@@ -1,0 +1,55 @@
+package javapad.run;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.util.Properties;
+
+public class LaunchSettings
+{
+	private final File file;
+	private final Properties props = new Properties();
+
+	public LaunchSettings(File projectRoot)
+	{
+		file = new File(projectRoot, ".javapad/launch.properties");
+		if(file.exists())
+		{
+			try
+			{
+				FileInputStream in = new FileInputStream(file);
+				props.load(in);
+				in.close();
+			}
+			catch(Exception e)
+			{
+			}
+		}
+	}
+
+	public String getArgs(String className)
+	{
+		return props.getProperty(className + ".args", "");
+	}
+
+	public String getVmArgs(String className)
+	{
+		return props.getProperty(className + ".vm", "");
+	}
+
+	public void set(String className, String args, String vmArgs)
+	{
+		props.setProperty(className + ".args", args);
+		props.setProperty(className + ".vm", vmArgs);
+		try
+		{
+			file.getParentFile().mkdirs();
+			FileOutputStream out = new FileOutputStream(file);
+			props.store(out, null);
+			out.close();
+		}
+		catch(Exception e)
+		{
+		}
+	}
+}
