@@ -89,7 +89,7 @@ public class MainWindow
 		vertical = new SashForm(horizontal, SWT.VERTICAL);
 		editors = new EditorTabs(vertical, theme);
 		editors.setAssist(assist);
-		navigation = new NavigationActions(shell, assist, loc -> open(loc));
+		navigation = new NavigationActions(shell, assist, loc -> openLine(loc));
 		editors.setNavigation(navigation);
 		editors.setTabHook(tab -> new EditorMenu(this).attach(tab));
 		bottom = new CTabFolder(vertical, SWT.BORDER);
@@ -111,7 +111,7 @@ public class MainWindow
 		callTab.setText("Call Hierarchy");
 		callTab.setControl(callPane.getControl());
 		callPane.setModelSupplier(() -> assist.model());
-		callPane.setOpener(l -> open(l));
+		callPane.setOpener(l -> openLine(l));
 		navigation.setHierarchy(t ->
 		{
 			callPane.show(t.key, t.description, t.declaration);
@@ -128,7 +128,7 @@ public class MainWindow
 		editors.setCompileHook(() -> run.runActive());
 		projectTree.setOpener(f -> open(new Location(f, 1, 1)));
 		sourceTree.setOpener(f -> open(new Location(f, 1, 1)));
-		console.setOpener(l -> open(l));
+		console.setOpener(l -> openLine(l));
 		problemsPane.setOpener(l -> open(l));
 		problemsPane.setPreviewer(l ->
 		{
@@ -138,7 +138,7 @@ public class MainWindow
 				tab.editor.highlightLine(l.line);
 			}
 		});
-		junitPane.setOpener(l -> open(l));
+		junitPane.setOpener(l -> openLine(l));
 		junitPane.setRunner(specs -> run.runSpecs(specs));
 		console.setInputSink(s ->
 		{
@@ -300,6 +300,17 @@ public class MainWindow
 			return;
 		}
 		loadProject();
+	}
+
+	// Opens the file with the whole line selected.
+	public void openLine(Location loc)
+	{
+		EditorTab tab = editors.open(loc.file);
+		if(tab != null)
+		{
+			tab.editor.highlightLine(loc.line);
+			tab.editor.getControl().setFocus();
+		}
 	}
 
 	public void open(Location loc)

@@ -28,14 +28,14 @@ public class NavigationActions
 
 	private final Shell shell;
 	private final CodeAssist assist;
-	private final Consumer<Location> opener;
+	private final Consumer<Location> lineOpener;
 	private Consumer<Target> hierarchy;
 
-	public NavigationActions(Shell shell, CodeAssist assist, Consumer<Location> opener)
+	public NavigationActions(Shell shell, CodeAssist assist, Consumer<Location> lineOpener)
 	{
 		this.shell = shell;
 		this.assist = assist;
-		this.opener = opener;
+		this.lineOpener = lineOpener;
 	}
 
 	void setHierarchy(Consumer<Target> hierarchy)
@@ -63,9 +63,10 @@ public class NavigationActions
 		ConfirmDialog.message(shell, title, message, SWT.ICON_INFORMATION);
 	}
 
+	// every target is shown with its whole line selected
 	void open(CodeModel.Place p)
 	{
-		opener.accept(new Location(p.file, p.line, p.column));
+		lineOpener.accept(new Location(p.file, p.line, p.column));
 	}
 
 	// Finds what is at the offset, on the worker thread.
