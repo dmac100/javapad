@@ -49,6 +49,7 @@ public class MainWindow
 	private final CTabItem sourceTab;
 	private final EditorTabs editors;
 	private final ConsolePane console;
+	private org.eclipse.swt.widgets.ToolItem stopItem;
 	private final ProblemsPane problemsPane;
 	private final CTabFolder bottom;
 	private final CTabItem consoleTab;
@@ -90,14 +91,7 @@ public class MainWindow
 		shell.setLayout(new GridLayout(1, false));
 		((GridLayout)shell.getLayout()).marginWidth = 0;
 		((GridLayout)shell.getLayout()).marginHeight = 0;
-		Composite toolbar = new Composite(shell, SWT.NONE);
-		RowLayout rows = new RowLayout(SWT.HORIZONTAL);
-		rows.marginTop = 4;
-		rows.marginBottom = 4;
-		rows.marginLeft = 4;
-		rows.spacing = 1;
-		rows.center = true;
-		toolbar.setLayout(rows);
+		org.eclipse.swt.widgets.ToolBar toolbar = new org.eclipse.swt.widgets.ToolBar(shell, SWT.FLAT);
 		toolbar.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
 		horizontal = new SashForm(shell, SWT.HORIZONTAL);
 		horizontal.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
@@ -178,23 +172,36 @@ public class MainWindow
 		return shell;
 	}
 
-	void addToolItems(Composite bar)
+	void addToolItems(org.eclipse.swt.widgets.ToolBar bar)
 	{
-		item(bar, "Open Project", () -> chooseProject());
-		item(bar, "Save All", () -> editors.saveAll());
-		Label separator = new Label(bar, SWT.SEPARATOR | SWT.VERTICAL);
-		separator.setLayoutData(new RowData(2, 22));
-		item(bar, "Build", () -> build(null));
-		item(bar, "Run", () -> runActive());
-		item(bar, "Run Tests", () -> runTests());
-		item(bar, "Stop", () -> stop());
+		item(bar, "Open Project", Icons.FOLDER, () -> chooseProject());
+		item(bar, "Save All", Icons.SAVE, () -> editors.saveAll());
+		new org.eclipse.swt.widgets.ToolItem(bar, SWT.SEPARATOR);
+		item(bar, "Build", Icons.BUILD, () -> build(null));
+		item(bar, "Run", Icons.RUN, () -> runActive());
+		item(bar, "Run Tests", Icons.TESTS, () -> runTests());
+		stopItem = item(bar, "Stop", Icons.STOP, () -> stop());
+		stopItem.setEnabled(false);
 	}
 
-	void item(Composite bar, String label, Runnable action)
+	// the stop button is only live while a process is running
+	void updateStop()
 	{
-		Button b = new Button(bar, SWT.PUSH);
-		b.setText(label);
+		if(stopItem != null && !stopItem.isDisposed())
+		{
+			stopItem.setEnabled(launcher != null && launcher.isRunning());
+		}
+	}
+
+	org.eclipse.swt.widgets.ToolItem item(org.eclipse.swt.widgets.ToolBar bar, String label, int icon, Runnable action)
+	{
+		org.eclipse.swt.widgets.ToolItem b = new org.eclipse.swt.widgets.ToolItem(bar, SWT.PUSH);
+		org.eclipse.swt.graphics.Image image = Icons.create(display, icon);
+		b.setImage(image);
+		b.setToolTipText(label);
 		b.addListener(SWT.Selection, e -> action.run());
+		b.addListener(SWT.Dispose, e -> image.dispose());
+		return b;
 	}
 
 	void menuItem(Menu menu, String label, int accel, Runnable action)
@@ -256,6 +263,7 @@ public class MainWindow
 		importActions = new ImportActions(shell, assist);
 		Menu source = submenu(bar, "Source");
 		menuItem(source, "Organize Imports", SWT.MOD1 | SWT.SHIFT | 'O', () -> withEditor(t -> importActions.organize(t)));
+		menuItem(source, "Format", SWT.MOD1 | SWT.SHIFT | 'F', () -> withEditor(t -> format(t)));
 		menuItem(source, "Add Import", SWT.MOD1 | SWT.SHIFT | 'M', () -> withEditor(t -> importActions.addImport(t)));
 		menuItem(source, "Quick Fix", SWT.MOD1 | '1', () -> withEditor(t -> importActions.quickFix(t)));
 		Menu navigate = submenu(bar, "Navigate");
@@ -308,9 +316,11 @@ public class MainWindow
 		{
 			f.setBackground(theme.chrome);
 			f.setForeground(theme.foreground);
-			f.setSelectionBackground(theme.background);
-			f.setSelectionForeground(theme.foreground);
+			f.setSelectionBackground(f == left ? theme.sidebar : theme.background);
+			f.setSelectionForeground(f == left ? theme.sidebarText : theme.foreground);
 		}
+		horizontal.setBackground(theme.chrome);
+		vertical.setBackground(theme.chrome);
 		projectTree.restyle(theme);
 		sourceTree.restyle(theme);
 		problemsPane.restyle(theme);
@@ -650,6 +660,7 @@ public class MainWindow
 		{
 			return;
 		}
+		refreshSources();
 		if(busy)
 		{
 			return;
@@ -736,6 +747,33 @@ public class MainWindow
 		runFrom(activeTree().selected());
 	}
 
+	// Selection if there is one, else the whole file; only Java files have a formatter.
+	void format(EditorTab tab)
+	{
+		if(tab.file.getName().endsWith(".java"))
+		{
+			tab.editor.format();
+		}
+	}
+
+	void refreshSources()
+	{
+		try
+		{
+			if(project.refreshSources())
+			{
+				projectTree.setProject(project);
+				sourceTree.setProject(project);
+				assist.setProject(project);
+				console.append("Found source folder(s): " + project.sourceFolders.size() + "\n", false);
+			}
+		}
+		catch(Exception e)
+		{
+			error("Cannot update .classpath: " + e);
+		}
+	}
+
 	void runFrom(File f)
 	{
 		if(project == null)
@@ -743,6 +781,7 @@ public class MainWindow
 			error("Open a project first.");
 			return;
 		}
+		refreshSources();
 		if(f != null && f.isFile() && TestFinder.isTestClass(contentOf(f)))
 		{
 			runTestsIn(f);
@@ -879,6 +918,7 @@ public class MainWindow
 						return;
 					}
 					console.append("\n<exited with code " + exitCode + ">\n", false);
+					updateStop();
 					if(launcher != self[0])
 					{
 						return;
@@ -895,6 +935,7 @@ public class MainWindow
 			}
 		});
 		launcher.start(command.apply(launcher));
+		updateStop();
 	}
 
 	File newRunDir()
@@ -1097,6 +1138,7 @@ public class MainWindow
 		javaItems.add(contextItem(menu, "Content Assist\tCtrl+Space", () -> tab.editor.triggerCompletion(true)));
 		javaItems.add(contextItem(menu, "Quick Fix\tCtrl+1", () -> importActions.quickFix(tab)));
 		javaItems.add(contextItem(menu, "Add Import\tCtrl+Shift+M", () -> importActions.addImport(tab)));
+		javaItems.add(contextItem(menu, "Format\tCtrl+Shift+F", () -> format(tab)));
 		javaItems.add(contextItem(menu, "Organize Imports\tCtrl+Shift+O", () -> importActions.organize(tab)));
 		new MenuItem(menu, SWT.SEPARATOR);
 		javaItems.add(contextItem(menu, "Run Test at Cursor\tCtrl+Alt+R", () -> runTestAtCursor()));
@@ -1249,9 +1291,17 @@ public class MainWindow
 		}
 		try
 		{
+			// in the sources pane a name without an extension is a Java class
+			if(left.getSelection() == sourceTab && !name.substring(name.lastIndexOf('/') + 1).contains("."))
+			{
+				name += ".java";
+			}
 			File f = new File(dir, name);
 			f.getParentFile().mkdirs();
-			f.createNewFile();
+			if(f.createNewFile() && name.endsWith(".java"))
+			{
+				Files.write(f.toPath(), javaTemplate(f).getBytes(StandardCharsets.UTF_8));
+			}
 			refreshTrees();
 			open(new Location(f, 1, 1));
 		}
@@ -1271,6 +1321,31 @@ public class MainWindow
 		}
 		new File(dir, name).mkdirs();
 		refreshTrees();
+	}
+
+	// "public class Name {\n}", preceded by a package line when the file is in a package folder of a source folder
+	String javaTemplate(File f)
+	{
+		String cls = f.getName().substring(0, f.getName().length() - ".java".length());
+		if(cls.isEmpty() || !Character.isJavaIdentifierStart(cls.charAt(0)) || !cls.chars().allMatch(Character::isJavaIdentifierPart))
+		{
+			return "";
+		}
+		String pkg = "";
+		for(File src : project.sourceFolders)
+		{
+			java.nio.file.Path rel = null;
+			if(f.getParentFile().toPath().toAbsolutePath().normalize().startsWith(src.toPath()))
+			{
+				rel = src.toPath().relativize(f.getParentFile().toPath().toAbsolutePath().normalize());
+			}
+			if(rel != null)
+			{
+				pkg = rel.toString().replace(File.separatorChar, '.');
+				break;
+			}
+		}
+		return (pkg.isEmpty() ? "" : "package " + pkg + ";\n\n") + "public class " + cls + " {\n}";
 	}
 
 	File targetDir()
@@ -1339,6 +1414,10 @@ public class MainWindow
 		else if(tab.equals("console"))
 		{
 			bottom.setSelection(consoleTab);
+		}
+		else if(tab.equals("call"))
+		{
+			bottom.setSelection(callTab);
 		}
 	}
 

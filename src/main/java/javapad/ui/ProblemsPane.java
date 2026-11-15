@@ -133,6 +133,8 @@ public class ProblemsPane
 	{
 		table.setBackground(theme.background);
 		table.setForeground(theme.foreground);
+		table.setHeaderBackground(theme.chrome);
+		table.setHeaderForeground(theme.foreground);
 	}
 
 	public Table getControl()

@@ -17,6 +17,8 @@ public class Theme
 	public boolean dark;
 	public Color background;
 	public Color foreground;
+	public Color sidebar;
+	public Color sidebarText;
 	public Color chrome;
 	public Color keyword;
 	public Color type;
@@ -73,26 +75,32 @@ public class Theme
 		this.dark = dark;
 		if(dark)
 		{
+			// Monokai, with the colours ScratchPad uses
 			background = color(30, 30, 30);
-			foreground = color(212, 212, 212);
-			chrome = color(45, 45, 48);
-			keyword = color(86, 156, 214);
-			type = color(78, 201, 176);
-			string = color(206, 145, 120);
-			number = color(181, 206, 168);
-			comment = color(106, 153, 85);
-			doc = color(96, 139, 78);
-			annotation = color(220, 220, 170);
-			gutter = color(133, 133, 133);
+			foreground = color(0xff, 0xff, 0xff);
+			// the side panels keep the earlier dark grey
+			sidebar = color(30, 30, 30);
+			sidebarText = color(212, 212, 212);
+			chrome = color(30, 30, 30);
+			keyword = color(0xf9, 0x26, 0x72);
+			type = color(0x66, 0xd9, 0xef);
+			string = color(0xe6, 0xdb, 0x74);
+			number = color(0xae, 0x81, 0xff);
+			comment = color(0x75, 0x71, 0x5e);
+			doc = color(0x75, 0x71, 0x5e);
+			annotation = color(0x8a, 0xa6, 0xc1);
+			gutter = color(0x6b, 0x7f, 0x8f);
 			error = color(244, 71, 71);
 			errorText = color(255, 110, 110);
 			pass = color(106, 190, 100);
-			bracket = color(70, 90, 120);
+			bracket = color(0x25, 0x3e, 0x5a);
 		}
 		else
 		{
 			background = color(255, 255, 255);
 			foreground = color(30, 30, 30);
+			sidebar = background;
+			sidebarText = foreground;
 			chrome = color(240, 240, 240);
 			keyword = color(127, 0, 85);
 			type = color(0, 90, 130);

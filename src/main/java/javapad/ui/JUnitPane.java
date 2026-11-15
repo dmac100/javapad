@@ -28,6 +28,7 @@ public class JUnitPane
 {
 	static final Pattern FRAME = Pattern.compile("at ([\\w.$]+)\\.[\\w$<>]+\\((\\w+\\.java):(\\d+)\\)");
 
+	private SashForm sash;
 	private final Composite composite;
 	private final Label summary;
 	private final Composite bar;
@@ -57,7 +58,7 @@ public class JUnitPane
 		GridData barData = new GridData(SWT.FILL, SWT.TOP, true, false);
 		barData.heightHint = 6;
 		bar.setLayoutData(barData);
-		SashForm sash = new SashForm(composite, SWT.HORIZONTAL);
+		sash = new SashForm(composite, SWT.HORIZONTAL);
 		sash.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		tree = new Tree(sash, SWT.BORDER | SWT.SINGLE | SWT.V_SCROLL | SWT.H_SCROLL);
 		detail = new StyledText(sash, SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL | SWT.READ_ONLY);
@@ -257,6 +258,7 @@ public class JUnitPane
 	public void restyle()
 	{
 		composite.setBackground(theme.chrome);
+		sash.setBackground(theme.chrome);
 		summary.setBackground(theme.chrome);
 		summary.setForeground(theme.foreground);
 		tree.setBackground(theme.background);

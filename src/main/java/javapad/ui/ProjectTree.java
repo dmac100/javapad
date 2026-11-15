@@ -41,8 +41,8 @@ public class ProjectTree
 
 	public void restyle(Theme theme)
 	{
-		tree.setBackground(theme.background);
-		tree.setForeground(theme.foreground);
+		tree.setBackground(theme.sidebar);
+		tree.setForeground(theme.sidebarText);
 	}
 
 	public Tree getControl()

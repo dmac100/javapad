@@ -2,6 +2,7 @@ package javapad.ui;
 
 import java.util.ArrayList;
 import java.util.List;
+import javapad.lang.JavaFormatter;
 import javapad.lang.ImportEditor;
 import javapad.lang.Proposal;
 import javapad.model.Problem;
@@ -545,6 +546,27 @@ public class CodeEditor
 		if(edit != null)
 		{
 			replaceContentMinimal(ImportEditor.apply(content, edit));
+		}
+	}
+
+	// Formats the selected lines, or the whole file when nothing is selected.
+	public void format()
+	{
+		Point sel = text.getSelection();
+		boolean whole = sel.x == sel.y;
+		int first = whole ? 0 : text.getLineAtOffset(sel.x);
+		int last = whole ? Integer.MAX_VALUE : text.getLineAtOffset(sel.y);
+		if(!whole && last > first && sel.y == text.getOffsetAtLine(last))
+		{
+			last--;
+		}
+		JavaFormatter.Result result = JavaFormatter.format(text.getText(), first, last);
+		replaceContentMinimal(result.text);
+		if(!whole)
+		{
+			int end = Math.min(result.lastLine + 1, text.getLineCount());
+			int to = end < text.getLineCount() ? text.getOffsetAtLine(end) : text.getCharCount();
+			text.setSelection(text.getOffsetAtLine(first), to);
 		}
 	}
 

@@ -12,8 +12,8 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Text;
 
 public class ConsolePane
 {
@@ -21,7 +21,8 @@ public class ConsolePane
 
 	private final Composite composite;
 	private final StyledText text;
-	private final Text input;
+	private int inputStart;
+	private boolean internal;
 	private final java.util.List<Seg> segments = new java.util.ArrayList<Seg>();
 	private final java.util.Map<Integer, Color> colors = new java.util.HashMap<Integer, Color>();
 	private AnsiParser ansi = new AnsiParser();
@@ -47,14 +48,28 @@ public class ConsolePane
 		layout.marginHeight = 0;
 		layout.verticalSpacing = 0;
 		composite.setLayout(layout);
-		text = new StyledText(composite, SWT.V_SCROLL | SWT.H_SCROLL | SWT.READ_ONLY);
+		text = new StyledText(composite, SWT.V_SCROLL | SWT.H_SCROLL);
 		text.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		text.setFont(theme.font);
 		ReadOnlyText.installKeys(text);
-		input = new Text(composite, SWT.BORDER | SWT.SINGLE);
-		input.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
-		input.setMessage("stdin: type a line and press Enter");
-		input.addListener(SWT.DefaultSelection, e -> sendInput());
+		// output and stdin share one text: everything before inputStart is output, everything after is the line being typed
+		text.addVerifyListener(e ->
+		{
+			if(!internal && e.start < inputStart)
+			{
+				e.doit = false;
+				if(!e.text.isEmpty())
+				{
+					// typed or pasted into old output: it belongs on the input line instead
+					int end = text.getCharCount();
+					internal = true;
+					text.replaceTextRange(end, 0, e.text);
+					internal = false;
+					text.setCaretOffset(end + e.text.length());
+				}
+			}
+		});
+		text.addListener(SWT.KeyDown, e -> key(e));
 		text.addListener(SWT.MouseUp, e -> clicked(e.x, e.y));
 		text.addListener(SWT.Dispose, e ->
 		{
@@ -85,14 +100,41 @@ public class ConsolePane
 		inputSink = sink;
 	}
 
+	void key(Event e)
+	{
+		boolean enter = e.keyCode == SWT.CR || e.keyCode == SWT.KEYPAD_CR;
+		if(enter && (e.stateMask & (SWT.MOD1 | SWT.SHIFT | SWT.ALT)) == 0)
+		{
+			e.doit = false;
+			sendInput();
+			return;
+		}
+		boolean edit = e.character != 0 && e.character != SWT.ESC;
+		boolean copyOrAll = (e.stateMask & SWT.MOD1) != 0 && (e.keyCode == 'c' || e.keyCode == 'a');
+		if(edit && !copyOrAll && text.getSelectionCount() == 0 && text.getCaretOffset() < inputStart)
+		{
+			text.setCaretOffset(text.getCharCount());
+		}
+	}
+
 	void sendInput()
 	{
-		String line = input.getText();
-		input.setText("");
-		append(line + "\n", false);
+		String line = text.getText(inputStart, text.getCharCount() - 1) + "\n";
+		Seg seg = new Seg();
+		seg.start = inputStart;
+		seg.length = line.length();
+		seg.style = new AnsiParser.Style();
+		internal = true;
+		text.append("\n");
+		internal = false;
+		segments.add(seg);
+		text.setStyleRange(styleFor(seg));
+		inputStart = text.getCharCount();
+		text.setCaretOffset(inputStart);
+		text.setTopIndex(text.getLineCount() - 1);
 		if(inputSink != null)
 		{
-			inputSink.accept(line + "\n");
+			inputSink.accept(line);
 		}
 	}
 
@@ -100,7 +142,10 @@ public class ConsolePane
 	{
 		segments.clear();
 		ansi = new AnsiParser();
+		internal = true;
 		text.setText("");
+		internal = false;
+		inputStart = 0;
 	}
 
 	public String getText()
@@ -110,22 +155,32 @@ public class ConsolePane
 
 	public void append(String s, boolean error)
 	{
-		int first = text.getCharCount();
+		int first = inputStart;
+		int caret = text.getCaretOffset();
+		boolean typing = caret >= inputStart;
+		internal = true;
 		for(AnsiParser.Span span : ansi.parse(s))
 		{
 			Seg seg = new Seg();
-			seg.start = text.getCharCount();
+			seg.start = inputStart;
 			seg.length = span.text.length();
 			seg.error = error;
 			seg.style = span.style;
-			text.append(span.text);
+			text.replaceTextRange(inputStart, 0, span.text);
+			inputStart += seg.length;
 			text.setStyleRange(styleFor(seg));
 			segments.add(seg);
+			if(typing)
+			{
+				caret += seg.length;
+			}
 		}
-		if(text.getCharCount() > first)
+		internal = false;
+		if(inputStart > first)
 		{
 			linkify(first);
 		}
+		text.setCaretOffset(caret);
 		text.setTopIndex(text.getLineCount() - 1);
 	}
 
@@ -222,8 +277,6 @@ public class ConsolePane
 	{
 		text.setBackground(theme.background);
 		text.setForeground(theme.foreground);
-		input.setBackground(theme.background);
-		input.setForeground(theme.foreground);
 		for(Seg seg : segments)
 		{
 			text.setStyleRange(styleFor(seg));

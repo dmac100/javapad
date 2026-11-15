@@ -27,6 +27,7 @@ public class EditorTabs
 		this.theme = theme;
 		this.shell = parent.getShell();
 		folder = new CTabFolder(parent, SWT.BORDER);
+		folder.setTabHeight(folder.getTabHeight() + 3);
 		folder.addCTabFolder2Listener(new org.eclipse.swt.custom.CTabFolder2Adapter()
 		{
 			public void close(org.eclipse.swt.custom.CTabFolderEvent e)

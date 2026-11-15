@@ -24,6 +24,24 @@ public class ProjectGenerator
 		return notes;
 	}
 
+	// A project created empty gets a .classpath without source folders; once Java files exist, give it some.
+	// Only a .classpath with no src entry at all is touched.
+	public static boolean addMissingSources(File dir) throws Exception
+	{
+		File file = new File(dir, ".classpath");
+		if(!file.exists())
+		{
+			return false;
+		}
+		String text = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+		if(text.contains("kind=\"src\"") || sourceFolders(dir).isEmpty())
+		{
+			return false;
+		}
+		writeClasspath(dir);
+		return true;
+	}
+
 	public static List<String> regenerate(File dir) throws Exception
 	{
 		List<String> notes = new ArrayList<String>();

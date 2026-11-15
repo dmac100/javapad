@@ -36,6 +36,19 @@ public class EclipseProject
 		return project;
 	}
 
+	// Picks up source folders that appeared after the project was opened; true if the list changed.
+	public boolean refreshSources() throws Exception
+	{
+		if(!sourceFolders.isEmpty() || !ProjectGenerator.addMissingSources(root))
+		{
+			return false;
+		}
+		EclipseProject fresh = ClasspathParser.parse(root);
+		sourceFolders.addAll(fresh.sourceFolders);
+		libraries.addAll(fresh.libraries);
+		return !sourceFolders.isEmpty();
+	}
+
 	public static EclipseProject regenerate(File dir) throws Exception
 	{
 		List<String> notes = ProjectGenerator.regenerate(dir);
