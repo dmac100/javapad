@@ -18,12 +18,19 @@ public class CommandDialog
 	private Shell shell;
 	private Text text;
 	private org.eclipse.swt.widgets.List list;
+	private final String title;
 	private String result;
 
 	public CommandDialog(Shell parent, Function<String, List<String>> search)
 	{
+		this(parent, search, "Run Command");
+	}
+
+	public CommandDialog(Shell parent, Function<String, List<String>> search, String title)
+	{
 		this.parent = parent;
 		this.search = search;
+		this.title = title;
 	}
 
 	public String open()
@@ -40,7 +47,7 @@ public class CommandDialog
 		shell = new Shell(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL | SWT.RESIZE);
 		shell.setLayout(layout);
 		shell.setSize(560, 380);
-		shell.setText("Run Command / Go to File");
+		shell.setText(title);
 		Rectangle b = parent.getBounds();
 		Point size = shell.getSize();
 		shell.setLocation(b.x + (b.width - size.x) / 2, b.y + (b.height - size.y) / 3);

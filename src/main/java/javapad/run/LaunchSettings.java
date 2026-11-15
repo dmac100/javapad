@@ -37,10 +37,26 @@ public class LaunchSettings
 		return props.getProperty(className + ".vm", "");
 	}
 
+	public String getLastMain()
+	{
+		return props.getProperty("lastMain", "");
+	}
+
+	public void setLastMain(String className)
+	{
+		props.setProperty("lastMain", className);
+		save();
+	}
+
 	public void set(String className, String args, String vmArgs)
 	{
 		props.setProperty(className + ".args", args);
 		props.setProperty(className + ".vm", vmArgs);
+		save();
+	}
+
+	void save()
+	{
 		try
 		{
 			file.getParentFile().mkdirs();

@@ -2,6 +2,8 @@ package javapad.ui;
 
 import java.util.ArrayList;
 import java.util.List;
+import javapad.lang.ImportEditor;
+import javapad.lang.Proposal;
 import javapad.model.Problem;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.Bullet;
@@ -37,6 +39,22 @@ public class CodeEditor
 	private boolean[] codeMask;
 	private int[] bracketPair;
 	private String shownTip;
+	private Assist assist;
+	private Navigation navigation;
+
+	public interface Navigation
+	{
+		void declaration(int offset);
+
+		void implementation(int offset);
+	}
+	private CompletionPopup popup;
+	private int completionGeneration;
+
+	public interface Assist
+	{
+		void complete(String text, int offset, java.util.function.Consumer<javapad.lang.CompletionEngine.Completions> done);
+	}
 
 	static class Edit
 	{
@@ -73,7 +91,16 @@ public class CodeEditor
 			}
 		});
 		text.addVerifyKeyListener(e -> keyPressed(e));
-		text.addCaretListener(e -> updateBracket());
+		popup = new CompletionPopup(text, theme, p -> acceptProposal(p));
+		text.addCaretListener(e ->
+		{
+			updateBracket();
+			popup.refresh();
+		});
+		text.addListener(SWT.FocusOut, e -> popup.close());
+		text.addListener(SWT.MouseDown, e -> controlClick(e));
+		text.addListener(SWT.MouseDown, e -> popup.close());
+		text.addListener(SWT.Dispose, e -> popup.dispose());
 		text.addListener(SWT.MouseMove, e -> updateTip(e.x, e.y));
 		Listener wheel = e -> wheel(e);
 		Display display = text.getDisplay();
@@ -151,6 +178,19 @@ public class CodeEditor
 		text.setTopIndex(Math.max(0, l - 8));
 		text.showSelection();
 		text.setFocus();
+	}
+
+	// Selects the whole line and scrolls to it, leaving the keyboard focus where it is.
+	public void highlightLine(int line)
+	{
+		int l = Math.max(0, Math.min(text.getLineCount() - 1, line - 1));
+		int start = text.getOffsetAtLine(l);
+		text.setSelection(start, start + text.getLine(l).length());
+		int visible = Math.max(1, text.getClientArea().height / Math.max(1, text.getLineHeight()));
+		if(l < text.getTopIndex() || l >= text.getTopIndex() + visible - 1)
+		{
+			text.setTopIndex(Math.max(0, l - visible / 3));
+		}
 	}
 
 	void makeBullets()
@@ -411,11 +451,43 @@ public class CodeEditor
 		if(!replaying)
 		{
 			record(e);
+			autoTrigger(e);
 		}
 		if(modifyHook != null)
 		{
 			modifyHook.run();
 		}
+	}
+
+	// Typing "." right after a name opens member completion, like Eclipse.
+	void autoTrigger(ExtendedModifyEvent e)
+	{
+		if(assist == null || e.length != 1 || !text.getTextRange(e.start, 1).equals(".") || !e.replacedText.isEmpty())
+		{
+			return;
+		}
+		if(e.start == 0)
+		{
+			return;
+		}
+		char before = text.getTextRange(e.start - 1, 1).charAt(0);
+		if(!(Character.isJavaIdentifierPart(before) || before == ')' || before == ']'))
+		{
+			return;
+		}
+		int dotOffset = e.start;
+		text.getDisplay().timerExec(150, () ->
+		{
+			if(text.isDisposed() || text.getCaretOffset() != dotOffset + 1 || text.getCharCount() <= dotOffset || !text.getTextRange(dotOffset, 1).equals("."))
+			{
+				return;
+			}
+			boolean[] mask = BracketMatcher.codeMask(text.getText());
+			if(dotOffset < mask.length && mask[dotOffset])
+			{
+				triggerCompletion(false);
+			}
+		});
 	}
 
 	void record(ExtendedModifyEvent e)
@@ -466,10 +538,164 @@ public class CodeEditor
 		undo.add(edit);
 	}
 
+	public void insertImport(String fqn, String pkg)
+	{
+		String content = text.getText();
+		ImportEditor.Edit edit = ImportEditor.addImport(content, fqn, pkg);
+		if(edit != null)
+		{
+			replaceContentMinimal(ImportEditor.apply(content, edit));
+		}
+	}
+
+	// Swaps in new content by replacing only the part that differs, so undo is one step and the caret and scroll position hold.
+	public void replaceContentMinimal(String newContent)
+	{
+		String old = text.getText();
+		int prefix = 0;
+		int limit = Math.min(old.length(), newContent.length());
+		while(prefix < limit && old.charAt(prefix) == newContent.charAt(prefix))
+		{
+			prefix++;
+		}
+		int suffix = 0;
+		while(suffix < limit - prefix && old.charAt(old.length() - 1 - suffix) == newContent.charAt(newContent.length() - 1 - suffix))
+		{
+			suffix++;
+		}
+		int caret = text.getCaretOffset();
+		int topOffset = text.getOffsetAtLine(text.getTopIndex());
+		int delta = newContent.length() - old.length();
+		int oldEnd = old.length() - suffix;
+		text.replaceTextRange(prefix, oldEnd - prefix, newContent.substring(prefix, newContent.length() - suffix));
+		text.setCaretOffset(caret >= oldEnd ? caret + delta : Math.min(caret, prefix + (newContent.length() - suffix - prefix)));
+		int newTop = topOffset >= oldEnd ? topOffset + delta : Math.min(topOffset, text.getCharCount());
+		text.setTopIndex(text.getLineAtOffset(Math.max(0, Math.min(newTop, text.getCharCount()))));
+	}
+
+	public void setNavigation(Navigation navigation)
+	{
+		this.navigation = navigation;
+	}
+
+	// Ctrl+click opens the declaration, Ctrl+Alt+click the implementation (Eclipse).
+	void controlClick(Event e)
+	{
+		if(navigation == null || e.button != 1 || (e.stateMask & SWT.MOD1) == 0 || (e.stateMask & SWT.SHIFT) != 0)
+		{
+			return;
+		}
+		int offset;
+		try
+		{
+			offset = text.getOffsetAtPoint(new Point(e.x, e.y));
+		}
+		catch(IllegalArgumentException ex)
+		{
+			return;
+		}
+		String content = text.getText();
+		boolean onWord = (offset < content.length() && Character.isJavaIdentifierPart(content.charAt(offset))) || (offset > 0 && Character.isJavaIdentifierPart(content.charAt(offset - 1)));
+		if(!onWord)
+		{
+			return;
+		}
+		text.setCaretOffset(offset);
+		if((e.stateMask & SWT.ALT) != 0)
+		{
+			navigation.implementation(offset);
+		}
+		else
+		{
+			navigation.declaration(offset);
+		}
+	}
+
+	public void setAssist(Assist assist)
+	{
+		this.assist = assist;
+	}
+
+	public CompletionPopup popup()
+	{
+		return popup;
+	}
+
+	// Asks the assist for proposals at the caret; manual (Ctrl+Space) inserts directly when there is only one.
+	public void triggerCompletion(boolean manual)
+	{
+		if(assist == null || text.isDisposed())
+		{
+			return;
+		}
+		String content = text.getText();
+		int offset = text.getCaretOffset();
+		int generation = ++completionGeneration;
+		assist.complete(content, offset, result ->
+		{
+			if(generation != completionGeneration || text.isDisposed() || !text.isFocusControl() && !Boolean.getBoolean("javapad.nofocuscheck"))
+			{
+				return;
+			}
+			popup.show(result, manual);
+		});
+	}
+
+	void acceptProposal(Proposal p)
+	{
+		int caret = text.getCaretOffset();
+		int wordStart = popup.wordStart();
+		if(wordStart > caret)
+		{
+			return;
+		}
+		String content = text.getText();
+		String insert = p.insert;
+		int back = 0;
+		if(p.isMethod())
+		{
+			boolean parenFollows = caret < content.length() && content.charAt(caret) == '(';
+			if(!parenFollows)
+			{
+				insert += "()";
+				back = p.hasParams ? 1 : 0;
+			}
+		}
+		ImportEditor.Edit imp = p.importType == null ? null : ImportEditor.addImport(content, p.importType, p.detail);
+		int top = text.getTopIndex();
+		int newCaret;
+		int addedLines = 0;
+		if(imp != null && imp.offset <= wordStart && imp.length == 0)
+		{
+			String between = content.substring(imp.offset, wordStart);
+			text.replaceTextRange(imp.offset, caret - imp.offset, imp.text + between + insert);
+			newCaret = imp.offset + imp.text.length() + between.length() + insert.length() - back;
+			addedLines = imp.text.length() - imp.text.replace("\n", "").length();
+		}
+		else
+		{
+			text.replaceTextRange(wordStart, caret - wordStart, insert);
+			newCaret = wordStart + insert.length() - back;
+		}
+		text.setCaretOffset(newCaret);
+		text.setTopIndex(top + addedLines);
+		text.showSelection();
+	}
+
 	void keyPressed(VerifyEvent e)
 	{
 		boolean ctrl = (e.stateMask & SWT.MOD1) != 0;
 		boolean shift = (e.stateMask & SWT.SHIFT) != 0;
+		if(popup.handleKey(e))
+		{
+			return;
+		}
+		if(ctrl && !shift && e.keyCode == ' ')
+		{
+			e.doit = false;
+			triggerCompletion(true);
+			return;
+		}
 		if(ctrl && (e.keyCode == 'z' || e.keyCode == 'Z'))
 		{
 			e.doit = false;

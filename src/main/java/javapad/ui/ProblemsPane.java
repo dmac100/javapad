@@ -23,6 +23,7 @@ public class ProblemsPane
 	private final List<Problem> shown = new ArrayList<Problem>();
 	private EclipseProject project;
 	private Consumer<Location> opener;
+	private Consumer<Location> previewer;
 
 	public ProblemsPane(Composite parent)
 	{
@@ -38,6 +39,7 @@ public class ProblemsPane
 			c.setWidth(widths[i]);
 		}
 		table.addListener(SWT.DefaultSelection, e -> activate());
+		table.addListener(SWT.Selection, e -> preview());
 		Menu menu = new Menu(table);
 		MenuItem copy = addItem(menu, "Copy\tCtrl+C", () -> copy(selected()));
 		MenuItem copyErrors = addItem(menu, "Copy Errors", () -> copy(errors()));
@@ -146,6 +148,26 @@ public class ProblemsPane
 	public void setOpener(Consumer<Location> opener)
 	{
 		this.opener = opener;
+	}
+
+	// Called when a problem is selected with a click or the arrow keys: show its line without leaving the list.
+	public void setPreviewer(Consumer<Location> previewer)
+	{
+		this.previewer = previewer;
+	}
+
+	void preview()
+	{
+		int i = table.getSelectionIndex();
+		if(i < 0 || i >= shown.size() || previewer == null)
+		{
+			return;
+		}
+		Problem p = shown.get(i);
+		if(!p.file.isEmpty())
+		{
+			previewer.accept(new Location(new File(p.file), p.line, p.column));
+		}
 	}
 
 	public void setProblems(List<Problem> problems)

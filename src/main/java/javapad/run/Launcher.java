@@ -77,6 +77,10 @@ public class Launcher
 		List<String> cmd = new ArrayList<String>();
 		cmd.add(javaExecutable());
 		addOpens(cmd);
+		if(project.preview)
+		{
+			cmd.add("--enable-preview");
+		}
 		cmd.addAll(splitArgs(vmArgs));
 		cmd.add("-cp");
 		cmd.add(project.classpathString());
@@ -96,6 +100,10 @@ public class Launcher
 		List<String> cmd = new ArrayList<String>();
 		cmd.add(javaExecutable());
 		addOpens(cmd);
+		if(project.preview)
+		{
+			cmd.add("--enable-preview");
+		}
 		cmd.add("-Djavapad.live=" + liveLog(reportDir).getAbsolutePath());
 		cmd.add("-cp");
 		cmd.add(junitClasspath(jupiter));

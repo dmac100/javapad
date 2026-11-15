@@ -50,9 +50,20 @@ public class ProjectCompiler
 			options.add("UTF-8");
 			options.add("-proc:none");
 			options.add("-Xlint:-options");
+			int feature = Runtime.version().feature();
+			project.preview = feature >= 21 && feature < 25 && javapad.run.MainFinder.needsPreview(javapad.run.MainFinder.inProject(project.sourceFolders, null));
 			int release = project.release;
 			int lowest = lowestRelease(compiler);
-			if(release > 0 && release < lowest)
+			if(project.preview)
+			{
+				// instance and no-argument mains are preview features here; they need the JDK's own language level
+				options.add("--enable-preview");
+				options.add("-source");
+				options.add(String.valueOf(feature));
+				problems.add(new Problem("", 0, 0, false, "Compiling with Java " + feature + " preview features for the newer main method style"));
+				release = 0;
+			}
+			else if(release > 0 && release < lowest)
 			{
 				problems.add(new Problem("", 0, 0, false, "Java " + release + " is no longer supported by this JDK; compiling for Java " + lowest + " instead"));
 				release = lowest;
@@ -121,6 +132,12 @@ public class ProjectCompiler
 		{
 			return fallback;
 		}
+	}
+
+	// The project's language level, raised to the lowest one this JDK still accepts; 0 when the project sets none.
+	public static int effectiveRelease(int release, JavaCompiler compiler)
+	{
+		return release > 0 ? Math.max(release, lowestRelease(compiler)) : 0;
 	}
 
 	private static int lowest;

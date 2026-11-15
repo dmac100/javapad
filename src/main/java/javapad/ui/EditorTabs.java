@@ -18,6 +18,9 @@ public class EditorTabs
 	private final Shell shell;
 	private List<Problem> problems = new ArrayList<Problem>();
 	private Runnable compileHook;
+	private CodeAssist assist;
+	private NavigationActions navigation;
+	private java.util.function.Consumer<EditorTab> tabHook;
 
 	public EditorTabs(Composite parent, Theme theme)
 	{
@@ -31,6 +34,22 @@ public class EditorTabs
 				e.doit = confirmClose((EditorTab)((CTabItem)e.item).getData());
 			}
 		});
+	}
+
+	// Called once for every tab that is opened, to add menus and the like.
+	public void setTabHook(java.util.function.Consumer<EditorTab> hook)
+	{
+		tabHook = hook;
+	}
+
+	public void setNavigation(NavigationActions navigation)
+	{
+		this.navigation = navigation;
+	}
+
+	public void setAssist(CodeAssist assist)
+	{
+		this.assist = assist;
 	}
 
 	public void setCompileHook(Runnable hook)
@@ -72,6 +91,30 @@ public class EditorTabs
 			EditorTab tab = new EditorTab(folder, file, theme);
 			tab.editor.setProblems(problemsFor(file));
 			tab.editor.setCompileHook(compileHook);
+			boolean java = tab.file.getName().endsWith(".java");
+			if(assist != null && java)
+			{
+				tab.editor.setAssist((t, o, d) -> assist.complete(tab.file, t, o, d));
+			}
+			if(navigation != null && java)
+			{
+				tab.editor.setNavigation(new CodeEditor.Navigation()
+				{
+					public void declaration(int offset)
+					{
+						navigation.openDeclaration(tab, offset);
+					}
+
+					public void implementation(int offset)
+					{
+						navigation.openImplementation(tab, offset);
+					}
+				});
+			}
+			if(tabHook != null)
+			{
+				tabHook.accept(tab);
+			}
 			folder.setSelection(tab.item);
 			return tab;
 		}

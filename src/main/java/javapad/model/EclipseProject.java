@@ -17,6 +17,8 @@ public class EclipseProject
 	public boolean junit4;
 	public boolean junit5;
 	public int release;
+	// set by the compiler when the project's mains need the preview features of java 21 to 24
+	public boolean preview;
 	public final List<String> notes = new ArrayList<String>();
 
 	public EclipseProject(File root)

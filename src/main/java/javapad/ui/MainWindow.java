@@ -54,6 +54,8 @@ public class MainWindow
 	private final CTabItem consoleTab;
 	private final CTabItem problemsTab;
 	private final CTabItem junitTab;
+	private final CTabItem callTab;
+	private final CallHierarchyPane callPane;
 	private final JUnitPane junitPane;
 	private final java.util.Set<File> parsedReports = new java.util.HashSet<File>();
 	private final List<TestResult> allResults = new ArrayList<TestResult>();
@@ -63,6 +65,9 @@ public class MainWindow
 	private final SashForm horizontal;
 	private final SashForm vertical;
 	private EclipseProject project;
+	private final CodeAssist assist;
+	private ImportActions importActions;
+	private NavigationActions navigation;
 	private LaunchSettings settings;
 	private Launcher launcher;
 	private boolean busy;
@@ -70,6 +75,7 @@ public class MainWindow
 	private FindDialog findDialog;
 	private final CommandList commands = new CommandList();
 	private CommandList lastCommands = new CommandList();
+	private CommandList lastFiles = new CommandList();
 	private String menuName;
 	private final List<java.util.function.Function<Launcher, List<String>>> pending = new ArrayList<java.util.function.Function<Launcher, List<String>>>();
 
@@ -77,6 +83,7 @@ public class MainWindow
 	{
 		this.display = display;
 		theme = new Theme(display);
+		assist = new CodeAssist(display);
 		shell = new Shell(display);
 		shell.setText("JavaPad");
 		shell.setSize(1280, 800);
@@ -106,6 +113,10 @@ public class MainWindow
 		left.setSelection(projectTab);
 		vertical = new SashForm(horizontal, SWT.VERTICAL);
 		editors = new EditorTabs(vertical, theme);
+		editors.setAssist(assist);
+		navigation = new NavigationActions(shell, assist, loc -> open(loc));
+		editors.setNavigation(navigation);
+		editors.setTabHook(tab -> editorMenu(tab));
 		bottom = new CTabFolder(vertical, SWT.BORDER);
 		bottom.setTabPosition(SWT.TOP);
 		console = new ConsolePane(bottom, theme);
@@ -120,6 +131,17 @@ public class MainWindow
 		junitTab = new CTabItem(bottom, SWT.NONE);
 		junitTab.setText("JUnit");
 		junitTab.setControl(junitPane.getControl());
+		callPane = new CallHierarchyPane(bottom, theme);
+		callTab = new CTabItem(bottom, SWT.NONE);
+		callTab.setText("Call Hierarchy");
+		callTab.setControl(callPane.getControl());
+		callPane.setModelSupplier(() -> assist.model());
+		callPane.setOpener(l -> open(l));
+		navigation.setHierarchy(t ->
+		{
+			callPane.show(t.key, t.description, t.declaration);
+			bottom.setSelection(callTab);
+		});
 		bottom.setSelection(consoleTab);
 		horizontal.setWeights(new int[] {20, 80});
 		vertical.setWeights(new int[] {60, 40});
@@ -130,6 +152,14 @@ public class MainWindow
 		sourceTree.setOpener(f -> open(new Location(f, 1, 1)));
 		console.setOpener(l -> open(l));
 		problemsPane.setOpener(l -> open(l));
+		problemsPane.setPreviewer(l ->
+		{
+			EditorTab tab = editors.open(l.file);
+			if(tab != null)
+			{
+				tab.editor.highlightLine(l.line);
+			}
+		});
 		junitPane.setOpener(l -> open(l));
 		junitPane.setRunner(specs -> runSpecs(specs));
 		console.setInputSink(s ->
@@ -184,7 +214,11 @@ public class MainWindow
 
 	static String accelName(int accel)
 	{
-		String s = "Ctrl+";
+		String s = "";
+		if((accel & SWT.MOD1) != 0)
+		{
+			s += "Ctrl+";
+		}
 		if((accel & SWT.SHIFT) != 0)
 		{
 			s += "Shift+";
@@ -196,7 +230,7 @@ public class MainWindow
 		int key = accel & ~(SWT.MOD1 | SWT.SHIFT | SWT.ALT);
 		if(key >= SWT.F1 && key <= SWT.F12)
 		{
-			return "F" + (key - SWT.F1 + 1);
+			return s + "F" + (key - SWT.F1 + 1);
 		}
 		return s + (char)key;
 	}
@@ -207,7 +241,8 @@ public class MainWindow
 		shell.setMenuBar(bar);
 		Menu file = submenu(bar, "File");
 		menuItem(file, "Open Project...", SWT.MOD1 | 'O', () -> chooseProject());
-		menuItem(file, "Run Command / Go to File...", SWT.MOD1 | '3', () -> runCommandDialog());
+		menuItem(file, "Run Command...", SWT.MOD1 | '3', () -> runCommandDialog());
+		menuItem(file, "Open File...", SWT.MOD1 | SWT.SHIFT | 'R', () -> runFileDialog());
 		menuItem(file, "Regenerate Project File...", 0, () -> regenerateProject());
 		menuItem(file, "Save", SWT.MOD1 | 'S', () -> saveActive());
 		menuItem(file, "Save All", SWT.MOD1 | SWT.SHIFT | 'S', () -> editors.saveAll());
@@ -216,7 +251,18 @@ public class MainWindow
 		Menu edit = submenu(bar, "Edit");
 		menuItem(edit, "Find...", SWT.MOD1 | 'F', () -> find());
 		menuItem(edit, "Go to Line...", SWT.MOD1 | 'L', () -> gotoLine());
+		menuItem(edit, "Content Assist", 0, () -> contentAssist());
 		menuItem(edit, "Go to Matching Bracket", SWT.MOD1 | SWT.SHIFT | 'P', () -> goToMatchingBracket());
+		importActions = new ImportActions(shell, assist);
+		Menu source = submenu(bar, "Source");
+		menuItem(source, "Organize Imports", SWT.MOD1 | SWT.SHIFT | 'O', () -> withEditor(t -> importActions.organize(t)));
+		menuItem(source, "Add Import", SWT.MOD1 | SWT.SHIFT | 'M', () -> withEditor(t -> importActions.addImport(t)));
+		menuItem(source, "Quick Fix", SWT.MOD1 | '1', () -> withEditor(t -> importActions.quickFix(t)));
+		Menu navigate = submenu(bar, "Navigate");
+		menuItem(navigate, "Show Current File in Sidebar", SWT.MOD1 | SWT.ALT | 'W', () -> showInSidebar());
+		menuItem(navigate, "Open Declaration", SWT.F3, () -> withEditor(t -> navigation.openDeclaration(t, t.editor.getControl().getCaretOffset())));
+		menuItem(navigate, "Open Implementation", SWT.MOD1 | 'T', () -> withEditor(t -> navigation.openImplementation(t, t.editor.getControl().getCaretOffset())));
+		menuItem(navigate, "Call Hierarchy", SWT.MOD1 | SWT.ALT | 'H', () -> withEditor(t -> navigation.callHierarchy(t, t.editor.getControl().getCaretOffset())));
 		Menu view = submenu(bar, "View");
 		MenuItem darkItem = new MenuItem(view, SWT.CHECK);
 		darkItem.setText("Dark Mode");
@@ -232,11 +278,13 @@ public class MainWindow
 		commands.add("View > Show Problems", () -> bottom.setSelection(problemsTab));
 		commands.add("View > Show Console", () -> bottom.setSelection(consoleTab));
 		commands.add("View > Show JUnit", () -> bottom.setSelection(junitTab));
+		commands.add("View > Show Call Hierarchy", () -> bottom.setSelection(callTab));
 		Menu run = submenu(bar, "Run");
 		menuItem(run, "Build", SWT.MOD1 | 'B', () -> build(null));
 		menuItem(run, "Build and Run", SWT.F11, () -> runActive());
 		menuItem(run, "Run", SWT.MOD1 | 'R', () -> runActive());
-		menuItem(run, "Run Tests", SWT.MOD1 | SWT.SHIFT | 'R', () -> runTests());
+		menuItem(run, "Run Main Class...", 0, () -> runMainClass());
+		menuItem(run, "Run Tests", SWT.MOD1 | SWT.F11, () -> runTests());
 		menuItem(run, "Run Test at Cursor", SWT.MOD1 | SWT.ALT | 'R', () -> runTestAtCursor());
 		menuItem(run, "Re-run Failed Tests", 0, () -> runSpecs(junitPane.failedSpecs()));
 		menuItem(run, "Program Arguments...", 0, () -> editArguments());
@@ -268,6 +316,7 @@ public class MainWindow
 		problemsPane.restyle(theme);
 		console.restyle();
 		junitPane.restyle();
+		callPane.restyle();
 		for(EditorTab tab : editors.tabs())
 		{
 			tab.editor.restyle();
@@ -284,6 +333,27 @@ public class MainWindow
 	ProjectTree activeTree()
 	{
 		return left.getSelection() == sourceTab ? sourceTree : projectTree;
+	}
+
+	// One-off: select the file of the active editor in the sidebar, switching tab if this one does not list it.
+	public void showInSidebar()
+	{
+		EditorTab tab = editors.active();
+		if(tab == null || project == null)
+		{
+			return;
+		}
+		boolean sources = left.getSelection() == sourceTab;
+		ProjectTree first = sources ? sourceTree : projectTree;
+		ProjectTree second = sources ? projectTree : sourceTree;
+		if(first.reveal(tab.file))
+		{
+			return;
+		}
+		if(second.reveal(tab.file))
+		{
+			left.setSelection(sources ? projectTab : sourceTab);
+		}
 	}
 
 	void refreshTrees()
@@ -339,6 +409,7 @@ public class MainWindow
 	void loadProject()
 	{
 		editors.closeAll();
+		assist.setProject(project);
 		settings = new LaunchSettings(project.root);
 		projectTree.setProject(project);
 		sourceTree.setProject(project);
@@ -466,17 +537,45 @@ public class MainWindow
 			all.add("Tab: " + path + (tab.isDirty() ? " *" : ""), () -> editors.show(tab));
 		}
 		all.addAll(commands);
-		if(project != null)
-		{
-			List<File> files = new ArrayList<File>();
-			listFiles(project.root, files);
-			for(File f : files)
-			{
-				all.add("Open: " + project.relative(f).replace(File.separatorChar, '/'), () -> open(new Location(f, 1, 1)));
-			}
-		}
 		lastCommands = all;
 		return new CommandDialog(shell, text -> all.find(text, 300));
+	}
+
+	// Ctrl+Shift+R: every file in the project, by path.
+	CommandList fileList()
+	{
+		CommandList files = new CommandList();
+		if(project != null)
+		{
+			List<File> found = new ArrayList<File>();
+			listFiles(project.root, found);
+			for(File f : found)
+			{
+				files.add(project.relative(f).replace(File.separatorChar, '/'), () -> open(new Location(f, 1, 1)));
+			}
+		}
+		return files;
+	}
+
+	CommandDialog fileDialog()
+	{
+		CommandList files = fileList();
+		lastFiles = files;
+		return new CommandDialog(shell, text -> files.find(text, 300), "Open File");
+	}
+
+	void runFileDialog()
+	{
+		if(project == null)
+		{
+			error("Open a project first.");
+			return;
+		}
+		String choice = fileDialog().open();
+		if(choice != null)
+		{
+			lastFiles.run(choice);
+		}
 	}
 
 	void runCommandDialog()
@@ -583,6 +682,7 @@ public class MainWindow
 		int errors = problemsPane.errorCount();
 		problemsTab.setText("Problems (" + problemsPane.count() + ")");
 		console.append(errors == 0 ? "Build OK\n" : "Build failed: " + errors + " error(s)\n", errors > 0);
+		assist.refresh();
 		if(errors > 0)
 		{
 			bottom.setSelection(problemsTab);
@@ -643,48 +743,99 @@ public class MainWindow
 			error("Open a project first.");
 			return;
 		}
-		if(f != null && f.isFile() && (TestFinder.isTestClass(contentOf(f)) || MainFinder.hasMain(f)))
+		if(f != null && f.isFile() && TestFinder.isTestClass(contentOf(f)))
 		{
-			launchMain(f);
+			runTestsIn(f);
 			return;
 		}
-		List<File> mains = MainFinder.findAll(project.sourceFolders);
-		if(mains.size() == 1)
+		List<MainFinder.Main> mains = new ArrayList<MainFinder.Main>();
+		if(f != null && f.isFile() && f.getName().endsWith(".java"))
 		{
-			launchMain(mains.get(0));
-			return;
+			EditorTab tab = tabFor(f);
+			mains = tab != null ? MainFinder.inSource(f, tab.editor.getContent()) : MainFinder.inFile(f);
+		}
+		if(mains.isEmpty())
+		{
+			mains = allMains();
 		}
 		if(mains.isEmpty())
 		{
 			error("No class with a main method found in " + project.name);
 			return;
 		}
-		StringBuilder sb = new StringBuilder("Several classes have a main method; open or select one and press Run:\n");
-		for(File m : mains)
-		{
-			sb.append("\n").append(project.classNameOf(m));
-		}
-		error(sb.toString());
+		runOneOf(mains);
 	}
 
-	void launchMain(File file)
+	EditorTab tabFor(File f)
 	{
-		if(project == null || file == null || !file.getName().endsWith(".java"))
+		for(EditorTab tab : editors.tabs())
 		{
-			error("Select or open a Java file with a main method.");
+			if(tab.file.equals(f))
+			{
+				return tab;
+			}
+		}
+		return null;
+	}
+
+	// Every main in the project, using the text of files that have unsaved changes.
+	List<MainFinder.Main> allMains()
+	{
+		java.util.Map<File, String> unsaved = new java.util.HashMap<File, String>();
+		for(EditorTab tab : editors.tabs())
+		{
+			if(tab.isDirty() && tab.file.getName().endsWith(".java"))
+			{
+				unsaved.put(tab.file, tab.editor.getContent());
+			}
+		}
+		return MainFinder.inProject(project.sourceFolders, unsaved);
+	}
+
+	// Runs the only candidate, or asks which one; the last choice is offered first.
+	void runOneOf(List<MainFinder.Main> mains)
+	{
+		MainFinder.Main pick = mains.get(0);
+		if(mains.size() > 1)
+		{
+			List<MainFinder.Main> ordered = new ArrayList<MainFinder.Main>(mains);
+			String last = settings.getLastMain();
+			ordered.sort((a, b) -> Boolean.compare(!b.className.equals(last), !a.className.equals(last)));
+			List<String> labels = new ArrayList<String>();
+			for(MainFinder.Main m : ordered)
+			{
+				labels.add(m.label());
+			}
+			String choice = ChoiceDialog.choose(shell, "Run which main class?", labels);
+			if(choice == null)
+			{
+				return;
+			}
+			pick = ordered.get(labels.indexOf(choice));
+		}
+		launchMain(pick);
+	}
+
+	public void runMainClass()
+	{
+		if(project == null)
+		{
+			error("Open a project first.");
 			return;
 		}
-		String cls = project.classNameOf(file);
-		if(cls == null)
+		List<MainFinder.Main> mains = allMains();
+		if(mains.isEmpty())
 		{
-			error("File is not in a source folder.");
+			error("No class with a main method found in " + project.name);
 			return;
 		}
-		if(TestFinder.isTestClass(contentOf(file)))
-		{
-			runTestsIn(file);
-			return;
-		}
+		runOneOf(mains);
+	}
+
+	void launchMain(MainFinder.Main main)
+	{
+		String cls = main.className;
+		settings.setLastMain(cls);
 		build(() ->
 		{
 			if(hasErrors())
@@ -914,6 +1065,87 @@ public class MainWindow
 		}
 		String method = TestFinder.methodAt(tab.editor.getContent(), tab.editor.getControl().getCaretOffset());
 		runSpecs(java.util.Arrays.asList(method == null ? cls : cls + "#" + method));
+	}
+
+	MenuItem contextItem(Menu menu, String text, Runnable action)
+	{
+		MenuItem item = new MenuItem(menu, SWT.PUSH);
+		item.setText(text);
+		item.addListener(SWT.Selection, e -> action.run());
+		return item;
+	}
+
+	// The editor's right-click menu: editing, navigation and import features with their shortcuts.
+	void editorMenu(EditorTab tab)
+	{
+		org.eclipse.swt.custom.StyledText t = tab.editor.getControl();
+		boolean java = tab.file.getName().endsWith(".java");
+		Menu menu = new Menu(t);
+		MenuItem cut = contextItem(menu, "Cut\tCtrl+X", () -> t.cut());
+		MenuItem copy = contextItem(menu, "Copy\tCtrl+C", () -> t.copy());
+		contextItem(menu, "Paste\tCtrl+V", () -> t.paste());
+		contextItem(menu, "Select All\tCtrl+A", () -> t.selectAll());
+		contextItem(menu, "Undo\tCtrl+Z", () -> tab.editor.undo());
+		contextItem(menu, "Redo\tCtrl+Y", () -> tab.editor.redo());
+		new MenuItem(menu, SWT.SEPARATOR);
+		java.util.List<MenuItem> javaItems = new ArrayList<MenuItem>();
+		contextItem(menu, "Show in Sidebar\tCtrl+Alt+W", () -> showInSidebar());
+		javaItems.add(contextItem(menu, "Open Declaration\tF3", () -> navigation.openDeclaration(tab, t.getCaretOffset())));
+		javaItems.add(contextItem(menu, "Open Implementation\tCtrl+T", () -> navigation.openImplementation(tab, t.getCaretOffset())));
+		javaItems.add(contextItem(menu, "Call Hierarchy\tCtrl+Alt+H", () -> navigation.callHierarchy(tab, t.getCaretOffset())));
+		new MenuItem(menu, SWT.SEPARATOR);
+		javaItems.add(contextItem(menu, "Content Assist\tCtrl+Space", () -> tab.editor.triggerCompletion(true)));
+		javaItems.add(contextItem(menu, "Quick Fix\tCtrl+1", () -> importActions.quickFix(tab)));
+		javaItems.add(contextItem(menu, "Add Import\tCtrl+Shift+M", () -> importActions.addImport(tab)));
+		javaItems.add(contextItem(menu, "Organize Imports\tCtrl+Shift+O", () -> importActions.organize(tab)));
+		new MenuItem(menu, SWT.SEPARATOR);
+		javaItems.add(contextItem(menu, "Run Test at Cursor\tCtrl+Alt+R", () -> runTestAtCursor()));
+		javaItems.add(contextItem(menu, "Go to Matching Bracket\tCtrl+Shift+P", () -> tab.editor.goToMatchingBracket()));
+		t.setMenu(menu);
+		// a right click puts the caret where you clicked, unless that is inside the selection
+		t.addListener(SWT.MenuDetect, e ->
+		{
+			try
+			{
+				int offset = t.getOffsetAtPoint(t.toControl(e.x, e.y));
+				org.eclipse.swt.graphics.Point sel = t.getSelection();
+				if(offset < sel.x || offset > sel.y)
+				{
+					t.setCaretOffset(offset);
+				}
+			}
+			catch(IllegalArgumentException ex)
+			{
+			}
+		});
+		menu.addListener(SWT.Show, e ->
+		{
+			cut.setEnabled(t.getSelectionCount() > 0);
+			copy.setEnabled(t.getSelectionCount() > 0);
+			for(MenuItem item : javaItems)
+			{
+				item.setEnabled(java);
+			}
+		});
+	}
+
+	void withEditor(java.util.function.Consumer<EditorTab> action)
+	{
+		EditorTab tab = editors.active();
+		if(tab != null)
+		{
+			action.accept(tab);
+		}
+	}
+
+	void contentAssist()
+	{
+		EditorTab tab = editors.active();
+		if(tab != null)
+		{
+			tab.editor.getControl().setFocus();
+			tab.editor.triggerCompletion(true);
+		}
 	}
 
 	void goToMatchingBracket()

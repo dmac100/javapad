@@ -1,8 +1,10 @@
 package javapad;
 
 import java.io.File;
-import javapad.ui.MainWindow;
+
 import org.eclipse.swt.widgets.Display;
+
+import javapad.ui.MainWindow;
 
 public class JavaPad
 {

@@ -67,7 +67,18 @@ public class JUnitPane
 		tree.addListener(SWT.Selection, e -> showDetail());
 		detail.addListener(SWT.MouseUp, e -> clicked(e.x, e.y));
 		detail.addListener(SWT.MouseMove, e -> hover(e.x, e.y));
-		tree.addListener(SWT.DefaultSelection, e -> openSelected());
+		tree.addListener(SWT.DefaultSelection, e ->
+		{
+			TreeItem[] sel = tree.getSelection();
+			if(sel.length > 0 && sel[0].getItemCount() > 0)
+			{
+				sel[0].setExpanded(!sel[0].getExpanded());
+			}
+			else
+			{
+				openSelected();
+			}
+		});
 		Menu menu = new Menu(tree);
 		MenuItem runSelected = new MenuItem(menu, SWT.PUSH);
 		runSelected.setText("Run Selected");
