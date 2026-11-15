@@ -64,4 +64,16 @@ public class ProjectGeneratorTest
 		EclipseProject fresh = EclipseProject.regenerate(d);
 		assertEquals(new File(d, "src"), fresh.sourceFolders.get(0));
 	}
+
+	@Test
+	public void usesProjectFolderWhenThereIsNoSrc() throws Exception
+	{
+		File d = temp();
+		assertEquals(Arrays.asList(), ProjectGenerator.sourceFolders(d));
+		Files.write(new File(d, "Hello.java").toPath(), "class Hello {}".getBytes());
+		assertEquals(Arrays.asList(""), ProjectGenerator.sourceFolders(d));
+		EclipseProject p = EclipseProject.open(d);
+		assertEquals(Arrays.asList(p.root), p.sourceFolders);
+		assertEquals("Hello", p.classNameOf(new File(d, "Hello.java")));
+	}
 }

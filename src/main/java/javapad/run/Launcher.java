@@ -61,10 +61,22 @@ public class Launcher
 		return result;
 	}
 
+	// Older libraries (Mockito 1/cglib, Guice, Spring, ...) reflect into the JDK internals, which JDK 16+
+	// blocks by default. Eclipse-era projects expect that to work, so open the common packages.
+	static void addOpens(List<String> cmd)
+	{
+		String[] packages = {"java.lang", "java.lang.reflect", "java.util", "java.io", "java.net", "java.text", "java.nio"};
+		for(String p : packages)
+		{
+			cmd.add("--add-opens=java.base/" + p + "=ALL-UNNAMED");
+		}
+	}
+
 	public List<String> mainCommand(String className, String vmArgs, String args)
 	{
 		List<String> cmd = new ArrayList<String>();
 		cmd.add(javaExecutable());
+		addOpens(cmd);
 		cmd.addAll(splitArgs(vmArgs));
 		cmd.add("-cp");
 		cmd.add(project.classpathString());
@@ -73,10 +85,18 @@ public class Launcher
 		return cmd;
 	}
 
-	public List<String> junitCommand(List<String> classNames, boolean jupiter, File reportDir)
+	public static File liveLog(File reportDir)
+	{
+		return new File(reportDir, "live.log");
+	}
+
+	// specs are class names, or class#method to run a single test method
+	public List<String> junitCommand(List<String> specs, boolean jupiter, File reportDir)
 	{
 		List<String> cmd = new ArrayList<String>();
 		cmd.add(javaExecutable());
+		addOpens(cmd);
+		cmd.add("-Djavapad.live=" + liveLog(reportDir).getAbsolutePath());
 		cmd.add("-cp");
 		cmd.add(junitClasspath(jupiter));
 		if(jupiter)
@@ -85,16 +105,16 @@ public class Launcher
 			cmd.add("execute");
 			cmd.add("--details=tree");
 			cmd.add("--reports-dir=" + new File(reportDir, "jupiter").getAbsolutePath());
-			for(String c : classNames)
+			for(String spec : specs)
 			{
-				cmd.add("--select-class=" + c);
+				cmd.add(spec.indexOf('#') < 0 ? "--select-class=" + spec : "--select-method=" + spec);
 			}
 		}
 		else
 		{
 			cmd.add("javapad.runner.JUnit4Runner");
 			cmd.add(new File(reportDir, "junit4.xml").getAbsolutePath());
-			cmd.addAll(classNames);
+			cmd.addAll(specs);
 		}
 		return cmd;
 	}
@@ -131,10 +151,7 @@ public class Launcher
 			extra.add(ClasspathParser.bundled("junit-4.13.2.jar"));
 			extra.add(ClasspathParser.bundled("hamcrest-core-1.3.jar"));
 		}
-		if(!jupiter)
-		{
-			extra.add(runnerLocation());
-		}
+		extra.add(runnerLocation());
 		StringBuilder sb = new StringBuilder(project.classpathString());
 		for(File f : extra)
 		{

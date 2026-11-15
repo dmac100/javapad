@@ -55,7 +55,28 @@ public class ProjectGenerator
 				sources.add(path);
 			}
 		}
+		if(sources.isEmpty() && hasJavaFiles(dir))
+		{
+			// no src folder: the source files sit in the project folder itself (Eclipse writes that as an empty path)
+			sources.add("");
+		}
 		return sources;
+	}
+
+	static boolean hasJavaFiles(File dir)
+	{
+		File[] files = dir.listFiles();
+		if(files != null)
+		{
+			for(File f : files)
+			{
+				if(f.isFile() && f.getName().endsWith(".java"))
+				{
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	public static List<String> libraries(File dir)

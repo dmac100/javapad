@@ -167,7 +167,7 @@ public class ClasspathParser
 			return;
 		}
 		File src = path.isEmpty() ? dir : resolve(dir, path);
-		project.sourceFolders.add(src.getAbsoluteFile());
+		project.sourceFolders.add(src.toPath().toAbsolutePath().normalize().toFile());
 	}
 
 	static void addContainer(EclipseProject project, String path)

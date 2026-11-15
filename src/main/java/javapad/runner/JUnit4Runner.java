@@ -12,6 +12,7 @@ import java.util.Map;
 import org.junit.internal.TextListener;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
+import org.junit.runner.Request;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
@@ -26,6 +27,7 @@ public class JUnit4Runner
 		long nanos;
 		Failure failure;
 		boolean skipped;
+		boolean started;
 	}
 
 	private static final List<Case> cases = new ArrayList<Case>();
@@ -34,10 +36,18 @@ public class JUnit4Runner
 	public static void main(String[] args) throws Exception
 	{
 		File report = new File(args[0]);
-		List<Class<?>> classes = new ArrayList<Class<?>>();
+		List<Request> requests = new ArrayList<Request>();
 		for(int i = 1; i < args.length; i++)
 		{
-			classes.add(Class.forName(args[i]));
+			int hash = args[i].indexOf('#');
+			if(hash < 0)
+			{
+				requests.add(Request.aClass(Class.forName(args[i])));
+			}
+			else
+			{
+				requests.add(Request.method(Class.forName(args[i].substring(0, hash)), args[i].substring(hash + 1)));
+			}
 		}
 		JUnitCore core = new JUnitCore();
 		core.addListener(new TextListener(System.out));
@@ -45,18 +55,28 @@ public class JUnit4Runner
 		{
 			public void testStarted(Description d)
 			{
-				caseFor(d).start = System.nanoTime();
+				Case c = caseFor(d);
+				c.start = System.nanoTime();
+				c.started = true;
+				LiveLog.event("RUN", c.className, c.name);
 			}
 
 			public void testFinished(Description d)
 			{
 				Case c = caseFor(d);
 				c.nanos = System.nanoTime() - c.start;
+				live(c);
 			}
 
 			public void testFailure(Failure f)
 			{
-				caseFor(f.getDescription()).failure = f;
+				Case c = caseFor(f.getDescription());
+				c.failure = f;
+				if(!c.started)
+				{
+					// e.g. a class that cannot be constructed: there is no start/finish pair
+					live(c);
+				}
 			}
 
 			public void testAssumptionFailure(Failure f)
@@ -66,13 +86,26 @@ public class JUnit4Runner
 
 			public void testIgnored(Description d)
 			{
-				caseFor(d).skipped = true;
+				Case c = caseFor(d);
+				c.skipped = true;
+				live(c);
 			}
 		});
-		Result result = core.run(classes.toArray(new Class<?>[0]));
+		boolean ok = true;
+		for(Request request : requests)
+		{
+			ok &= core.run(request).wasSuccessful();
+		}
 		write(report);
 		System.out.flush();
-		System.exit(result.wasSuccessful() ? 0 : 1);
+		System.exit(ok ? 0 : 1);
+	}
+
+	static void live(Case c)
+	{
+		String status = c.failure != null ? (c.failure.getException() instanceof AssertionError ? "F" : "E") : c.skipped ? "K" : "P";
+		String message = c.failure == null || c.failure.getMessage() == null ? "" : c.failure.getMessage();
+		LiveLog.event("END", c.className, c.name, status, String.valueOf(c.nanos / 1e9), message);
 	}
 
 	static Case caseFor(Description d)

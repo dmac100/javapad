@@ -29,6 +29,7 @@ public class Theme
 	public Color error;
 	public Color errorText;
 	public Color pass;
+	public Color bracket;
 	private final Display display;
 
 	public Theme(Display d)
@@ -86,6 +87,7 @@ public class Theme
 			error = color(244, 71, 71);
 			errorText = color(255, 110, 110);
 			pass = color(106, 190, 100);
+			bracket = color(70, 90, 120);
 		}
 		else
 		{
@@ -103,6 +105,7 @@ public class Theme
 			error = color(220, 30, 30);
 			errorText = color(200, 0, 0);
 			pass = color(0, 130, 0);
+			bracket = color(190, 215, 255);
 		}
 	}
 

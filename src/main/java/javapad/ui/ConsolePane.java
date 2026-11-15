@@ -8,6 +8,7 @@ import javapad.model.EclipseProject;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -21,11 +22,21 @@ public class ConsolePane
 	private final Composite composite;
 	private final StyledText text;
 	private final Text input;
-	private final java.util.List<int[]> segments = new java.util.ArrayList<int[]>();
+	private final java.util.List<Seg> segments = new java.util.ArrayList<Seg>();
+	private final java.util.Map<Integer, Color> colors = new java.util.HashMap<Integer, Color>();
+	private AnsiParser ansi = new AnsiParser();
 	private final Theme theme;
 	private EclipseProject project;
 	private Consumer<Location> opener;
 	private Consumer<String> inputSink;
+
+	static class Seg
+	{
+		int start;
+		int length;
+		boolean error;
+		AnsiParser.Style style;
+	}
 
 	public ConsolePane(Composite parent, Theme theme)
 	{
@@ -39,11 +50,19 @@ public class ConsolePane
 		text = new StyledText(composite, SWT.V_SCROLL | SWT.H_SCROLL | SWT.READ_ONLY);
 		text.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		text.setFont(theme.font);
+		ReadOnlyText.installKeys(text);
 		input = new Text(composite, SWT.BORDER | SWT.SINGLE);
 		input.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 		input.setMessage("stdin: type a line and press Enter");
 		input.addListener(SWT.DefaultSelection, e -> sendInput());
 		text.addListener(SWT.MouseUp, e -> clicked(e.x, e.y));
+		text.addListener(SWT.Dispose, e ->
+		{
+			for(Color c : colors.values())
+			{
+				c.dispose();
+			}
+		});
 	}
 
 	public Composite getControl()
@@ -80,6 +99,7 @@ public class ConsolePane
 	public void clear()
 	{
 		segments.clear();
+		ansi = new AnsiParser();
 		text.setText("");
 	}
 
@@ -90,16 +110,112 @@ public class ConsolePane
 
 	public void append(String s, boolean error)
 	{
-		int start = text.getCharCount();
-		text.append(s);
-		StyleRange range = new StyleRange();
-		range.start = start;
-		range.length = s.length();
-		range.foreground = error ? theme.errorText : theme.foreground;
-		text.setStyleRange(range);
-		segments.add(new int[] {start, s.length(), error ? 1 : 0});
-		linkify(start);
+		int first = text.getCharCount();
+		for(AnsiParser.Span span : ansi.parse(s))
+		{
+			Seg seg = new Seg();
+			seg.start = text.getCharCount();
+			seg.length = span.text.length();
+			seg.error = error;
+			seg.style = span.style;
+			text.append(span.text);
+			text.setStyleRange(styleFor(seg));
+			segments.add(seg);
+		}
+		if(text.getCharCount() > first)
+		{
+			linkify(first);
+		}
 		text.setTopIndex(text.getLineCount() - 1);
+	}
+
+	StyleRange styleFor(Seg seg)
+	{
+		StyleRange range = new StyleRange();
+		range.start = seg.start;
+		range.length = seg.length;
+		AnsiParser.Style st = seg.style;
+		// with an explicit background, use true terminal colours so pairs like white-on-blue keep their contrast
+		boolean literal = st.bg != AnsiParser.DEFAULT && !theme.dark;
+		Color fg = st.fg == AnsiParser.DEFAULT ? null : colorOf(st.fg, literal);
+		Color bg = st.bg == AnsiParser.DEFAULT ? null : colorOf(st.bg, !theme.dark);
+		Color normal = seg.error ? theme.errorText : theme.foreground;
+		if(st.reverse)
+		{
+			range.foreground = bg != null ? bg : theme.background;
+			range.background = fg != null ? fg : normal;
+		}
+		else
+		{
+			range.foreground = fg != null ? fg : normal;
+			range.background = bg;
+		}
+		if(st.bold)
+		{
+			range.fontStyle |= SWT.BOLD;
+		}
+		if(st.italic)
+		{
+			range.fontStyle |= SWT.ITALIC;
+		}
+		range.underline = st.underline;
+		return range;
+	}
+
+	static final int[][] DARK = {{80, 80, 80}, {244, 71, 71}, {106, 190, 100}, {229, 192, 123}, {86, 156, 214}, {198, 120, 221}, {78, 201, 176}, {212, 212, 212},
+		{128, 128, 128}, {255, 110, 110}, {140, 220, 130}, {255, 215, 130}, {120, 180, 240}, {220, 150, 240}, {110, 230, 200}, {255, 255, 255}};
+	static final int[][] LIGHT = {{0, 0, 0}, {200, 0, 0}, {0, 130, 0}, {150, 110, 0}, {0, 60, 200}, {150, 0, 150}, {0, 130, 130}, {120, 120, 120},
+		{90, 90, 90}, {230, 40, 40}, {0, 160, 0}, {180, 130, 0}, {40, 90, 230}, {180, 40, 180}, {0, 160, 160}, {60, 60, 60}};
+
+	static final int[][] XTERM = {{0, 0, 0}, {205, 0, 0}, {0, 160, 0}, {190, 150, 0}, {30, 60, 230}, {190, 0, 190}, {0, 170, 170}, {229, 229, 229},
+		{127, 127, 127}, {255, 60, 60}, {60, 220, 60}, {255, 235, 80}, {90, 120, 255}, {255, 90, 255}, {60, 230, 230}, {255, 255, 255}};
+
+	// ANSI colour code to a colour: 0-15 follow the theme, 16-255 are the xterm cube/greys, RGB is literal
+	Color colorOf(int code, boolean literal)
+	{
+		int key = code < 16 ? code + (theme.dark ? 0 : literal ? 2000 : 1000) : code;
+		Color c = colors.get(key);
+		if(c != null)
+		{
+			return c;
+		}
+		int r;
+		int g;
+		int b;
+		if(code >= AnsiParser.RGB)
+		{
+			r = (code >> 16) & 255;
+			g = (code >> 8) & 255;
+			b = code & 255;
+		}
+		else if(code < 16)
+		{
+			int[] rgb = (theme.dark ? DARK : literal ? XTERM : LIGHT)[code];
+			r = rgb[0];
+			g = rgb[1];
+			b = rgb[2];
+		}
+		else if(code < 232)
+		{
+			int n = code - 16;
+			r = level(n / 36);
+			g = level((n / 6) % 6);
+			b = level(n % 6);
+		}
+		else
+		{
+			r = 8 + 10 * (code - 232);
+			g = r;
+			b = r;
+		}
+		c = new Color(text.getDisplay(), r, g, b);
+		colors.put(key, c);
+		return c;
+	}
+
+	static int level(int v)
+	{
+		return v == 0 ? 0 : 55 + 40 * v;
 	}
 
 	public void restyle()
@@ -108,13 +224,9 @@ public class ConsolePane
 		text.setForeground(theme.foreground);
 		input.setBackground(theme.background);
 		input.setForeground(theme.foreground);
-		for(int[] seg : segments)
+		for(Seg seg : segments)
 		{
-			StyleRange range = new StyleRange();
-			range.start = seg[0];
-			range.length = seg[1];
-			range.foreground = seg[2] == 1 ? theme.errorText : theme.foreground;
-			text.setStyleRange(range);
+			text.setStyleRange(styleFor(seg));
 		}
 		linkify(0);
 	}

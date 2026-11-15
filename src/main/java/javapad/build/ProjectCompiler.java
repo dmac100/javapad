@@ -50,10 +50,21 @@ public class ProjectCompiler
 			options.add("UTF-8");
 			options.add("-proc:none");
 			options.add("-Xlint:-options");
-			if(project.release > 0)
+			int release = project.release;
+			int lowest = lowestRelease(compiler);
+			if(release > 0 && release < lowest)
 			{
-				options.add("--release");
-				options.add(String.valueOf(project.release));
+				problems.add(new Problem("", 0, 0, false, "Java " + release + " is no longer supported by this JDK; compiling for Java " + lowest + " instead"));
+				release = lowest;
+			}
+			if(release > 0)
+			{
+				// like Eclipse: language level and class version from the project, but the running JDK's
+				// libraries, so modules outside the Java SE API (jdk.jshell etc.) still resolve
+				options.add("-source");
+				options.add(String.valueOf(release));
+				options.add("-target");
+				options.add(String.valueOf(release));
 			}
 			Iterable<? extends JavaFileObject> units = fm.getJavaFileObjectsFromFiles(sources);
 			compiler.getTask(null, fm, diagnostics, options, null, units).call();
@@ -110,6 +121,46 @@ public class ProjectCompiler
 		{
 			return fallback;
 		}
+	}
+
+	private static int lowest;
+
+	// Asks the compiler itself which language levels it accepts (JDK 21 dropped 7 and below).
+	static synchronized int lowestRelease(JavaCompiler compiler)
+	{
+		if(lowest == 0)
+		{
+			lowest = Runtime.version().feature();
+			for(int n = 5; n < Runtime.version().feature(); n++)
+			{
+				java.io.StringWriter sink = new java.io.StringWriter();
+				JavaFileObject probe = new javax.tools.SimpleJavaFileObject(java.net.URI.create("string:///Probe.java"), JavaFileObject.Kind.SOURCE)
+				{
+					public CharSequence getCharContent(boolean ignoreEncodingErrors)
+					{
+						return "class Probe {}";
+					}
+				};
+				List<String> flags = java.util.Arrays.asList("-source", String.valueOf(n), "-target", String.valueOf(n), "-proc:none", "-Xlint:-options", "-d", System.getProperty("java.io.tmpdir"));
+				boolean ok;
+				try
+				{
+					ok = compiler.getTask(sink, null, null, flags, null, java.util.Arrays.asList(probe)).call();
+				}
+				catch(RuntimeException e)
+				{
+					ok = false;
+				}
+				java.io.File made = new java.io.File(System.getProperty("java.io.tmpdir"), "Probe.class");
+				made.delete();
+				if(ok)
+				{
+					lowest = n;
+					break;
+				}
+			}
+		}
+		return lowest;
 	}
 
 	static void collect(File dir, String suffix, List<File> out)

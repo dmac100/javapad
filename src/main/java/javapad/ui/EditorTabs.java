@@ -43,12 +43,25 @@ public class EditorTabs
 		return folder;
 	}
 
-	public EditorTab open(File file)
+	static File canonical(File file)
 	{
+		try
+		{
+			return file.toPath().toRealPath().toFile();
+		}
+		catch(IOException e)
+		{
+			return file.toPath().toAbsolutePath().normalize().toFile();
+		}
+	}
+
+	public EditorTab open(File requested)
+	{
+		File file = canonical(requested);
 		for(CTabItem item : folder.getItems())
 		{
 			EditorTab tab = (EditorTab)item.getData();
-			if(tab.file.equals(file))
+			if(canonical(tab.file).equals(file))
 			{
 				folder.setSelection(item);
 				return tab;
@@ -73,6 +86,12 @@ public class EditorTabs
 	{
 		CTabItem item = folder.getSelection();
 		return item == null ? null : (EditorTab)item.getData();
+	}
+
+	public void show(EditorTab tab)
+	{
+		folder.setSelection(tab.item);
+		tab.editor.getControl().setFocus();
 	}
 
 	public List<EditorTab> tabs()
@@ -171,9 +190,10 @@ public class EditorTabs
 	List<Problem> problemsFor(File file)
 	{
 		List<Problem> result = new ArrayList<Problem>();
+		File wanted = canonical(file);
 		for(Problem p : problems)
 		{
-			if(p.file.equals(file.getAbsolutePath()))
+			if(!p.file.isEmpty() && canonical(new File(p.file)).equals(wanted))
 			{
 				result.add(p);
 			}

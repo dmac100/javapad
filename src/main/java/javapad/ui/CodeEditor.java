@@ -34,6 +34,9 @@ public class CodeEditor
 	private Runnable modifyHook;
 	private Runnable compileHook;
 	private final Completion completion;
+	private boolean[] codeMask;
+	private int[] bracketPair;
+	private String shownTip;
 
 	static class Edit
 	{
@@ -70,6 +73,8 @@ public class CodeEditor
 			}
 		});
 		text.addVerifyKeyListener(e -> keyPressed(e));
+		text.addCaretListener(e -> updateBracket());
+		text.addListener(SWT.MouseMove, e -> updateTip(e.x, e.y));
 		Listener wheel = e -> wheel(e);
 		Display display = text.getDisplay();
 		display.addFilter(SWT.MouseWheel, wheel);
@@ -188,6 +193,101 @@ public class CodeEditor
 		return false;
 	}
 
+	void updateBracket()
+	{
+		if(codeMask == null || codeMask.length != text.getCharCount())
+		{
+			codeMask = BracketMatcher.codeMask(text.getText());
+		}
+		int[] pair = BracketMatcher.find(text.getText(), codeMask, text.getCaretOffset());
+		if(!java.util.Arrays.equals(pair, bracketPair))
+		{
+			bracketPair = pair;
+			text.redraw();
+		}
+	}
+
+	public void goToMatchingBracket()
+	{
+		updateBracket();
+		if(bracketPair != null)
+		{
+			// caret just after the partner when jumping forward, so the pair stays highlighted
+			int target = bracketPair[1] > bracketPair[0] ? bracketPair[1] + 1 : bracketPair[1];
+			text.setCaretOffset(target);
+			text.showSelection();
+		}
+	}
+
+	String problemTip(int x, int y)
+	{
+		int lineCount = text.getLineCount();
+		int line;
+		try
+		{
+			line = text.getLineIndex(y);
+		}
+		catch(IllegalArgumentException ex)
+		{
+			return null;
+		}
+		if(line < 0 || line >= lineCount)
+		{
+			return null;
+		}
+		int lineStart = text.getOffsetAtLine(line);
+		String content = text.getLine(line);
+		int textX = text.getLocationAtOffset(lineStart).x;
+		boolean gutter = x < textX;
+		int offset = -1;
+		if(!gutter)
+		{
+			try
+			{
+				offset = text.getOffsetAtPoint(new org.eclipse.swt.graphics.Point(x, y));
+			}
+			catch(IllegalArgumentException ex)
+			{
+				return null;
+			}
+		}
+		StringBuilder tip = new StringBuilder();
+		for(Problem p : problems)
+		{
+			if(p.line - 1 != line)
+			{
+				continue;
+			}
+			boolean hit = gutter;
+			if(!hit && offset >= 0)
+			{
+				boolean[] bad = new boolean[content.length()];
+				markBad(content, bad, p.column - 1);
+				int rel = offset - lineStart;
+				hit = rel >= 0 && rel < bad.length && bad[rel];
+			}
+			if(hit)
+			{
+				if(tip.length() > 0)
+				{
+					tip.append("\n");
+				}
+				tip.append(p.error ? "Error: " : "Warning: ").append(p.message);
+			}
+		}
+		return tip.length() == 0 ? null : tip.toString();
+	}
+
+	void updateTip(int x, int y)
+	{
+		String tip = problems.isEmpty() ? null : problemTip(x, y);
+		if(tip == null ? shownTip != null : !tip.equals(shownTip))
+		{
+			shownTip = tip;
+			text.setToolTipText(tip);
+		}
+	}
+
 	void styleLine(org.eclipse.swt.custom.LineStyleEvent e)
 	{
 		int line = text.getLineAtOffset(e.lineOffset);
@@ -204,16 +304,27 @@ public class CodeEditor
 				markBad(content, bad, p.column - 1);
 			}
 		}
+		boolean[] match = new boolean[content.length()];
+		if(bracketPair != null)
+		{
+			for(int p : bracketPair)
+			{
+				if(p >= e.lineOffset && p < e.lineOffset + content.length())
+				{
+					match[p - e.lineOffset] = true;
+				}
+			}
+		}
 		List<StyleRange> ranges = new ArrayList<StyleRange>();
 		int i = 0;
 		while(i < content.length())
 		{
 			int j = i + 1;
-			while(j < content.length() && styles[j] == styles[i] && bad[j] == bad[i])
+			while(j < content.length() && styles[j] == styles[i] && bad[j] == bad[i] && match[j] == match[i])
 			{
 				j++;
 			}
-			if(styles[i] != JavaLexer.PLAIN || bad[i])
+			if(styles[i] != JavaLexer.PLAIN || bad[i] || match[i])
 			{
 				StyleRange r = new StyleRange();
 				r.start = e.lineOffset + i;
@@ -221,6 +332,11 @@ public class CodeEditor
 				r.foreground = theme.colorFor(styles[i]);
 				if(styles[i] == JavaLexer.KEYWORD)
 				{
+					r.fontStyle = SWT.BOLD;
+				}
+				if(match[i])
+				{
+					r.background = theme.bracket;
 					r.fontStyle = SWT.BOLD;
 				}
 				if(bad[i])
@@ -283,6 +399,7 @@ public class CodeEditor
 
 	void modified(ExtendedModifyEvent e)
 	{
+		codeMask = null;
 		int firstLine = text.getLineAtOffset(e.start);
 		lineStates.clear();
 		rebuildStates(0);

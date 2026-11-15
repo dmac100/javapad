@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class TestFinder
@@ -19,6 +20,59 @@ public class TestFinder
 			return false;
 		}
 		return !ABSTRACT.matcher(content).find();
+	}
+
+	static final Pattern TEST_METHOD = Pattern.compile("@(?:org\\.junit\\.(?:jupiter\\.api\\.)?)?(?:Test|ParameterizedTest|RepeatedTest|TestFactory)\\b"
+		+ "(?:\\s*\\([^)]*\\))?(?:\\s*@[\\w.]+(?:\\s*\\([^)]*\\))?)*\\s+(?:(?:public|protected|private|static|final|synchronized)\\s+)*(?:<[^>]*>\\s+)?"
+		+ "[\\w<>\\[\\],.?]+\\s+(\\w+)\\s*\\(");
+
+	// The name of the @Test method whose declaration or body contains the offset, or null.
+	public static String methodAt(String content, int offset)
+	{
+		Matcher m = TEST_METHOD.matcher(content);
+		String found = null;
+		int bodyEnd = -1;
+		while(m.find() && m.start() <= offset)
+		{
+			found = m.group(1);
+			bodyEnd = bodyEnd(content, m.end());
+		}
+		return found != null && offset <= bodyEnd ? found : null;
+	}
+
+	static int bodyEnd(String content, int from)
+	{
+		int open = content.indexOf('{', from);
+		int semi = content.indexOf(';', from);
+		if(open < 0 || (semi >= 0 && semi < open))
+		{
+			return semi < 0 ? content.length() : semi;
+		}
+		int depth = 0;
+		for(int i = open; i < content.length(); i++)
+		{
+			char c = content.charAt(i);
+			if(c == '{')
+			{
+				depth++;
+			}
+			else if(c == '}')
+			{
+				depth--;
+				if(depth == 0)
+				{
+					return i;
+				}
+			}
+		}
+		return content.length();
+	}
+
+	// A test name from a result ("adds", "adds()") that can be selected as a method; null for parameterized/dynamic names.
+	public static String selectableMethod(String name)
+	{
+		String n = name.endsWith("()") ? name.substring(0, name.length() - 2) : name;
+		return n.matches("[\\w$]+") && !n.equals("<class>") ? n : null;
 	}
 
 	public static boolean isJupiter(String content)

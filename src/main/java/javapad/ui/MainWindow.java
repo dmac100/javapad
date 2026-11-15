@@ -11,6 +11,7 @@ import javapad.model.Problem;
 import javapad.run.LaunchSettings;
 import javapad.run.MainFinder;
 import javapad.run.Launcher;
+import javapad.run.LiveTail;
 import javapad.run.OutputListener;
 import javapad.run.JUnitReport;
 import javapad.run.TestFinder;
@@ -57,6 +58,8 @@ public class MainWindow
 	private final java.util.Set<File> parsedReports = new java.util.HashSet<File>();
 	private final List<TestResult> allResults = new ArrayList<TestResult>();
 	private File testRunDir;
+	private LiveTail liveTail;
+	private final java.util.concurrent.ConcurrentLinkedQueue<String[]> liveEvents = new java.util.concurrent.ConcurrentLinkedQueue<String[]>();
 	private final SashForm horizontal;
 	private final SashForm vertical;
 	private EclipseProject project;
@@ -128,6 +131,7 @@ public class MainWindow
 		console.setOpener(l -> open(l));
 		problemsPane.setOpener(l -> open(l));
 		junitPane.setOpener(l -> open(l));
+		junitPane.setRunner(specs -> runSpecs(specs));
 		console.setInputSink(s ->
 		{
 			if(launcher != null)
@@ -185,7 +189,11 @@ public class MainWindow
 		{
 			s += "Shift+";
 		}
-		int key = accel & ~(SWT.MOD1 | SWT.SHIFT);
+		if((accel & SWT.ALT) != 0)
+		{
+			s += "Alt+";
+		}
+		int key = accel & ~(SWT.MOD1 | SWT.SHIFT | SWT.ALT);
 		if(key >= SWT.F1 && key <= SWT.F12)
 		{
 			return "F" + (key - SWT.F1 + 1);
@@ -208,6 +216,7 @@ public class MainWindow
 		Menu edit = submenu(bar, "Edit");
 		menuItem(edit, "Find...", SWT.MOD1 | 'F', () -> find());
 		menuItem(edit, "Go to Line...", SWT.MOD1 | 'L', () -> gotoLine());
+		menuItem(edit, "Go to Matching Bracket", SWT.MOD1 | SWT.SHIFT | 'P', () -> goToMatchingBracket());
 		Menu view = submenu(bar, "View");
 		MenuItem darkItem = new MenuItem(view, SWT.CHECK);
 		darkItem.setText("Dark Mode");
@@ -218,11 +227,18 @@ public class MainWindow
 			darkItem.setSelection(!darkItem.getSelection());
 			setDark(darkItem.getSelection());
 		});
+		commands.add("View > Show Project", () -> left.setSelection(projectTab));
+		commands.add("View > Show Sources", () -> left.setSelection(sourceTab));
+		commands.add("View > Show Problems", () -> bottom.setSelection(problemsTab));
+		commands.add("View > Show Console", () -> bottom.setSelection(consoleTab));
+		commands.add("View > Show JUnit", () -> bottom.setSelection(junitTab));
 		Menu run = submenu(bar, "Run");
 		menuItem(run, "Build", SWT.MOD1 | 'B', () -> build(null));
 		menuItem(run, "Build and Run", SWT.F11, () -> runActive());
 		menuItem(run, "Run", SWT.MOD1 | 'R', () -> runActive());
 		menuItem(run, "Run Tests", SWT.MOD1 | SWT.SHIFT | 'R', () -> runTests());
+		menuItem(run, "Run Test at Cursor", SWT.MOD1 | SWT.ALT | 'R', () -> runTestAtCursor());
+		menuItem(run, "Re-run Failed Tests", 0, () -> runSpecs(junitPane.failedSpecs()));
 		menuItem(run, "Program Arguments...", 0, () -> editArguments());
 		menuItem(run, "Stop", 0, () -> stop());
 		menuName = null;
@@ -444,6 +460,11 @@ public class MainWindow
 	CommandDialog commandDialog()
 	{
 		CommandList all = new CommandList();
+		for(EditorTab tab : editors.tabs())
+		{
+			String path = project == null ? tab.file.getName() : project.relative(tab.file).replace(File.separatorChar, '/');
+			all.add("Tab: " + path + (tab.isDirty() ? " *" : ""), () -> editors.show(tab));
+		}
 		all.addAll(commands);
 		if(project != null)
 		{
@@ -727,6 +748,7 @@ public class MainWindow
 
 	File newRunDir()
 	{
+		stopLive();
 		try
 		{
 			testRunDir = java.nio.file.Files.createTempDirectory("javapad-tests").toFile();
@@ -738,9 +760,43 @@ public class MainWindow
 		}
 		parsedReports.clear();
 		allResults.clear();
-		junitPane.clear();
+		junitPane.beginLive();
 		junitTab.setText("JUnit");
+		liveEvents.clear();
+		liveTail = new LiveTail(Launcher.liveLog(testRunDir), fields ->
+		{
+			liveEvents.add(fields);
+			display.asyncExec(() -> drainLive());
+		});
+		liveTail.start();
 		return testRunDir;
+	}
+
+	void drainLive()
+	{
+		String[] fields = liveEvents.poll();
+		while(fields != null)
+		{
+			if(!junitPane.getControl().isDisposed())
+			{
+				if(bottom.getSelection() != junitTab && junitPane.total() == 0)
+				{
+					bottom.setSelection(junitTab);
+				}
+				junitPane.liveEvent(fields);
+			}
+			fields = liveEvents.poll();
+		}
+	}
+
+	void stopLive()
+	{
+		if(liveTail != null)
+		{
+			liveTail.stop();
+			liveTail = null;
+		}
+		drainLive();
 	}
 
 	void collectReports()
@@ -749,6 +805,11 @@ public class MainWindow
 		{
 			return;
 		}
+		if(liveTail != null)
+		{
+			liveTail.flush();
+		}
+		drainLive();
 		List<File> found = new ArrayList<File>();
 		findXml(testRunDir, found);
 		for(File xml : found)
@@ -765,7 +826,7 @@ public class MainWindow
 				}
 			}
 		}
-		if(!allResults.isEmpty())
+		if(!allResults.isEmpty() && pending.isEmpty())
 		{
 			junitPane.setResults(new ArrayList<TestResult>(allResults));
 		}
@@ -798,6 +859,7 @@ public class MainWindow
 		{
 			return;
 		}
+		stopLive();
 		int failed = junitPane.failures();
 		int total = junitPane.total();
 		junitTab.setText(total == 0 ? "JUnit" : failed == 0 ? "JUnit (" + total + " passed)" : "JUnit (" + failed + " of " + total + " failed)");
@@ -826,11 +888,56 @@ public class MainWindow
 		if(files.isEmpty())
 		{
 			console.append("No JUnit test classes found in " + project.name + "\n", true);
-			bottom.setSelection(consoleTab);
 			error("No JUnit test classes found in " + project.name);
 			return;
 		}
-		List<File> toRun = files;
+		List<String> specs = new ArrayList<String>();
+		for(File f : files)
+		{
+			String cls = project.classNameOf(f);
+			if(cls != null)
+			{
+				specs.add(cls);
+			}
+		}
+		runSpecs(specs);
+	}
+
+	public void runTestAtCursor()
+	{
+		EditorTab tab = editors.active();
+		String cls = tab == null || project == null ? null : project.classNameOf(tab.file);
+		if(cls == null || !TestFinder.isTestClass(tab.editor.getContent()))
+		{
+			error("Put the cursor in a JUnit test method.");
+			return;
+		}
+		String method = TestFinder.methodAt(tab.editor.getContent(), tab.editor.getControl().getCaretOffset());
+		runSpecs(java.util.Arrays.asList(method == null ? cls : cls + "#" + method));
+	}
+
+	void goToMatchingBracket()
+	{
+		EditorTab tab = editors.active();
+		if(tab != null)
+		{
+			tab.editor.goToMatchingBracket();
+		}
+	}
+
+	// specs: class names, or class#method for a single test
+	public void runSpecs(List<String> specs)
+	{
+		if(project == null)
+		{
+			error("Open a project first.");
+			return;
+		}
+		if(specs.isEmpty())
+		{
+			console.append("No tests to run\n", true);
+			return;
+		}
 		build(() ->
 		{
 			if(hasErrors())
@@ -839,20 +946,17 @@ public class MainWindow
 			}
 			List<String> four = new ArrayList<String>();
 			List<String> five = new ArrayList<String>();
-			for(File f : toRun)
+			for(String spec : specs)
 			{
-				String cls = project.classNameOf(f);
-				if(cls == null)
+				int hash = spec.indexOf('#');
+				File f = project.sourceFor(hash < 0 ? spec : spec.substring(0, hash));
+				if(f != null && TestFinder.isJupiter(contentOf(f)))
 				{
-					continue;
-				}
-				if(TestFinder.isJupiter(contentOf(f)))
-				{
-					five.add(cls);
+					five.add(spec);
 				}
 				else
 				{
-					four.add(cls);
+					four.add(spec);
 				}
 			}
 			stop();
@@ -1048,6 +1152,15 @@ public class MainWindow
 			left.setSelection(sourceTab);
 		}
 		applyTabProperty();
+		String early = System.getProperty("javapad.early", "");
+		if(shot != null && !early.isEmpty())
+		{
+			// extra screenshots at the given milliseconds (comma separated), taken while a run is still going
+			for(String ms : early.split(","))
+			{
+				display.timerExec(Integer.parseInt(ms.trim()), () -> screenshot(shot + ".early" + ms.trim() + ".png"));
+			}
+		}
 		if(action.equals("build"))
 		{
 			build(finish);
@@ -1102,6 +1215,21 @@ public class MainWindow
 		else if(action.equals("test"))
 		{
 			idleHook = finish;
+			runTests();
+		}
+		else if(action.equals("testcursor"))
+		{
+			idleHook = finish;
+			runTestAtCursor();
+		}
+		else if(action.equals("rerunfailed"))
+		{
+			// run everything, then re-run only what failed
+			idleHook = () ->
+			{
+				idleHook = finish;
+				runSpecs(junitPane.failedSpecs());
+			};
 			runTests();
 		}
 		else if(shot != null)
