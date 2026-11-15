@@ -23,6 +23,7 @@ public class LaunchSettings
 			}
 			catch(Exception e)
 			{
+				// no saved settings yet, or they cannot be read: use the defaults
 			}
 		}
 	}
@@ -66,6 +67,7 @@ public class LaunchSettings
 		}
 		catch(Exception e)
 		{
+			// the settings simply are not remembered when the file cannot be written
 		}
 	}
 }

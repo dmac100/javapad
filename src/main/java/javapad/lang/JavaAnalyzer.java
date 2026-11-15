@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import javapad.build.ProjectCompiler;
 import javapad.model.EclipseProject;
@@ -87,6 +88,7 @@ public class JavaAnalyzer
 			}
 			catch(IOException e)
 			{
+				// closing is best effort
 			}
 			fileManager = null;
 		}
@@ -142,7 +144,7 @@ public class JavaAnalyzer
 		};
 		try
 		{
-			JavacTask task = (JavacTask)compiler.getTask(null, fileManager, diagnostics, options, null, java.util.Arrays.asList(source));
+			JavacTask task = (JavacTask)compiler.getTask(null, fileManager, diagnostics, options, null, Arrays.asList(source));
 			Iterable<? extends CompilationUnitTree> units = task.parse();
 			CompilationUnitTree unit = units.iterator().next();
 			task.analyze();

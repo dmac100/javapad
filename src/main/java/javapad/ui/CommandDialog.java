@@ -8,6 +8,7 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
@@ -95,7 +96,7 @@ public class CommandDialog
 		}
 	}
 
-	void key(org.eclipse.swt.widgets.Event e)
+	void key(Event e)
 	{
 		if(e.keyCode == SWT.ESC)
 		{

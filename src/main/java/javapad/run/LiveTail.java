@@ -38,6 +38,7 @@ public class LiveTail
 		}
 		catch(InterruptedException e)
 		{
+			// shutting down anyway
 		}
 	}
 

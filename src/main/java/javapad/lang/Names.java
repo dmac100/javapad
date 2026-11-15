@@ -1,5 +1,7 @@
 package javapad.lang;
 
+import java.util.List;
+
 public class Names
 {
 	// Prefix match ignoring case, or a camel-hump match: "NPE" matches NullPointerException.
@@ -35,7 +37,7 @@ public class Names
 		return dot < 0 ? qualified : qualified.substring(dot + 1);
 	}
 
-	// java.util.List<java.lang.String> becomes List<String>
+	// List<java.lang.String> becomes List<String>
 	public static String shorten(String type)
 	{
 		return type.replaceAll("\\b[a-z_][\\w]*(\\.[a-z_][\\w]*)*\\.(?=[A-Z_])", "");

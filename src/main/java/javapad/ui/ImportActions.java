@@ -2,6 +2,7 @@ package javapad.ui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import javapad.lang.ImportEditor;
 import javapad.lang.ImportFixer;
 import javapad.lang.JavaAnalyzer;
@@ -130,7 +131,7 @@ public class ImportActions
 			{
 				return;
 			}
-			for(java.util.Map.Entry<String, List<TypeIndex.Entry>> choice : plan.choices.entrySet())
+			for(Map.Entry<String, List<TypeIndex.Entry>> choice : plan.choices.entrySet())
 			{
 				TypeIndex.Entry pick = choose(choice.getKey(), choice.getValue());
 				if(pick == null)

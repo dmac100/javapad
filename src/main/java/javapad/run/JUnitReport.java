@@ -29,6 +29,7 @@ public class JUnitReport
 			}
 			catch(NumberFormatException ex)
 			{
+				// a malformed time stays 0
 			}
 			int status = TestResult.PASSED;
 			String message = "";

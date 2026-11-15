@@ -1,15 +1,19 @@
 package javapad.ui;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import javapad.lang.JavaFormatter;
+import java.util.function.Consumer;
 import javapad.lang.ImportEditor;
+import javapad.lang.JavaFormatter;
 import javapad.lang.Proposal;
 import javapad.model.Problem;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.Bullet;
 import org.eclipse.swt.custom.ExtendedModifyEvent;
 import org.eclipse.swt.custom.ExtendedModifyListener;
+import org.eclipse.swt.custom.LineStyleEvent;
+import org.eclipse.swt.custom.ST;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.VerifyEvent;
@@ -37,6 +41,7 @@ public class CodeEditor
 	private Runnable modifyHook;
 	private Runnable compileHook;
 	private final Completion completion;
+	private final LineEdits edits;
 	private boolean[] codeMask;
 	private int[] bracketPair;
 	private String shownTip;
@@ -54,7 +59,7 @@ public class CodeEditor
 
 	public interface Assist
 	{
-		void complete(String text, int offset, java.util.function.Consumer<javapad.lang.CompletionEngine.Completions> done);
+		void complete(String text, int offset, Consumer<javapad.lang.CompletionEngine.Completions> done);
 	}
 
 	static class Edit
@@ -84,6 +89,7 @@ public class CodeEditor
 			}
 		});
 		completion = new Completion(text);
+		edits = new LineEdits(text);
 		text.addTraverseListener(e ->
 		{
 			if(e.detail == SWT.TRAVERSE_TAB_PREVIOUS || e.detail == SWT.TRAVERSE_TAB_NEXT)
@@ -204,12 +210,12 @@ public class CodeEditor
 		StyleRange normal = new StyleRange();
 		normal.foreground = theme.gutter;
 		normal.metrics = new GlyphMetrics(0, 0, (bulletDigits + 1) * charWidth);
-		normalBullet = new Bullet(org.eclipse.swt.custom.ST.BULLET_NUMBER, normal);
+		normalBullet = new Bullet(ST.BULLET_NUMBER, normal);
 		StyleRange bad = new StyleRange();
 		bad.foreground = theme.error;
 		bad.fontStyle = SWT.BOLD;
 		bad.metrics = new GlyphMetrics(0, 0, (bulletDigits + 1) * charWidth);
-		errorBullet = new Bullet(org.eclipse.swt.custom.ST.BULLET_NUMBER, bad);
+		errorBullet = new Bullet(ST.BULLET_NUMBER, bad);
 	}
 
 	void updateBullets()
@@ -241,7 +247,7 @@ public class CodeEditor
 			codeMask = BracketMatcher.codeMask(text.getText());
 		}
 		int[] pair = BracketMatcher.find(text.getText(), codeMask, text.getCaretOffset());
-		if(!java.util.Arrays.equals(pair, bracketPair))
+		if(!Arrays.equals(pair, bracketPair))
 		{
 			bracketPair = pair;
 			text.redraw();
@@ -285,7 +291,7 @@ public class CodeEditor
 		{
 			try
 			{
-				offset = text.getOffsetAtPoint(new org.eclipse.swt.graphics.Point(x, y));
+				offset = text.getOffsetAtPoint(new Point(x, y));
 			}
 			catch(IllegalArgumentException ex)
 			{
@@ -329,7 +335,7 @@ public class CodeEditor
 		}
 	}
 
-	void styleLine(org.eclipse.swt.custom.LineStyleEvent e)
+	void styleLine(LineStyleEvent e)
 	{
 		int line = text.getLineAtOffset(e.lineOffset);
 		e.bulletIndex = line;
@@ -708,15 +714,25 @@ public class CodeEditor
 	{
 		boolean ctrl = (e.stateMask & SWT.MOD1) != 0;
 		boolean shift = (e.stateMask & SWT.SHIFT) != 0;
-		if(popup.handleKey(e))
+		if(popup.handleKey(e) || shortcut(e, ctrl, shift))
 		{
 			return;
 		}
+		if(ctrl)
+		{
+			return;
+		}
+		typed(e, shift);
+	}
+
+	// Ctrl and Alt commands and Home; true when the key was handled here.
+	boolean shortcut(VerifyEvent e, boolean ctrl, boolean shift)
+	{
 		if(ctrl && !shift && e.keyCode == ' ')
 		{
 			e.doit = false;
 			triggerCompletion(true);
-			return;
+			return true;
 		}
 		if(ctrl && (e.keyCode == 'z' || e.keyCode == 'Z'))
 		{
@@ -729,13 +745,13 @@ public class CodeEditor
 			{
 				undo();
 			}
-			return;
+			return true;
 		}
 		if(ctrl && (e.keyCode == 'y' || e.keyCode == 'Y'))
 		{
 			e.doit = false;
 			redo();
-			return;
+			return true;
 		}
 		if(ctrl && (e.character == '\r' || e.character == '\n'))
 		{
@@ -744,58 +760,60 @@ public class CodeEditor
 			{
 				compileHook.run();
 			}
-			return;
+			return true;
 		}
 		if(ctrl && e.keyCode == 'a')
 		{
 			e.doit = false;
 			text.selectAll();
-			return;
+			return true;
 		}
 		if(ctrl && e.keyCode == 'd')
 		{
 			e.doit = false;
-			deleteLine();
-			return;
+			edits.deleteLine();
+			return true;
 		}
 		if(ctrl && e.keyCode == SWT.ARROW_UP)
 		{
 			text.setTopPixel(text.getTopPixel() - 20);
-			return;
+			return true;
 		}
 		if(ctrl && e.keyCode == SWT.ARROW_DOWN)
 		{
 			text.setTopPixel(text.getTopPixel() + 20);
-			return;
+			return true;
 		}
 		if((e.stateMask & SWT.ALT) != 0 && e.keyCode == SWT.ARROW_UP)
 		{
 			e.doit = false;
-			moveLines(true);
-			return;
+			edits.moveLines(true);
+			return true;
 		}
 		if((e.stateMask & SWT.ALT) != 0 && e.keyCode == SWT.ARROW_DOWN)
 		{
 			e.doit = false;
-			moveLines(false);
-			return;
+			edits.moveLines(false);
+			return true;
 		}
 		if(e.keyCode == SWT.HOME && (shift || e.stateMask == 0))
 		{
 			e.doit = false;
-			smartHome(shift);
-			return;
+			edits.smartHome(shift);
+			return true;
 		}
-		if(ctrl)
-		{
-			return;
-		}
+		return false;
+	}
+
+	// Tab, Enter and the closing brace, which indent as you type.
+	void typed(VerifyEvent e, boolean shift)
+	{
 		if(e.keyCode == SWT.TAB || e.character == '\t')
 		{
 			if(shift || text.getSelectionCount() > 0)
 			{
 				e.doit = false;
-				shiftLines(shift);
+				edits.shiftLines(shift);
 			}
 			else if(completion.canComplete())
 			{
@@ -807,7 +825,7 @@ public class CodeEditor
 		if(e.character == '\r' || e.character == '\n')
 		{
 			e.doit = false;
-			newline();
+			edits.newline();
 			return;
 		}
 		if(e.character == '}')
@@ -824,140 +842,5 @@ public class CodeEditor
 				text.setCaretOffset(lineStart + indent.length() + 1);
 			}
 		}
-	}
-
-	void smartHome(boolean select)
-	{
-		int caret = text.getCaretOffset();
-		Point range = text.getSelectionRange();
-		int anchor = caret == range.x ? range.x + range.y : range.x;
-		int line = text.getLineAtOffset(caret);
-		int lineStart = text.getOffsetAtLine(line);
-		String content = text.getLine(line);
-		int firstText = Indenter.indentOf(content).length();
-		int target = lineStart;
-		if(select)
-		{
-			if(caret - lineStart > firstText && lineStart + firstText != anchor)
-			{
-				target = lineStart + firstText;
-			}
-		}
-		else if(caret - lineStart != firstText)
-		{
-			target = lineStart + firstText;
-		}
-		if(select)
-		{
-			text.setSelection(anchor, target);
-		}
-		else
-		{
-			text.setCaretOffset(target);
-		}
-		text.showSelection();
-	}
-
-	void deleteLine()
-	{
-		int line = text.getLineAtOffset(text.getCaretOffset());
-		int start = text.getOffsetAtLine(line);
-		int end = start + text.getLine(line).length();
-		if(end < text.getCharCount())
-		{
-			end++;
-		}
-		text.replaceTextRange(start, end - start, "");
-	}
-
-	void moveLines(boolean up)
-	{
-		Point sel = text.getSelection();
-		int first = text.getLineAtOffset(sel.x);
-		int last = text.getLineAtOffset(sel.y);
-		if(last > first && sel.y == text.getOffsetAtLine(last))
-		{
-			last--;
-		}
-		if(up && first == 0)
-		{
-			return;
-		}
-		if(!up && last + 1 >= text.getLineCount())
-		{
-			return;
-		}
-		int from = up ? first - 1 : first;
-		int to = up ? last : last + 1;
-		StringBuilder block = new StringBuilder();
-		for(int l = first; l <= last; l++)
-		{
-			if(l > first)
-			{
-				block.append('\n');
-			}
-			block.append(text.getLine(l));
-		}
-		String other = text.getLine(up ? first - 1 : last + 1);
-		String result = up ? block + "\n" + other : other + "\n" + block;
-		int start = text.getOffsetAtLine(from);
-		int end = text.getOffsetAtLine(to) + text.getLine(to).length();
-		text.replaceTextRange(start, end - start, result);
-		int newFirst = up ? first - 1 : first + 1;
-		int newLast = up ? last - 1 : last + 1;
-		text.setSelection(text.getOffsetAtLine(newFirst), text.getOffsetAtLine(newLast) + text.getLine(newLast).length());
-	}
-
-	void newline()
-	{
-		Point sel = text.getSelection();
-		int line = text.getLineAtOffset(sel.x);
-		int lineStart = text.getOffsetAtLine(line);
-		String before = text.getText(lineStart, sel.x - 1 < lineStart ? lineStart : sel.x - 1);
-		if(sel.x == lineStart)
-		{
-			before = "";
-		}
-		String indent = Indenter.newlineIndent(before);
-		String insert = "\n" + indent;
-		text.replaceTextRange(sel.x, sel.y - sel.x, insert);
-		text.setCaretOffset(sel.x + insert.length());
-		text.showSelection();
-	}
-
-	void shiftLines(boolean outdent)
-	{
-		Point sel = text.getSelection();
-		int first = text.getLineAtOffset(sel.x);
-		int last = text.getLineAtOffset(sel.y);
-		if(last > first && sel.y == text.getOffsetAtLine(last))
-		{
-			last--;
-		}
-		int start = text.getOffsetAtLine(first);
-		int end = last + 1 < text.getLineCount() ? text.getOffsetAtLine(last + 1) - 1 : text.getCharCount();
-		String block = text.getTextRange(start, end - start);
-		String[] lines = block.split("\n", -1);
-		StringBuilder result = new StringBuilder();
-		int firstDelta = 0;
-		int total = 0;
-		for(int i = 0; i < lines.length; i++)
-		{
-			String shifted = outdent ? Indenter.outdentLines(lines[i]) : Indenter.indentLines(lines[i]);
-			if(i > 0)
-			{
-				result.append('\n');
-			}
-			result.append(shifted);
-			if(i == 0)
-			{
-				firstDelta = shifted.length() - lines[i].length();
-			}
-			total += shifted.length() - lines[i].length();
-		}
-		text.replaceTextRange(start, end - start, result.toString());
-		int x = Math.max(start, sel.x + firstDelta);
-		int y = Math.max(x, sel.y + total);
-		text.setSelection(x, y);
 	}
 }

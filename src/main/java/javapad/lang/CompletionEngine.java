@@ -263,6 +263,7 @@ public class CompletionEngine
 				}
 				catch(Exception e)
 				{
+					// if accessibility cannot be decided, offer the member
 				}
 			}
 			Element owner = m.getEnclosingElement();
@@ -317,6 +318,7 @@ public class CompletionEngine
 			}
 			catch(Exception e)
 			{
+				// keep the declared type when it cannot be viewed as a member of the qualifier
 			}
 			return new Proposal(Proposal.FIELD, name, name + " : " + Names.shorten(t.toString()), owner, name, null, false, rank);
 		}
@@ -384,6 +386,7 @@ public class CompletionEngine
 						}
 						catch(Exception e)
 						{
+							// if accessibility cannot be decided, offer the member
 						}
 						out.add(proposalFor(r, m, dt, m.getEnclosingElement().equals(cls) ? 10 : 11));
 					}

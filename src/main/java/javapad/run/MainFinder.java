@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.type.TypeKind;
 import javax.tools.DiagnosticCollector;
@@ -263,6 +264,7 @@ public class MainFinder
 		}
 		catch(Throwable e)
 		{
+			// a source that cannot be parsed has no mains
 		}
 		return result;
 	}
@@ -343,7 +345,7 @@ public class MainFinder
 		{
 			return -1;
 		}
-		java.util.Set<Modifier> flags = m.getModifiers().getFlags();
+		Set<Modifier> flags = m.getModifiers().getFlags();
 		if(flags.contains(Modifier.PRIVATE) || flags.contains(Modifier.ABSTRACT))
 		{
 			return -1;
@@ -386,7 +388,7 @@ public class MainFinder
 
 	static String signature(MethodTree m, boolean inInterface)
 	{
-		java.util.Set<Modifier> flags = m.getModifiers().getFlags();
+		Set<Modifier> flags = m.getModifiers().getFlags();
 		StringBuilder sb = new StringBuilder();
 		if(flags.contains(Modifier.PUBLIC) || inInterface)
 		{

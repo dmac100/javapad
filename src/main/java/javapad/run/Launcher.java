@@ -8,7 +8,6 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import javapad.model.ClasspathParser;
 import javapad.model.EclipseProject;
@@ -201,6 +200,7 @@ public class Launcher
 			}
 			catch(InterruptedException e)
 			{
+				// interrupted while shutting down; the process is stopped anyway
 			}
 			listener.finished(code);
 		}, "launcher-wait");
@@ -245,6 +245,7 @@ public class Launcher
 			}
 			catch(IOException | InterruptedException e)
 			{
+				// the output stream closed with the process
 			}
 		}, "launcher-pump");
 		t.setDaemon(true);
@@ -266,6 +267,7 @@ public class Launcher
 		}
 		catch(IOException e)
 		{
+			// the process has already ended, so there is nobody to read the input
 		}
 	}
 

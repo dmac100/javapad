@@ -2,6 +2,7 @@ package javapad.build;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -88,6 +89,7 @@ public class ProjectCompiler
 			}
 			catch(IOException e)
 			{
+				// closing is best effort
 			}
 		}
 		for(Diagnostic<? extends JavaFileObject> d : diagnostics.getDiagnostics())
@@ -150,7 +152,7 @@ public class ProjectCompiler
 			lowest = Runtime.version().feature();
 			for(int n = 5; n < Runtime.version().feature(); n++)
 			{
-				java.io.StringWriter sink = new java.io.StringWriter();
+				StringWriter sink = new StringWriter();
 				JavaFileObject probe = new javax.tools.SimpleJavaFileObject(java.net.URI.create("string:///Probe.java"), JavaFileObject.Kind.SOURCE)
 				{
 					public CharSequence getCharContent(boolean ignoreEncodingErrors)
@@ -158,17 +160,17 @@ public class ProjectCompiler
 						return "class Probe {}";
 					}
 				};
-				List<String> flags = java.util.Arrays.asList("-source", String.valueOf(n), "-target", String.valueOf(n), "-proc:none", "-Xlint:-options", "-d", System.getProperty("java.io.tmpdir"));
+				List<String> flags = Arrays.asList("-source", String.valueOf(n), "-target", String.valueOf(n), "-proc:none", "-Xlint:-options", "-d", System.getProperty("java.io.tmpdir"));
 				boolean ok;
 				try
 				{
-					ok = compiler.getTask(sink, null, null, flags, null, java.util.Arrays.asList(probe)).call();
+					ok = compiler.getTask(sink, null, null, flags, null, Arrays.asList(probe)).call();
 				}
 				catch(RuntimeException e)
 				{
 					ok = false;
 				}
-				java.io.File made = new java.io.File(System.getProperty("java.io.tmpdir"), "Probe.class");
+				File made = new File(System.getProperty("java.io.tmpdir"), "Probe.class");
 				made.delete();
 				if(ok)
 				{
@@ -227,11 +229,13 @@ public class ProjectCompiler
 					}
 					catch(IOException e)
 					{
+						// a resource that cannot be copied is left out of the output folder; compile errors are reported separately
 					}
 				});
 			}
 			catch(IOException e)
 			{
+				// an unreadable resource folder is skipped
 			}
 		}
 	}

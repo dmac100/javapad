@@ -249,6 +249,7 @@ public class TypeIndex
 							}
 							catch(IOException e)
 							{
+								// an unreadable source file is left out of the index
 							}
 						}
 					}
@@ -257,6 +258,7 @@ public class TypeIndex
 		}
 		catch(Exception e)
 		{
+			// a module that cannot be listed is left out of the index
 		}
 		jdk = list;
 		return list;
@@ -315,11 +317,13 @@ public class TypeIndex
 				}
 				catch(IOException ex)
 				{
+					// an unreadable class entry is left out of the index
 				}
 			}
 		}
 		catch(IOException e)
 		{
+			// a jar that cannot be read is left out of the index
 		}
 	}
 
@@ -345,6 +349,7 @@ public class TypeIndex
 				}
 				catch(IOException e)
 				{
+					// an unreadable class file is left out of the index
 				}
 			}
 		}
@@ -383,6 +388,7 @@ public class TypeIndex
 				}
 				catch(IOException e)
 				{
+					// an unreadable source file is left out of the index
 				}
 			}
 		}

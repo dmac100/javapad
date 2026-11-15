@@ -1,6 +1,10 @@
 package javapad.ui;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -12,8 +16,8 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Event;
 
 public class ConsolePane
 {
@@ -23,8 +27,8 @@ public class ConsolePane
 	private final StyledText text;
 	private int inputStart;
 	private boolean internal;
-	private final java.util.List<Seg> segments = new java.util.ArrayList<Seg>();
-	private final java.util.Map<Integer, Color> colors = new java.util.HashMap<Integer, Color>();
+	private final List<Seg> segments = new ArrayList<Seg>();
+	private final Map<Integer, Color> colors = new HashMap<Integer, Color>();
 	private AnsiParser ansi = new AnsiParser();
 	private final Theme theme;
 	private EclipseProject project;
@@ -338,6 +342,7 @@ public class ConsolePane
 		}
 		catch(IllegalArgumentException e)
 		{
+			// the click was not over any text
 		}
 	}
 }

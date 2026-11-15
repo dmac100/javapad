@@ -4,9 +4,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import javapad.model.Problem;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CTabFolder2Adapter;
 import org.eclipse.swt.custom.CTabFolder;
+import org.eclipse.swt.custom.CTabFolderEvent;
 import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Shell;
@@ -20,7 +23,7 @@ public class EditorTabs
 	private Runnable compileHook;
 	private CodeAssist assist;
 	private NavigationActions navigation;
-	private java.util.function.Consumer<EditorTab> tabHook;
+	private Consumer<EditorTab> tabHook;
 
 	public EditorTabs(Composite parent, Theme theme)
 	{
@@ -28,9 +31,9 @@ public class EditorTabs
 		this.shell = parent.getShell();
 		folder = new CTabFolder(parent, SWT.BORDER);
 		folder.setTabHeight(folder.getTabHeight() + 3);
-		folder.addCTabFolder2Listener(new org.eclipse.swt.custom.CTabFolder2Adapter()
+		folder.addCTabFolder2Listener(new CTabFolder2Adapter()
 		{
-			public void close(org.eclipse.swt.custom.CTabFolderEvent e)
+			public void close(CTabFolderEvent e)
 			{
 				e.doit = confirmClose((EditorTab)((CTabItem)e.item).getData());
 			}
@@ -38,7 +41,7 @@ public class EditorTabs
 	}
 
 	// Called once for every tab that is opened, to add menus and the like.
-	public void setTabHook(java.util.function.Consumer<EditorTab> hook)
+	public void setTabHook(Consumer<EditorTab> hook)
 	{
 		tabHook = hook;
 	}

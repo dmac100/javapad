@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import javapad.lang.CodeModel;
 import javapad.lang.CompletionEngine;
 import javapad.lang.JavaAnalyzer;
@@ -128,6 +129,7 @@ public class CodeAssist
 			}
 			catch(Throwable ex)
 			{
+				// a failed analysis yields no proposals
 			}
 			CompletionEngine.Completions finalResult = result;
 			display.asyncExec(() ->
@@ -141,7 +143,7 @@ public class CodeAssist
 	}
 
 	// Runs arbitrary work against the analyzer off the UI thread and returns the result on it.
-	public <T> void submit(java.util.function.Supplier<T> work, Consumer<T> done)
+	public <T> void submit(Supplier<T> work, Consumer<T> done)
 	{
 		worker.execute(() ->
 		{
@@ -152,6 +154,7 @@ public class CodeAssist
 			}
 			catch(Throwable ex)
 			{
+				// a failed analysis yields no result
 			}
 			T finalResult = result;
 			display.asyncExec(() -> done.accept(finalResult));

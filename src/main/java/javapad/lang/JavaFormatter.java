@@ -1,6 +1,7 @@
 package javapad.lang;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,10 +16,6 @@ public class JavaFormatter
 	static final Pattern ANNOTATION = Pattern.compile("^@[\\w.]+(\\(.*\\))?$");
 	static final Pattern WORD_SWITCH = Pattern.compile("\\bswitch\\b");
 
-	static final int NORMAL = 0;
-	static final int BLOCK_COMMENT = 1;
-	static final int TEXT_BLOCK = 2;
-
 	public static class Result
 	{
 		public final String text;
@@ -30,13 +27,6 @@ public class JavaFormatter
 			this.text = text;
 			this.lastLine = lastLine;
 		}
-	}
-
-	static class Scan
-	{
-		String[] code;
-		int[] start;
-		boolean[] lineComment;
 	}
 
 	static class Frame
@@ -56,7 +46,7 @@ public class JavaFormatter
 	{
 		boolean crlf = text.contains("\r\n");
 		String[] split = text.replace("\r\n", "\n").split("\n", -1);
-		List<String> lines = new ArrayList<String>(java.util.Arrays.asList(split));
+		List<String> lines = new ArrayList<String>(Arrays.asList(split));
 		to = Math.min(to, lines.size() - 1);
 		from = Math.max(from, 0);
 		to = join(lines, from, to);
@@ -74,131 +64,18 @@ public class JavaFormatter
 		return new Result(sb.toString(), to);
 	}
 
-	// Masks strings, chars and comments with spaces and records the state each line starts in.
-	static Scan scan(List<String> lines)
+	static boolean plain(CodeMask s, int i)
 	{
-		int n = lines.size();
-		Scan s = new Scan();
-		s.code = new String[n];
-		s.start = new int[n];
-		s.lineComment = new boolean[n];
-		int state = NORMAL;
-		for(int i = 0; i < n; i++)
-		{
-			String line = lines.get(i);
-			s.start[i] = state;
-			char[] out = line.toCharArray();
-			int j = 0;
-			while(j < line.length())
-			{
-				char c = line.charAt(j);
-				if(state == BLOCK_COMMENT)
-				{
-					if(c == '*' && j + 1 < line.length() && line.charAt(j + 1) == '/')
-					{
-						out[j] = ' ';
-						out[j + 1] = ' ';
-						j += 2;
-						state = NORMAL;
-						continue;
-					}
-					out[j] = ' ';
-					j++;
-				}
-				else if(state == TEXT_BLOCK)
-				{
-					if(c == '\\')
-					{
-						out[j] = ' ';
-						if(j + 1 < line.length())
-						{
-							out[j + 1] = ' ';
-						}
-						j += 2;
-						continue;
-					}
-					if(line.startsWith("\"\"\"", j))
-					{
-						out[j] = ' ';
-						out[j + 1] = ' ';
-						out[j + 2] = ' ';
-						j += 3;
-						state = NORMAL;
-						continue;
-					}
-					out[j] = ' ';
-					j++;
-				}
-				else if(c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '/')
-				{
-					s.lineComment[i] = true;
-					for(int k = j; k < line.length(); k++)
-					{
-						out[k] = ' ';
-					}
-					j = line.length();
-				}
-				else if(c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '*')
-				{
-					out[j] = ' ';
-					out[j + 1] = ' ';
-					j += 2;
-					state = BLOCK_COMMENT;
-				}
-				else if(line.startsWith("\"\"\"", j))
-				{
-					out[j] = ' ';
-					out[j + 1] = ' ';
-					out[j + 2] = ' ';
-					j += 3;
-					state = TEXT_BLOCK;
-				}
-				else if(c == '"' || c == '\'')
-				{
-					out[j] = ' ';
-					j++;
-					while(j < line.length() && line.charAt(j) != c)
-					{
-						if(line.charAt(j) == '\\')
-						{
-							out[j] = ' ';
-							j++;
-							if(j >= line.length())
-							{
-								break;
-							}
-						}
-						out[j] = ' ';
-						j++;
-					}
-					if(j < line.length())
-					{
-						out[j] = ' ';
-						j++;
-					}
-				}
-				else
-				{
-					j++;
-				}
-			}
-			s.code[i] = new String(out);
-		}
-		return s;
-	}
-
-	static boolean plain(Scan s, int i)
-	{
-		return s.start[i] == NORMAL;
+		return s.start[i] == CodeMask.NORMAL;
 	}
 
 	// "{" on its own line moves up to the end of the previous line; "}" then "else"/"catch"/"finally" become "} else".
 	static int join(List<String> lines, int from, int to)
 	{
-		Scan s = scan(lines);
+		CodeMask s = CodeMask.of(lines);
 		int i = Math.max(from + 1, 1);
 		// work on a copy of the scan arrays that shrinks with the lines
-		List<String> code = new ArrayList<String>(java.util.Arrays.asList(s.code));
+		List<String> code = new ArrayList<String>(Arrays.asList(s.code));
 		List<Boolean> comment = new ArrayList<Boolean>();
 		List<Integer> start = new ArrayList<Integer>();
 		for(int k = 0; k < lines.size(); k++)
@@ -210,7 +87,7 @@ public class JavaFormatter
 		{
 			String here = code.get(i).trim();
 			String before = code.get(i - 1).trim();
-			boolean ok = start.get(i) == NORMAL && start.get(i - 1) == NORMAL && !comment.get(i - 1) && !before.isEmpty() && !here.isEmpty();
+			boolean ok = start.get(i) == CodeMask.NORMAL && start.get(i - 1) == CodeMask.NORMAL && !comment.get(i - 1) && !before.isEmpty() && !here.isEmpty();
 			boolean brace = false;
 			if(ok && here.startsWith("{"))
 			{
@@ -239,7 +116,7 @@ public class JavaFormatter
 
 	static int spacing(List<String> lines, int from, int to)
 	{
-		Scan s = scan(lines);
+		CodeMask s = CodeMask.of(lines);
 		for(int i = from; i <= to && i < lines.size(); i++)
 		{
 			if(!plain(s, i))
@@ -281,7 +158,7 @@ public class JavaFormatter
 
 	static void indent(List<String> lines, int from, int to)
 	{
-		Scan s = scan(lines);
+		CodeMask s = CodeMask.of(lines);
 		List<Frame> stack = new ArrayList<Frame>();
 		boolean ended = true;
 		int stmt = 0;
@@ -294,7 +171,7 @@ public class JavaFormatter
 			String trimmed = orig.trim();
 			String t = code.trim();
 			int level;
-			if(s.start[i] == BLOCK_COMMENT)
+			if(s.start[i] == CodeMask.BLOCK_COMMENT)
 			{
 				if(inRange && trimmed.startsWith("*"))
 				{
@@ -307,7 +184,7 @@ public class JavaFormatter
 				scanLine(code, stack, 0, stmt);
 				continue;
 			}
-			if(s.start[i] == TEXT_BLOCK)
+			if(s.start[i] == CodeMask.TEXT_BLOCK)
 			{
 				scanLine(code, stack, 0, stmt);
 				continue;

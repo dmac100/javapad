@@ -67,6 +67,7 @@ public class Theme
 		}
 		catch(Exception e)
 		{
+			// the theme preference is optional
 		}
 	}
 

@@ -6,14 +6,13 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.internal.TextListener;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Request;
-import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 
@@ -31,7 +30,7 @@ public class JUnit4Runner
 	}
 
 	private static final List<Case> cases = new ArrayList<Case>();
-	private static final Map<String, Case> byKey = new java.util.HashMap<String, Case>();
+	private static final Map<String, Case> byKey = new HashMap<String, Case>();
 
 	public static void main(String[] args) throws Exception
 	{

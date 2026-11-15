@@ -41,6 +41,7 @@ public class LiveLog
 		}
 		catch(Exception e)
 		{
+			// live progress is optional; the final report still has the results
 		}
 	}
 }

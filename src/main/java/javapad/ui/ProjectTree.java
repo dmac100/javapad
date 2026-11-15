@@ -1,6 +1,8 @@
 package javapad.ui;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.function.Consumer;
 import javapad.model.EclipseProject;
@@ -99,7 +101,7 @@ public class ProjectTree
 	// Expands the folders down to the file and selects it. Returns false when this tree does not show it.
 	public boolean reveal(File file)
 	{
-		java.nio.file.Path target = real(file);
+		Path target = real(file);
 		for(TreeItem top : tree.getItems())
 		{
 			TreeItem found = descend(top, target);
@@ -113,25 +115,25 @@ public class ProjectTree
 		return false;
 	}
 
-	static java.nio.file.Path real(File f)
+	static Path real(File f)
 	{
 		try
 		{
 			return f.toPath().toRealPath();
 		}
-		catch(java.io.IOException e)
+		catch(IOException e)
 		{
 			return f.toPath().toAbsolutePath().normalize();
 		}
 	}
 
-	TreeItem descend(TreeItem item, java.nio.file.Path target)
+	TreeItem descend(TreeItem item, Path target)
 	{
 		if(!(item.getData() instanceof File))
 		{
 			return null;
 		}
-		java.nio.file.Path here = real((File)item.getData());
+		Path here = real((File)item.getData());
 		if(here.equals(target))
 		{
 			return item;

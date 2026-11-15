@@ -52,6 +52,7 @@ public class Navigator
 			}
 			catch(Exception ex)
 			{
+				// javac could not resolve this node; fall through to the next candidate
 			}
 		}
 		return null;

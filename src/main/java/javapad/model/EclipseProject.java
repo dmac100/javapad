@@ -1,6 +1,8 @@
 package javapad.model;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -121,7 +123,7 @@ public class EclipseProject
 			{
 				try
 				{
-					String text = new String(java.nio.file.Files.readAllBytes(f.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+					String text = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
 					if(text.contains("org.junit.jupiter"))
 					{
 						found[1] = f.getName();
@@ -133,6 +135,7 @@ public class EclipseProject
 				}
 				catch(Exception e)
 				{
+					// a file that cannot be read does not count as a JUnit user
 				}
 			}
 			if(found[0] != null && found[1] != null)

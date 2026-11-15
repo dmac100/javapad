@@ -1,7 +1,9 @@
 package javapad.ui;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -41,7 +43,7 @@ public class JUnitPane
 	private Consumer<List<String>> runner;
 	private final Map<String, TreeItem> liveClasses = new LinkedHashMap<String, TreeItem>();
 	private final Map<String, TreeItem> liveTests = new LinkedHashMap<String, TreeItem>();
-	private final java.util.ArrayList<TestResult> liveResults = new java.util.ArrayList<TestResult>();
+	private final ArrayList<TestResult> liveResults = new ArrayList<TestResult>();
 
 	public JUnitPane(Composite parent, Theme theme)
 	{
@@ -118,7 +120,7 @@ public class JUnitPane
 	// class or class#method for each selected tree row (a class row means the whole class)
 	public List<String> selectedSpecs()
 	{
-		java.util.LinkedHashSet<String> specs = new java.util.LinkedHashSet<String>();
+		LinkedHashSet<String> specs = new LinkedHashSet<String>();
 		for(TreeItem item : tree.getSelection())
 		{
 			if(item.getData() instanceof TestResult)
@@ -131,12 +133,12 @@ public class JUnitPane
 				specs.add((String)item.getData("class"));
 			}
 		}
-		return new java.util.ArrayList<String>(specs);
+		return new ArrayList<String>(specs);
 	}
 
 	public List<String> failedSpecs()
 	{
-		java.util.LinkedHashSet<String> specs = new java.util.LinkedHashSet<String>();
+		LinkedHashSet<String> specs = new LinkedHashSet<String>();
 		if(results != null)
 		{
 			for(TestResult r : results)
@@ -147,7 +149,7 @@ public class JUnitPane
 				}
 			}
 		}
-		return new java.util.ArrayList<String>(specs);
+		return new ArrayList<String>(specs);
 	}
 
 	// Called at the start of a run: results then arrive one at a time through liveEvent.
@@ -207,6 +209,7 @@ public class JUnitPane
 		}
 		catch(NumberFormatException e)
 		{
+			// a malformed time stays 0
 		}
 		TestResult r = new TestResult(cls, f[2], seconds, status, f.length > 5 ? f[5] : "", "");
 		liveResults.add(r);
@@ -230,7 +233,7 @@ public class JUnitPane
 		{
 			failed += t.bad() ? 1 : 0;
 		}
-		results = new java.util.ArrayList<TestResult>(liveResults);
+		results = new ArrayList<TestResult>(liveResults);
 		summary.setText("Running...  Done: " + liveResults.size() + "    Failures: " + failed);
 		bar.setBackground(failed > 0 ? theme.error : theme.pass);
 		if(r.bad() && tree.getSelectionCount() == 0)
@@ -310,20 +313,20 @@ public class JUnitPane
 		results = list;
 		tree.removeAll();
 		detail.setText("");
-		Map<String, java.util.List<TestResult>> byClass = new LinkedHashMap<String, java.util.List<TestResult>>();
+		Map<String, List<TestResult>> byClass = new LinkedHashMap<String, List<TestResult>>();
 		int failed = 0;
 		int skipped = 0;
 		double seconds = 0;
 		for(TestResult r : list)
 		{
-			byClass.computeIfAbsent(r.className, k -> new java.util.ArrayList<TestResult>()).add(r);
+			byClass.computeIfAbsent(r.className, k -> new ArrayList<TestResult>()).add(r);
 			failed += r.bad() ? 1 : 0;
 			skipped += r.status == TestResult.SKIPPED ? 1 : 0;
 			seconds += r.seconds;
 		}
 		boolean expandAll = list.size() <= 40;
 		TreeItem firstBad = null;
-		for(Map.Entry<String, java.util.List<TestResult>> entry : byClass.entrySet())
+		for(Map.Entry<String, List<TestResult>> entry : byClass.entrySet())
 		{
 			int bad = 0;
 			for(TestResult r : entry.getValue())
@@ -442,6 +445,7 @@ public class JUnitPane
 		}
 		catch(IllegalArgumentException e)
 		{
+			// the click was not over any row
 		}
 		return null;
 	}
