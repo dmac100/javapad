@@ -309,6 +309,19 @@ public class HistoryPane
 		}
 		showDetails(c, "");
 		GitRepo repo = w.git.repo();
+		// until a file is chosen, the pane shows the diff of the whole commit
+		int whole = ++diffGeneration;
+		w.git.background(() ->
+		{
+			String diff = limited(repo.commitDiff(c.hash, null));
+			return () ->
+			{
+				if(whole == diffGeneration && c == selectedCommit() && selectedFile() == null)
+				{
+					showDetails(c, diff);
+				}
+			};
+		});
 		int mine = ++filesGeneration;
 		w.git.background(() ->
 		{
@@ -329,6 +342,13 @@ public class HistoryPane
 		});
 	}
 
+	// a huge diff would make the text widget crawl, so it is cut off
+	static String limited(String diff)
+	{
+		int max = 400000;
+		return diff.length() <= max ? diff : diff.substring(0, max) + "\n... the diff is cut off here (" + (diff.length() - max) + " more characters). Select a file to see its own diff.\n";
+	}
+
 	void fileSelected()
 	{
 		Commit c = selectedCommit();
@@ -341,7 +361,7 @@ public class HistoryPane
 		int mine = ++diffGeneration;
 		w.git.background(() ->
 		{
-			String diff = repo.commitDiff(c.hash, f.path);
+			String diff = limited(repo.commitDiff(c.hash, f.path));
 			return () ->
 			{
 				if(mine == diffGeneration && c == selectedCommit() && f == selectedFile())
