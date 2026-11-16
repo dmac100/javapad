@@ -14,47 +14,58 @@ class GitMenu
 	private final List<MenuItem> needRepo = new ArrayList<MenuItem>();
 	private final List<MenuItem> needPath = new ArrayList<MenuItem>();
 	private MenuItem init;
+	private final CommandList commands;
 
-	GitMenu(MainWindow window)
+	// commands: every item is also added to this list (the Ctrl+3 dialog)
+	GitMenu(MainWindow window, CommandList commands)
 	{
 		this.w = window;
+		this.commands = commands;
 	}
 
-	// Adds the cascade to the menu.
+	// Adds a "Git" cascade to a pop-up menu.
 	void attach(Menu parent)
 	{
 		MenuItem cascade = new MenuItem(parent, SWT.CASCADE);
 		cascade.setText("Git");
 		Menu menu = new Menu(parent);
 		cascade.setMenu(menu);
-		init = item(menu, "Init", () -> w.git.init());
+		build(menu);
+	}
+
+	// Fills a menu with the git items.
+	void build(Menu menu)
+	{
+		init = entry(menu, "Git", "Init", () -> w.git.init());
 		new MenuItem(menu, SWT.SEPARATOR);
 		Menu stashes = cascade(menu, "Stashes");
+		commands.add("Git > Stashes > Stash Changes...", () -> w.git.stash());
 		stashes.addListener(SWT.Show, e -> fillStashes(stashes));
 		needRepo.add(stashes.getParentItem());
-		needRepo.add(item(menu, "Commit...", () -> w.git.commit()));
+		needRepo.add(entry(menu, "Git", "Commit...", () -> w.git.commit()));
 		new MenuItem(menu, SWT.SEPARATOR);
-		needRepo.add(item(menu, "Push to Origin", () -> w.git.pushOrigin()));
-		needRepo.add(item(menu, "Fetch from Origin", () -> w.git.fetchOrigin()));
-		needRepo.add(item(menu, "Push Branch...", () -> w.git.pushBranch()));
-		needRepo.add(item(menu, "Pull", () -> w.git.pull()));
+		needRepo.add(entry(menu, "Git", "Push to Origin", () -> w.git.pushOrigin()));
+		needRepo.add(entry(menu, "Git", "Fetch from Origin", () -> w.git.fetchOrigin()));
+		needRepo.add(entry(menu, "Git", "Push Branch...", () -> w.git.pushBranch()));
+		needRepo.add(entry(menu, "Git", "Pull", () -> w.git.pull()));
 		new MenuItem(menu, SWT.SEPARATOR);
 		Menu switchTo = cascade(menu, "Switch to");
+		commands.add("Git > Switch to > New Branch...", () -> w.git.switchToNew());
 		switchTo.addListener(SWT.Show, e -> fillBranches(switchTo));
 		needRepo.add(switchTo.getParentItem());
-		needRepo.add(item(menu, "Merge...", () -> w.git.merge()));
-		needRepo.add(item(menu, "Rebase...", () -> w.git.rebase()));
-		needRepo.add(item(menu, "Reset...", () -> w.git.reset()));
+		needRepo.add(entry(menu, "Git", "Merge...", () -> w.git.merge()));
+		needRepo.add(entry(menu, "Git", "Rebase...", () -> w.git.rebase()));
+		needRepo.add(entry(menu, "Git", "Reset...", () -> w.git.reset()));
 		new MenuItem(menu, SWT.SEPARATOR);
-		needPath.add(item(menu, "Add to Index", () -> w.git.addToIndex()));
-		needPath.add(item(menu, "Untrack", () -> w.git.untrack()));
-		needPath.add(item(menu, "Ignore", () -> w.git.ignore()));
+		needPath.add(entry(menu, "Git", "Add to Index", () -> w.git.addToIndex()));
+		needPath.add(entry(menu, "Git", "Untrack", () -> w.git.untrack()));
+		needPath.add(entry(menu, "Git", "Ignore", () -> w.git.ignore()));
 		Menu replace = cascade(menu, "Replace with");
-		item(replace, "Head Revision", () -> w.git.replaceWith(true));
-		item(replace, "Previous Revision", () -> w.git.replaceWith(false));
+		entry(replace, "Git > Replace with", "Head Revision", () -> w.git.replaceWith(true));
+		entry(replace, "Git > Replace with", "Previous Revision", () -> w.git.replaceWith(false));
 		needPath.add(replace.getParentItem());
 		new MenuItem(menu, SWT.SEPARATOR);
-		needPath.add(item(menu, "Show in History", () -> w.git.showInHistory()));
+		needPath.add(entry(menu, "Git", "Show in History", () -> w.git.showInHistory()));
 		menu.addListener(SWT.Show, e ->
 		{
 			boolean repo = w.git.repo() != null;
@@ -71,12 +82,38 @@ class GitMenu
 		});
 	}
 
+	// a menu item that is also listed in the command dialog as "path > text"
+	MenuItem entry(Menu menu, String path, String text, Runnable action)
+	{
+		commands.add(path + " > " + text, action);
+		return item(menu, text, action);
+	}
+
 	static MenuItem item(Menu menu, String text, Runnable action)
 	{
 		MenuItem mi = new MenuItem(menu, SWT.PUSH);
 		mi.setText(text);
 		mi.addListener(SWT.Selection, e -> action.run());
 		return mi;
+	}
+
+	// The commands that depend on the repository's current branches and stashes; call it each time the command dialog is built.
+	void addDynamic(CommandList list)
+	{
+		if(w.git.repo() == null)
+		{
+			return;
+		}
+		for(String b : w.git.repo().branches())
+		{
+			list.add("Git > Switch to > " + b, () -> w.git.switchTo(b));
+		}
+		for(Stash s : w.git.stashes())
+		{
+			list.add("Git > Stashes > " + s + " > Apply", () -> w.git.stashApply(s.ref));
+			list.add("Git > Stashes > " + s + " > Pop", () -> w.git.stashPop(s.ref));
+			list.add("Git > Stashes > " + s + " > Drop...", () -> w.git.stashDrop(s.ref));
+		}
 	}
 
 	static Menu cascade(Menu menu, String text)

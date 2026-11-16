@@ -14,6 +14,7 @@ class MenuBuilder
 	private final CommandList commands = new CommandList();
 	private String menuName;
 	private ToolItem stopItem;
+	private GitMenu gitMenu;
 
 	MenuBuilder(MainWindow window)
 	{
@@ -23,6 +24,12 @@ class MenuBuilder
 	CommandList commands()
 	{
 		return commands;
+	}
+
+	// the git commands that depend on the repository's branches and stashes
+	void addGitCommands(CommandList list)
+	{
+		gitMenu.addDynamic(list);
 	}
 
 	void addToolItems(ToolBar bar)
@@ -117,6 +124,8 @@ class MenuBuilder
 		menuItem(navigate, "Open Declaration", SWT.F3, () -> w.withEditor(t -> w.navigation.openDeclaration(t, t.editor.getControl().getCaretOffset())));
 		menuItem(navigate, "Open Implementation", SWT.MOD1 | 'T', () -> w.withEditor(t -> w.navigation.openImplementation(t, t.editor.getControl().getCaretOffset())));
 		menuItem(navigate, "Call Hierarchy", SWT.MOD1 | SWT.ALT | 'H', () -> w.withEditor(t -> w.navigation.callHierarchy(t, t.editor.getControl().getCaretOffset())));
+		gitMenu = new GitMenu(w, commands);
+		gitMenu.build(submenu(bar, "Git"));
 		Menu view = submenu(bar, "View");
 		MenuItem darkItem = new MenuItem(view, SWT.CHECK);
 		darkItem.setText("Dark Mode");
@@ -144,7 +153,7 @@ class MenuBuilder
 		menuItem(runMenu, "Re-run Failed Tests", 0, () -> w.run.runSpecs(w.junitPane.failedSpecs()));
 		menuItem(runMenu, "Program Arguments...", 0, () -> w.editArguments());
 		menuItem(runMenu, "Stop", 0, () -> w.run.stop());
-		menuName = null;
+		menuName = "Sidebar";
 		Menu treeMenu = new Menu(w.shell, SWT.POP_UP);
 		w.projectTree.getControl().setMenu(treeMenu);
 		w.sourceTree.getControl().setMenu(treeMenu);
@@ -155,7 +164,8 @@ class MenuBuilder
 		menuItem(treeMenu, "Delete", 0, () -> w.files.deleteSelected());
 		menuItem(treeMenu, "Refresh", 0, () -> w.refreshTrees());
 		new MenuItem(treeMenu, SWT.SEPARATOR);
-		new GitMenu(w).attach(treeMenu);
+		menuName = null;
+		new GitMenu(w, commands).attach(treeMenu);
 	}
 
 	Menu submenu(Menu bar, String label)

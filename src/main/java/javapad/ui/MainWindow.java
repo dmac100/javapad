@@ -413,6 +413,7 @@ public class MainWindow
 			all.add("Tab: " + path + (tab.isDirty() ? " *" : ""), () -> editors.show(tab));
 		}
 		all.addAll(menus.commands());
+		menus.addGitCommands(all);
 		lastCommands = all;
 		return new CommandDialog(shell, text -> all.find(text, 300));
 	}
