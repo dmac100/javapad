@@ -22,6 +22,19 @@ public class CommandListTest
 	}
 
 	@Test
+	public void starIsAWildcard()
+	{
+		CommandList list = new CommandList();
+		list.add("src/app/FooTest.java", () -> {});
+		list.add("src/app/Foo.java", () -> {});
+		list.add("docs/notes.txt", () -> {});
+		assertEquals(Arrays.asList("src/app/FooTest.java"), list.find("foo*test", 10));
+		assertEquals(Arrays.asList("docs/notes.txt"), list.find("*.txt", 10));
+		assertEquals(Arrays.asList("src/app/FooTest.java", "src/app/Foo.java"), list.find("src/*/foo*", 10));
+		assertEquals(Arrays.asList("docs/notes.txt"), list.find("n?tes", 10));
+	}
+
+	@Test
 	public void runsTheChosenCommand()
 	{
 		CommandList list = new CommandList();

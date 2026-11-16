@@ -13,13 +13,13 @@ import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
-import org.eclipse.swt.widgets.Table;
-import org.eclipse.swt.widgets.TableColumn;
-import org.eclipse.swt.widgets.TableItem;
+import org.eclipse.swt.widgets.Tree;
+import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.swt.widgets.TreeItem;
 
 public class ProblemsPane
 {
-	private final Table table;
+	private final Tree table;
 	private final List<Problem> shown = new ArrayList<Problem>();
 	private EclipseProject project;
 	private Consumer<Location> opener;
@@ -27,14 +27,14 @@ public class ProblemsPane
 
 	public ProblemsPane(Composite parent)
 	{
-		table = new Table(parent, SWT.FULL_SELECTION | SWT.MULTI | SWT.BORDER | SWT.V_SCROLL);
+		table = new Tree(parent, SWT.FULL_SELECTION | SWT.MULTI | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
 		table.setHeaderVisible(true);
 		table.setLinesVisible(true);
-		String[] titles = {"", "Description", "Resource", "Line"};
-		int[] widths = {24, 600, 300, 60};
+		String[] titles = {"Description", "Resource", "Line"};
+		int[] widths = {620, 300, 60};
 		for(int i = 0; i < titles.length; i++)
 		{
-			TableColumn c = new TableColumn(table, SWT.NONE);
+			TreeColumn c = new TreeColumn(table, SWT.NONE);
 			c.setText(titles[i]);
 			c.setWidth(widths[i]);
 		}
@@ -47,7 +47,7 @@ public class ProblemsPane
 		table.setMenu(menu);
 		menu.addListener(SWT.Show, e ->
 		{
-			copy.setEnabled(table.getSelectionCount() > 0);
+			copy.setEnabled(!selected().isEmpty());
 			copyErrors.setEnabled(errorCount() > 0);
 			copyAll.setEnabled(!shown.isEmpty());
 		});
@@ -72,9 +72,12 @@ public class ProblemsPane
 	List<Problem> selected()
 	{
 		List<Problem> result = new ArrayList<Problem>();
-		for(int i : table.getSelectionIndices())
+		for(TreeItem item : table.getSelection())
 		{
-			result.add(shown.get(i));
+			if(item.getData() instanceof Problem)
+			{
+				result.add((Problem)item.getData());
+			}
 		}
 		return result;
 	}
@@ -137,7 +140,7 @@ public class ProblemsPane
 		table.setHeaderForeground(theme.foreground);
 	}
 
-	public Table getControl()
+	public Tree getControl()
 	{
 		return table;
 	}
@@ -160,12 +163,12 @@ public class ProblemsPane
 
 	void preview()
 	{
-		int i = table.getSelectionIndex();
-		if(i < 0 || i >= shown.size() || previewer == null)
+		List<Problem> sel = selected();
+		if(sel.isEmpty() || previewer == null)
 		{
 			return;
 		}
-		Problem p = shown.get(i);
+		Problem p = sel.get(0);
 		if(!p.file.isEmpty())
 		{
 			previewer.accept(new Location(new File(p.file), p.line, p.column));
@@ -190,12 +193,27 @@ public class ProblemsPane
 			}
 		}
 		table.removeAll();
+		addGroup("Errors", true);
+		addGroup("Warnings", false);
+	}
+
+	// A top-level "Errors (n)" or "Warnings (n)" node with its problems below it.
+	void addGroup(String title, boolean errors)
+	{
+		int n = errors ? errorCount() : shown.size() - errorCount();
+		TreeItem group = new TreeItem(table, SWT.NONE);
+		group.setText(title + " (" + n + ")");
 		for(Problem p : shown)
 		{
-			TableItem item = new TableItem(table, SWT.NONE);
-			String resource = p.file.isEmpty() ? "" : project.relative(new File(p.file));
-			item.setText(new String[] {p.error ? "E" : "W", p.message, resource, p.line > 0 ? String.valueOf(p.line) : ""});
+			if(p.error == errors)
+			{
+				TreeItem item = new TreeItem(group, SWT.NONE);
+				item.setData(p);
+				String resource = p.file.isEmpty() ? "" : project.relative(new File(p.file));
+				item.setText(new String[] {p.message, resource, p.line > 0 ? String.valueOf(p.line) : ""});
+			}
 		}
+		group.setExpanded(n > 0);
 	}
 
 	public int errorCount()
@@ -218,12 +236,17 @@ public class ProblemsPane
 
 	void activate()
 	{
-		int i = table.getSelectionIndex();
-		if(i < 0 || opener == null)
+		TreeItem[] sel = table.getSelection();
+		if(sel.length == 0 || opener == null)
 		{
 			return;
 		}
-		Problem p = shown.get(i);
+		if(!(sel[0].getData() instanceof Problem))
+		{
+			sel[0].setExpanded(!sel[0].getExpanded());
+			return;
+		}
+		Problem p = (Problem)sel[0].getData();
 		if(!p.file.isEmpty())
 		{
 			opener.accept(new Location(new File(p.file), p.line, p.column));

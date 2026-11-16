@@ -60,13 +60,13 @@ public class JUnitPane
 		GridData barData = new GridData(SWT.FILL, SWT.TOP, true, false);
 		barData.heightHint = 6;
 		bar.setLayoutData(barData);
-		sash = new SashForm(composite, SWT.HORIZONTAL);
+		sash = new SashForm(composite, SWT.VERTICAL);
 		sash.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		tree = new Tree(sash, SWT.BORDER | SWT.SINGLE | SWT.V_SCROLL | SWT.H_SCROLL);
 		detail = new StyledText(sash, SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL | SWT.READ_ONLY);
 		detail.setFont(theme.font);
 		ReadOnlyText.installKeys(detail);
-		sash.setWeights(new int[] {45, 55});
+		sash.setWeights(new int[] {85, 15});
 		tree.addListener(SWT.Selection, e -> showDetail());
 		detail.addListener(SWT.MouseUp, e -> clicked(e.x, e.y));
 		detail.addListener(SWT.MouseMove, e -> hover(e.x, e.y));
@@ -471,6 +471,17 @@ public class JUnitPane
 		if(r == null || project == null || opener == null)
 		{
 			return;
+		}
+		String method = TestFinder.selectableMethod(r.name);
+		File declaring = method == null ? null : project.sourceFor(r.className);
+		if(declaring != null)
+		{
+			int line = TestFinder.methodLine(FileUtil.contentOf(declaring), method);
+			if(line > 0)
+			{
+				opener.accept(new Location(declaring, line, 1));
+				return;
+			}
 		}
 		File first = null;
 		int firstLine = 1;

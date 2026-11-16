@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import javapad.lang.ImportEditor;
+import javapad.lang.IndentConverter;
 import javapad.lang.JavaFormatter;
 import javapad.lang.Proposal;
 import javapad.model.Problem;
@@ -29,13 +30,14 @@ public class CodeEditor
 {
 	private final StyledText text;
 	private final Theme theme;
-	private final JavaLexer lexer = new JavaLexer();
+	private final JavaLexer lexer;
 	private final List<Integer> lineStates = new ArrayList<Integer>();
 	private final List<Edit> undo = new ArrayList<Edit>();
 	private final List<Edit> redo = new ArrayList<Edit>();
 	private List<Problem> problems = new ArrayList<Problem>();
 	private Bullet normalBullet;
 	private Bullet errorBullet;
+	private Bullet warningBullet;
 	private int bulletDigits;
 	private boolean replaying;
 	private Runnable modifyHook;
@@ -69,9 +71,11 @@ public class CodeEditor
 		String newText;
 	}
 
-	public CodeEditor(Composite parent, Theme theme)
+	// java: full syntax colouring; otherwise only numbers and quoted text are coloured
+	public CodeEditor(Composite parent, Theme theme, boolean java)
 	{
 		this.theme = theme;
+		lexer = new JavaLexer(java);
 		text = new StyledText(parent, SWT.V_SCROLL | SWT.H_SCROLL);
 		text.setFont(theme.font);
 		text.setBackground(theme.background);
@@ -216,6 +220,11 @@ public class CodeEditor
 		bad.fontStyle = SWT.BOLD;
 		bad.metrics = new GlyphMetrics(0, 0, (bulletDigits + 1) * charWidth);
 		errorBullet = new Bullet(ST.BULLET_NUMBER, bad);
+		StyleRange warn = new StyleRange();
+		warn.foreground = theme.warning;
+		warn.fontStyle = SWT.BOLD;
+		warn.metrics = new GlyphMetrics(0, 0, (bulletDigits + 1) * charWidth);
+		warningBullet = new Bullet(ST.BULLET_NUMBER, warn);
 	}
 
 	void updateBullets()
@@ -228,11 +237,11 @@ public class CodeEditor
 		}
 	}
 
-	boolean lineHasError(int line)
+	boolean lineHasProblem(int line, boolean error)
 	{
 		for(Problem p : problems)
 		{
-			if(p.error && p.line - 1 == line)
+			if(p.error == error && p.line - 1 == line)
 			{
 				return true;
 			}
@@ -339,16 +348,17 @@ public class CodeEditor
 	{
 		int line = text.getLineAtOffset(e.lineOffset);
 		e.bulletIndex = line;
-		e.bullet = lineHasError(line) ? errorBullet : normalBullet;
+		e.bullet = lineHasProblem(line, true) ? errorBullet : lineHasProblem(line, false) ? warningBullet : normalBullet;
 		String content = e.lineText;
 		int state = line < lineStates.size() ? lineStates.get(line) : JavaLexer.STATE_NORMAL;
 		int[] styles = lexer.styles(content, state);
 		boolean[] bad = new boolean[content.length()];
+		boolean[] warn = new boolean[content.length()];
 		for(Problem p : problems)
 		{
 			if(p.line - 1 == line)
 			{
-				markBad(content, bad, p.column - 1);
+				markBad(content, p.error ? bad : warn, p.column - 1);
 			}
 		}
 		boolean[] match = new boolean[content.length()];
@@ -367,11 +377,11 @@ public class CodeEditor
 		while(i < content.length())
 		{
 			int j = i + 1;
-			while(j < content.length() && styles[j] == styles[i] && bad[j] == bad[i] && match[j] == match[i])
+			while(j < content.length() && styles[j] == styles[i] && bad[j] == bad[i] && warn[j] == warn[i] && match[j] == match[i])
 			{
 				j++;
 			}
-			if(styles[i] != JavaLexer.PLAIN || bad[i] || match[i])
+			if(styles[i] != JavaLexer.PLAIN || bad[i] || warn[i] || match[i])
 			{
 				StyleRange r = new StyleRange();
 				r.start = e.lineOffset + i;
@@ -386,11 +396,11 @@ public class CodeEditor
 					r.background = theme.bracket;
 					r.fontStyle = SWT.BOLD;
 				}
-				if(bad[i])
+				if(bad[i] || warn[i])
 				{
 					r.underline = true;
 					r.underlineStyle = SWT.UNDERLINE_SQUIGGLE;
-					r.underlineColor = theme.error;
+					r.underlineColor = bad[i] ? theme.error : theme.warning;
 				}
 				ranges.add(r);
 			}
@@ -574,6 +584,21 @@ public class CodeEditor
 			int to = end < text.getLineCount() ? text.getOffsetAtLine(end) : text.getCharCount();
 			text.setSelection(text.getOffsetAtLine(first), to);
 		}
+	}
+
+	// Converts the indentation of the selected lines, or of the whole file, to tabs or to 4-column spaces.
+	public void convertIndent(boolean toTabs)
+	{
+		Point sel = text.getSelection();
+		boolean whole = sel.x == sel.y;
+		int first = whole ? 0 : text.getLineAtOffset(sel.x);
+		int last = whole ? Integer.MAX_VALUE : text.getLineAtOffset(sel.y);
+		if(!whole && last > first && sel.y == text.getOffsetAtLine(last))
+		{
+			last--;
+		}
+		String result = toTabs ? IndentConverter.toTabs(text.getText(), first, last) : IndentConverter.toSpaces(text.getText(), first, last);
+		replaceContentMinimal(result);
 	}
 
 	// Swaps in new content by replacing only the part that differs, so undo is one step and the caret and scroll position hold.

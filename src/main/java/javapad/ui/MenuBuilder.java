@@ -108,6 +108,8 @@ class MenuBuilder
 		Menu source = submenu(bar, "Source");
 		menuItem(source, "Organize Imports", SWT.MOD1 | SWT.SHIFT | 'O', () -> w.withEditor(t -> w.importActions.organize(t)));
 		menuItem(source, "Format", SWT.MOD1 | SWT.SHIFT | 'F', () -> w.withEditor(t -> w.format(t)));
+		menuItem(source, "Convert Spaces to Tabs", 0, () -> w.withEditor(t -> t.editor.convertIndent(true)));
+		menuItem(source, "Convert Tabs to Spaces", 0, () -> w.withEditor(t -> t.editor.convertIndent(false)));
 		menuItem(source, "Add Import", SWT.MOD1 | SWT.SHIFT | 'M', () -> w.withEditor(t -> w.importActions.addImport(t)));
 		menuItem(source, "Quick Fix", SWT.MOD1 | '1', () -> w.withEditor(t -> w.importActions.quickFix(t)));
 		Menu navigate = submenu(bar, "Navigate");
@@ -133,7 +135,8 @@ class MenuBuilder
 		commands.add("View > Show Call Hierarchy", () -> w.bottom.setSelection(w.callTab));
 		Menu runMenu = submenu(bar, "Run");
 		menuItem(runMenu, "Build", SWT.MOD1 | 'B', () -> w.run.build(null));
-		menuItem(runMenu, "Build and Run", SWT.F11, () -> w.run.runActive());
+		menuItem(runMenu, "Run Last Launched", SWT.F11, () -> w.run.runLast());
+		menuItem(runMenu, "Build and Run", 0, () -> w.run.runActive());
 		menuItem(runMenu, "Run", SWT.MOD1 | 'R', () -> w.run.runActive());
 		menuItem(runMenu, "Run Main Class...", 0, () -> w.run.runMainClass());
 		menuItem(runMenu, "Run Tests", SWT.MOD1 | SWT.F11, () -> w.run.runTests());

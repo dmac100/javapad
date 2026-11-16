@@ -56,4 +56,13 @@ public class TestMethodAtTest
 		assertNull(TestFinder.selectableMethod("[1] 3"));
 		assertNull(TestFinder.selectableMethod("<class>"));
 	}
+
+	@Test
+	public void findsTheLineOfADeclaration()
+	{
+		assertEquals(3, TestFinder.methodLine(SRC, "first"));
+		assertEquals(11, TestFinder.methodLine(SRC, "second"));
+		assertEquals(15, TestFinder.methodLine(SRC, "third"));
+		assertEquals(-1, TestFinder.methodLine(SRC, "helper"));
+	}
 }

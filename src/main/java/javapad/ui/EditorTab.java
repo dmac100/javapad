@@ -19,7 +19,7 @@ public class EditorTab
 	{
 		this.file = file;
 		item = new CTabItem(folder, SWT.CLOSE);
-		editor = new CodeEditor(folder, theme);
+		editor = new CodeEditor(folder, theme, file.getName().endsWith(".java"));
 		item.setControl(editor.getControl());
 		item.setData(this);
 		item.setToolTipText(file.getAbsolutePath());

@@ -29,9 +29,76 @@ public class JavaLexer
 		"boolean", "byte", "char", "double", "float", "int", "long", "short", "void"));
 
 	public int endState;
+	private final boolean java;
+
+	public JavaLexer()
+	{
+		this(true);
+	}
+
+	// java=false is for other kinds of files: only numbers and double-quoted text are coloured.
+	public JavaLexer(boolean java)
+	{
+		this.java = java;
+	}
+
+	// Numbers and "quoted text" on a single line, for files that are not Java.
+	int[] simpleStyles(String line)
+	{
+		int n = line.length();
+		int[] out = new int[n];
+		int i = 0;
+		while(i < n)
+		{
+			char c = line.charAt(i);
+			if(c == '"')
+			{
+				int j = i + 1;
+				while(j < n && line.charAt(j) != '"')
+				{
+					j += line.charAt(j) == '\\' ? 2 : 1;
+				}
+				int stop = Math.min(n, j + 1);
+				fill(out, i, stop, STRING);
+				i = stop;
+			}
+			else if(Character.isLetterOrDigit(c) || c == '_')
+			{
+				int j = i;
+				while(j < n && (Character.isLetterOrDigit(line.charAt(j)) || line.charAt(j) == '_'))
+				{
+					j++;
+				}
+				if(Character.isDigit(c))
+				{
+					// a decimal fraction belongs to the number
+					if(j + 1 < n && line.charAt(j) == '.' && Character.isDigit(line.charAt(j + 1)))
+					{
+						j++;
+						while(j < n && Character.isDigit(line.charAt(j)))
+						{
+							j++;
+						}
+					}
+					fill(out, i, j, NUMBER);
+				}
+				i = j;
+			}
+			else
+			{
+				i++;
+			}
+		}
+		endState = STATE_NORMAL;
+		return out;
+	}
 
 	public int[] styles(String line, int startState)
 	{
+		if(!java)
+		{
+			return simpleStyles(line);
+		}
 		int n = line.length();
 		int[] out = new int[n];
 		int state = startState;

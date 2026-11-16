@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class CommandList
 {
@@ -30,7 +31,12 @@ public class CommandList
 
 	public List<String> find(String text, int limit)
 	{
-		String[] tokens = text.toLowerCase().trim().split("\\s+");
+		String[] words = text.toLowerCase().trim().split("\\s+");
+		Pattern[] tokens = new Pattern[words.length];
+		for(int i = 0; i < words.length; i++)
+		{
+			tokens[i] = token(words[i]);
+		}
 		List<String> best = new ArrayList<String>();
 		List<String> good = new ArrayList<String>();
 		List<String> rest = new ArrayList<String>();
@@ -38,9 +44,9 @@ public class CommandList
 		{
 			String lower = label.toLowerCase();
 			boolean all = true;
-			for(String token : tokens)
+			for(Pattern token : tokens)
 			{
-				if(!lower.contains(token))
+				if(!token.matcher(lower).find())
 				{
 					all = false;
 					break;
@@ -51,11 +57,11 @@ public class CommandList
 				continue;
 			}
 			String name = namePart(lower);
-			if(name.startsWith(tokens[0]))
+			if(tokens[0].matcher(name).lookingAt())
 			{
 				best.add(label);
 			}
-			else if(name.contains(tokens[0]))
+			else if(tokens[0].matcher(name).find())
 			{
 				good.add(label);
 			}
@@ -68,6 +74,28 @@ public class CommandList
 		result.addAll(good);
 		result.addAll(rest);
 		return result.size() > limit ? new ArrayList<String>(result.subList(0, limit)) : result;
+	}
+
+	// a typed word as a pattern: '*' stands for any characters, '?' for one, everything else is literal
+	static Pattern token(String word)
+	{
+		StringBuilder sb = new StringBuilder();
+		for(char c : word.toCharArray())
+		{
+			if(c == '*')
+			{
+				sb.append(".*");
+			}
+			else if(c == '?')
+			{
+				sb.append('.');
+			}
+			else
+			{
+				sb.append(Pattern.quote(String.valueOf(c)));
+			}
+		}
+		return Pattern.compile(sb.toString());
 	}
 
 	static String namePart(String label)

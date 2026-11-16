@@ -54,4 +54,20 @@ public class JavaLexerTest
 		lexer.styles("/** doc", JavaLexer.STATE_NORMAL);
 		assertEquals(JavaLexer.STATE_DOC_COMMENT, lexer.endState);
 	}
+
+	@Test
+	public void otherFilesOnlyColourNumbersAndQuotedText()
+	{
+		JavaLexer lexer = new JavaLexer(false);
+		int[] s = lexer.styles("class a1 = 3.5 + \"if 4\" // x 'y'", 0);
+		String line = "class a1 = 3.5 + \"if 4\" // x 'y'";
+		assertEquals(JavaLexer.PLAIN, s[0]);
+		assertEquals(JavaLexer.PLAIN, s[line.indexOf("a1") + 1]);
+		assertEquals(JavaLexer.NUMBER, s[line.indexOf("3.5")]);
+		assertEquals(JavaLexer.NUMBER, s[line.indexOf("3.5") + 2]);
+		assertEquals(JavaLexer.STRING, s[line.indexOf("\"if")]);
+		assertEquals(JavaLexer.STRING, s[line.indexOf("4\"")]);
+		assertEquals(JavaLexer.PLAIN, s[line.indexOf("//")]);
+		assertEquals(JavaLexer.PLAIN, s[line.indexOf("'y'")]);
+	}
 }

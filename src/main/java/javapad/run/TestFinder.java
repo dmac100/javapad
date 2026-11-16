@@ -40,6 +40,28 @@ public class TestFinder
 		return found != null && offset <= bodyEnd ? found : null;
 	}
 
+	// The 1-based line of the declaration of the named @Test method, or -1.
+	public static int methodLine(String content, String method)
+	{
+		Matcher m = TEST_METHOD.matcher(content);
+		while(m.find())
+		{
+			if(m.group(1).equals(method))
+			{
+				int line = 1;
+				for(int i = 0; i < m.start(1); i++)
+				{
+					if(content.charAt(i) == '\n')
+					{
+						line++;
+					}
+				}
+				return line;
+			}
+		}
+		return -1;
+	}
+
 	static int bodyEnd(String content, int from)
 	{
 		int open = content.indexOf('{', from);

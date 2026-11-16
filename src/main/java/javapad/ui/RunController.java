@@ -44,6 +44,8 @@ class RunController
 	private final CTabItem consoleTab;
 	private final CTabItem problemsTab;
 	private final CTabItem junitTab;
+	// repeats the last main class or test run; null until something has been launched
+	private Runnable lastLaunch;
 	private final Supplier<File> currentFile;
 	private final Runnable beforeBuild;
 	private final Consumer<String> errorSink;
@@ -83,6 +85,7 @@ class RunController
 	{
 		this.project = project;
 		this.settings = settings;
+		lastLaunch = null;
 	}
 
 	void setStopItem(ToolItem item)
@@ -122,6 +125,18 @@ class RunController
 	void runActive()
 	{
 		runFrom(currentFile.get());
+	}
+
+	// Repeats the last main class or test run; the first time, it runs what the active file suggests.
+	void runLast()
+	{
+		if(lastLaunch == null)
+		{
+			runActive();
+			return;
+		}
+		beforeBuild.run();
+		lastLaunch.run();
 	}
 
 	void build(Runnable then)
@@ -289,6 +304,7 @@ class RunController
 	void launchMain(MainFinder.Main main)
 	{
 		String cls = main.className;
+		lastLaunch = () -> launchMain(main);
 		settings.setLastMain(cls);
 		build(() ->
 		{
@@ -386,9 +402,9 @@ class RunController
 		{
 			if(!junitPane.getControl().isDisposed())
 			{
-				if(bottom.getSelection() != junitTab && junitPane.total() == 0)
+				if(junitTab.getParent().getSelection() != junitTab && junitPane.total() == 0)
 				{
-					bottom.setSelection(junitTab);
+					junitTab.getParent().setSelection(junitTab);
 				}
 				junitPane.liveEvent(fields);
 			}
@@ -470,7 +486,7 @@ class RunController
 		int failed = junitPane.failures();
 		int total = junitPane.total();
 		junitTab.setText(total == 0 ? "JUnit" : failed == 0 ? "JUnit (" + total + " passed)" : "JUnit (" + failed + " of " + total + " failed)");
-		bottom.setSelection(junitTab);
+		junitTab.getParent().setSelection(junitTab);
 		FileUtil.deleteRecursive(testRunDir);
 		testRunDir = null;
 	}
@@ -536,6 +552,7 @@ class RunController
 			console.append("No tests to run\n", true);
 			return;
 		}
+		lastLaunch = () -> runSpecs(specs);
 		build(() ->
 		{
 			if(hasErrors())

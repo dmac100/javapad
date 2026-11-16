@@ -29,6 +29,7 @@ public class Theme
 	public Color annotation;
 	public Color gutter;
 	public Color error;
+	public Color warning;
 	public Color errorText;
 	public Color pass;
 	public Color bracket;
@@ -92,6 +93,7 @@ public class Theme
 			annotation = color(0x8a, 0xa6, 0xc1);
 			gutter = color(0x6b, 0x7f, 0x8f);
 			error = color(244, 71, 71);
+			warning = color(255, 165, 40);
 			errorText = color(255, 110, 110);
 			pass = color(106, 190, 100);
 			bracket = color(0x25, 0x3e, 0x5a);
@@ -112,6 +114,7 @@ public class Theme
 			annotation = color(100, 100, 100);
 			gutter = color(140, 140, 140);
 			error = color(220, 30, 30);
+			warning = color(230, 130, 0);
 			errorText = color(200, 0, 0);
 			pass = color(0, 130, 0);
 			bracket = color(190, 215, 255);

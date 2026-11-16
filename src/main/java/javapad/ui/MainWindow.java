@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import javapad.model.EclipseProject;
+import javapad.model.GitIgnore;
 import javapad.model.Problem;
 import javapad.run.LaunchSettings;
 import org.eclipse.swt.SWT;
@@ -102,8 +103,8 @@ public class MainWindow
 		consoleTab = new CTabItem(bottom, SWT.NONE);
 		consoleTab.setText("Console");
 		consoleTab.setControl(console.getControl());
-		junitPane = new JUnitPane(bottom, theme);
-		junitTab = new CTabItem(bottom, SWT.NONE);
+		junitPane = new JUnitPane(left, theme);
+		junitTab = new CTabItem(left, SWT.NONE);
 		junitTab.setText("JUnit");
 		junitTab.setControl(junitPane.getControl());
 		callPane = new CallHierarchyPane(bottom, theme);
@@ -404,7 +405,7 @@ public class MainWindow
 		if(project != null)
 		{
 			List<File> found = new ArrayList<File>();
-			listFiles(project.root, found);
+			listFiles(project.root, found, GitIgnore.of(project.root));
 			for(File f : found)
 			{
 				files.add(project.relative(f).replace(File.separatorChar, '/'), () -> open(new Location(f, 1, 1)));
@@ -447,7 +448,7 @@ public class MainWindow
 		"class", "jar", "zip", "gz", "png", "jpg", "jpeg", "gif", "bmp", "ico", "so", "dll", "exe", "pdf", "wav", "mp3",
 		"ogg", "iso", "grp", "wad", "dylib", "o", "a", "tar", "7z"));
 
-	void listFiles(File dir, List<File> out)
+	void listFiles(File dir, List<File> out, GitIgnore ignore)
 	{
 		File[] children = dir.listFiles();
 		if(children == null || out.size() > 50000)
@@ -455,14 +456,20 @@ public class MainWindow
 			return;
 		}
 		Arrays.sort(children);
+		GitIgnore here = ignore.child(dir);
+		File output = project.outputFolder == null ? null : project.outputFolder.getAbsoluteFile();
 		for(File f : children)
 		{
 			if(f.isDirectory())
 			{
-				if(!f.getName().startsWith(".") && !f.equals(project.outputFolder))
+				if(!f.getName().startsWith(".") && !f.getAbsoluteFile().equals(output) && !here.ignored(f, true))
 				{
-					listFiles(f, out);
+					listFiles(f, out, here);
 				}
+				continue;
+			}
+			if(here.ignored(f, false))
+			{
 				continue;
 			}
 			String name = f.getName();
@@ -608,13 +615,13 @@ public class MainWindow
 		new Automation(this).run();
 	}
 
-	// Used by Automation: shows one of the bottom tabs by name (problems, junit, console, call).
+	// Used by Automation: shows one of the tabs by name (problems, console, call at the bottom; junit in the sidebar).
 	void showBottomTab(String name)
 	{
 		CTabItem tab = name.equals("problems") ? problemsTab : name.equals("junit") ? junitTab : name.equals("console") ? consoleTab : name.equals("call") ? callTab : null;
 		if(tab != null)
 		{
-			bottom.setSelection(tab);
+			tab.getParent().setSelection(tab);
 		}
 	}
 
