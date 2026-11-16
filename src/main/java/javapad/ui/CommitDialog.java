@@ -100,6 +100,7 @@ class CommitDialog
 		selection.setLayout(sl);
 		untrackedBox = new Button(selection, SWT.CHECK);
 		untrackedBox.setText("Show untracked files");
+		untrackedBox.setSelection(true);
 		Button all = new Button(selection, SWT.PUSH);
 		all.setText("Select All");
 		Button none = new Button(selection, SWT.PUSH);
