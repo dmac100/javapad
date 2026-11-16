@@ -68,19 +68,20 @@ public class Icons
 				break;
 			case BUILD:
 				fill(d, gc, 120, 130, 150);
-				for(int i = 0; i < 8; i++)
-				{
-					double angle = Math.PI * i / 4;
-					double dx = Math.cos(angle);
-					double dy = Math.sin(angle);
-					double px = -dy;
-					double py = dx;
-					gc.fillPolygon(new int[] {
-						(int)Math.round(10 + dx * 6 + px * 2), (int)Math.round(10 + dy * 6 + py * 2),
-						(int)Math.round(10 + dx * 9 + px * 1.5), (int)Math.round(10 + dy * 9 + py * 1.5),
-						(int)Math.round(10 + dx * 9 - px * 1.5), (int)Math.round(10 + dy * 9 - py * 1.5),
-						(int)Math.round(10 + dx * 6 - px * 2), (int)Math.round(10 + dy * 6 - py * 2)});
-				}
+				// the teeth are drawn as pixel blocks, mirrored exactly about the centre, and overlap the body so that none float free
+				gc.fillRectangle(8, 1, 4, 5);
+				gc.fillRectangle(8, 14, 4, 5);
+				gc.fillRectangle(1, 8, 5, 4);
+				gc.fillRectangle(14, 8, 5, 4);
+				// each diagonal tooth is an outer block and an inner block that overlap, and the inner one overlaps the body
+				gc.fillRectangle(3, 3, 3, 3);
+				gc.fillRectangle(5, 5, 3, 3);
+				gc.fillRectangle(14, 3, 3, 3);
+				gc.fillRectangle(12, 5, 3, 3);
+				gc.fillRectangle(3, 14, 3, 3);
+				gc.fillRectangle(5, 12, 3, 3);
+				gc.fillRectangle(14, 14, 3, 3);
+				gc.fillRectangle(12, 12, 3, 3);
 				gc.fillOval(4, 4, 12, 12);
 				gc.setBackground(gc.getDevice().getSystemColor(SWT.COLOR_MAGENTA));
 				gc.fillOval(7, 7, 6, 6);
