@@ -139,10 +139,12 @@ class MenuBuilder
 		});
 		commands.add("View > Show Project", () -> w.left.setSelection(w.projectTab));
 		commands.add("View > Show Sources", () -> w.left.setSelection(w.sourceTab));
-		commands.add("View > Show Problems", () -> w.bottom.setSelection(w.problemsTab));
-		commands.add("View > Show Console", () -> w.bottom.setSelection(w.consoleTab));
-		commands.add("View > Show JUnit", () -> w.bottom.setSelection(w.junitTab));
-		commands.add("View > Show Call Hierarchy", () -> w.bottom.setSelection(w.callTab));
+		commands.add("View > Show Problems", () -> w.bottomTabs.show(w.problemsTab));
+		commands.add("View > Show Console", () -> w.bottomTabs.show(w.consoleTab));
+		commands.add("View > Show JUnit", () -> w.junitTab.getParent().setSelection(w.junitTab));
+		commands.add("View > Show Call Hierarchy", () -> w.bottomTabs.show(w.callTab));
+		commands.add("View > Show Search", () -> w.bottomTabs.show(w.searchTab));
+		commands.add("View > Show History", () -> w.showBottomTab("history"));
 		Menu runMenu = submenu(bar, "Run");
 		menuItem(runMenu, "Build", SWT.MOD1 | 'B', () -> w.run.build(null));
 		menuItem(runMenu, "Run Last Launched", SWT.F11, () -> w.run.runLast());

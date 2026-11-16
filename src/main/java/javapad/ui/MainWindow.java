@@ -43,12 +43,13 @@ public class MainWindow
 	final ConsolePane console;
 	final ProblemsPane problemsPane;
 	final CTabFolder bottom;
-	final CTabItem consoleTab;
-	final CTabItem problemsTab;
+	final BottomTabs bottomTabs;
+	final BottomTabs.Tab consoleTab;
+	final BottomTabs.Tab problemsTab;
 	final CTabItem junitTab;
-	final CTabItem callTab;
-	final CTabItem historyTab;
-	final CTabItem searchTab;
+	final BottomTabs.Tab callTab;
+	final BottomTabs.Tab historyTab;
+	final BottomTabs.Tab searchTab;
 	final SearchPane searchPane;
 	final HistoryPane history;
 	final GitActions git;
@@ -103,33 +104,24 @@ public class MainWindow
 		bottom.setTabPosition(SWT.TOP);
 		console = new ConsolePane(bottom, theme);
 		problemsPane = new ProblemsPane(bottom);
-		problemsTab = new CTabItem(bottom, SWT.NONE);
-		problemsTab.setText("Problems");
-		problemsTab.setControl(problemsPane.getControl());
-		consoleTab = new CTabItem(bottom, SWT.NONE);
-		consoleTab.setText("Console");
-		consoleTab.setControl(console.getControl());
+		bottomTabs = new BottomTabs(bottom);
+		problemsTab = bottomTabs.add("problems", "Problems", problemsPane.getControl(), true);
+		consoleTab = bottomTabs.add("console", "Console", console.getControl(), true);
 		junitPane = new JUnitPane(left, theme);
 		junitTab = new CTabItem(left, SWT.NONE);
 		junitTab.setText("JUnit");
 		junitTab.setControl(junitPane.getControl());
 		callPane = new CallHierarchyPane(bottom, theme);
-		callTab = new CTabItem(bottom, SWT.NONE);
-		callTab.setText("Call Hierarchy");
-		callTab.setControl(callPane.getControl());
+		callTab = bottomTabs.add("call", "Call Hierarchy", callPane.getControl(), false);
 		searchPane = new SearchPane(bottom, theme);
-		searchTab = new CTabItem(bottom, SWT.NONE);
-		searchTab.setText("Search");
-		searchTab.setControl(searchPane.getControl());
+		searchTab = bottomTabs.add("search", "Search", searchPane.getControl(), false);
 		searchPane.setOpener((f, line, column, length) -> openMatch(f, line, column, length));
 		git = new GitActions(this);
 		history = new HistoryPane(bottom, theme, this);
-		historyTab = new CTabItem(bottom, SWT.NONE);
-		historyTab.setText("History");
-		historyTab.setControl(history.getControl());
+		historyTab = bottomTabs.add("history", "History", history.getControl(), true);
 		bottom.addListener(SWT.Selection, e ->
 		{
-			if(bottom.getSelection() == historyTab)
+			if(bottomTabs.selected() == historyTab)
 			{
 				history.refresh();
 			}
@@ -139,12 +131,12 @@ public class MainWindow
 		navigation.setHierarchy(t ->
 		{
 			callPane.show(t.key, t.description, t.declaration);
-			bottom.setSelection(callTab);
+			bottomTabs.show(callTab);
 		});
-		bottom.setSelection(consoleTab);
+		bottomTabs.show(consoleTab);
 		horizontal.setWeights(new int[] {20, 80});
 		vertical.setWeights(new int[] {60, 40});
-		run = new RunController(display, shell, editors, console, problemsPane, junitPane, assist, bottom, consoleTab, problemsTab, junitTab, () -> currentFile(), () -> refreshSources(), m -> error(m));
+		run = new RunController(display, shell, editors, console, problemsPane, junitPane, assist, bottomTabs, consoleTab, problemsTab, junitTab, () -> currentFile(), () -> refreshSources(), m -> error(m));
 		importActions = new ImportActions(shell, assist);
 		menus.addToolItems(toolbar);
 		files = new FileActions(shell, () -> project, () -> activeTree(), () -> left.getSelection() == sourceTab, () -> refreshTrees(), l -> open(l), m -> error(m));
@@ -719,13 +711,18 @@ public class MainWindow
 		new Automation(this).run();
 	}
 
-	// Used by Automation: shows one of the tabs by name (problems, console, call at the bottom; junit in the sidebar).
+	// Used by Automation: shows one of the tabs by name (problems, console, call, history, search at the bottom; junit in the sidebar); a closed one is reopened.
 	void showBottomTab(String name)
 	{
-		CTabItem tab = name.equals("problems") ? problemsTab : name.equals("junit") ? junitTab : name.equals("console") ? consoleTab : name.equals("call") ? callTab : name.equals("history") ? historyTab : name.equals("search") ? searchTab : null;
+		if(name.equals("junit"))
+		{
+			junitTab.getParent().setSelection(junitTab);
+			return;
+		}
+		BottomTabs.Tab tab = bottomTabs.named(name);
 		if(tab != null)
 		{
-			tab.getParent().setSelection(tab);
+			bottomTabs.show(tab);
 		}
 	}
 

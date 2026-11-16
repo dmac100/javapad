@@ -40,9 +40,9 @@ class RunController
 	private final ProblemsPane problemsPane;
 	private final JUnitPane junitPane;
 	private final CodeAssist assist;
-	private final CTabFolder bottom;
-	private final CTabItem consoleTab;
-	private final CTabItem problemsTab;
+	private final BottomTabs bottom;
+	private final BottomTabs.Tab consoleTab;
+	private final BottomTabs.Tab problemsTab;
 	private final CTabItem junitTab;
 	// repeats the last main class or test run; null until something has been launched
 	private Runnable lastLaunch;
@@ -63,7 +63,7 @@ class RunController
 	private Runnable idleHook;
 
 	RunController(Display display, Shell shell, EditorTabs editors, ConsolePane console, ProblemsPane problemsPane, JUnitPane junitPane, CodeAssist assist,
-		CTabFolder bottom, CTabItem consoleTab, CTabItem problemsTab, CTabItem junitTab, Supplier<File> currentFile, Runnable beforeBuild, Consumer<String> errorSink)
+		BottomTabs bottom, BottomTabs.Tab consoleTab, BottomTabs.Tab problemsTab, CTabItem junitTab, Supplier<File> currentFile, Runnable beforeBuild, Consumer<String> errorSink)
 	{
 		this.display = display;
 		this.shell = shell;
@@ -180,12 +180,12 @@ class RunController
 		problemsPane.setProblems(problems);
 		editors.setProblems(problems);
 		int errors = problemsPane.errorCount();
-		problemsTab.setText("Problems (" + problemsPane.count() + ")");
+		bottom.setText(problemsTab, "Problems (" + problemsPane.count() + ")");
 		console.append(errors == 0 ? "Build OK\n" : "Build failed: " + errors + " error(s)\n", errors > 0);
 		assist.refresh();
 		if(errors > 0)
 		{
-			bottom.setSelection(problemsTab);
+			bottom.show(problemsTab);
 		}
 	}
 
@@ -325,7 +325,7 @@ class RunController
 
 	void launch(Function<Launcher, List<String>> command)
 	{
-		bottom.setSelection(consoleTab);
+		bottom.show(consoleTab);
 		Launcher[] self = new Launcher[1];
 		self[0] = launcher = new Launcher(project, new OutputListener()
 		{
