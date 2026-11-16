@@ -60,4 +60,11 @@ public class GitIgnoreTest
 		assertTrue(ignored(g, "logs/x/y", false));
 		assertEquals(false, ignored(g, "b/z", false));
 	}
+
+	@Test
+	public void dotSegmentsInThePathDoNotHideAnchoredRules()
+	{
+		GitIgnore g = rules("/out");
+		assertTrue(g.ignored(new File("/p/./sub/../out"), true));
+	}
 }

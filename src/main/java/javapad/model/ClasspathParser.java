@@ -33,7 +33,7 @@ public class ClasspathParser
 
 	public static EclipseProject parse(File dir) throws Exception
 	{
-		EclipseProject project = new EclipseProject(dir.getAbsoluteFile());
+		EclipseProject project = new EclipseProject(dir.toPath().toAbsolutePath().normalize().toFile());
 		File dotProject = new File(dir, ".project");
 		if(dotProject.exists())
 		{

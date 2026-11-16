@@ -282,4 +282,20 @@ public class GitRepoTest
 		assertEquals(0, Commit.parseRefs("").size());
 		assertEquals("2026-01-02 03:04", Commit.shortDate("2026-01-02T03:04:05+00:00"));
 	}
+
+	@Test
+	public void relativePathsIgnoreDotSegmentsAndSymbolicLinks() throws Exception
+	{
+		write("src/a.txt", "a\n");
+		assertEquals("src/a.txt", repo.relative(new File(dir, "src/a.txt")));
+		assertEquals("src/a.txt", repo.relative(new File(dir, "./src/../src/./a.txt")));
+		assertEquals("", repo.relative(new File(dir, ".")));
+		assertNull(repo.relative(new File(dir.getParentFile(), "elsewhere/x.txt")));
+		File link = new File(Files.createTempDirectory("links").toFile(), "linked");
+		Files.createSymbolicLink(link.toPath(), dir.toPath());
+		assertEquals("src/a.txt", repo.relative(new File(link, "src/a.txt")));
+		// a repository found through a path with a dot segment still works
+		GitRepo viaDot = GitRepo.find(new File(dir, "src/."));
+		assertEquals("src/a.txt", viaDot.relative(new File(dir, "src/./a.txt")));
+	}
 }

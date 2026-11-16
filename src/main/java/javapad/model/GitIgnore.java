@@ -30,7 +30,7 @@ public class GitIgnore
 	public static GitIgnore of(File dir)
 	{
 		List<File> chain = new ArrayList<File>();
-		File f = dir.getAbsoluteFile();
+		File f = dir.toPath().toAbsolutePath().normalize().toFile();
 		File top = null;
 		for(File p = f; p != null; p = p.getParentFile())
 		{
@@ -71,7 +71,7 @@ public class GitIgnore
 		{
 			return this;
 		}
-		return child(dir.getAbsolutePath(), lines);
+		return child(dir.toPath().toAbsolutePath().normalize().toString(), lines);
 	}
 
 	GitIgnore child(String base, List<String> lines)
@@ -190,7 +190,7 @@ public class GitIgnore
 	// Whether git would ignore the file or folder (the last matching rule wins).
 	public boolean ignored(File f, boolean directory)
 	{
-		String path = f.getAbsolutePath().replace(File.separatorChar, '/');
+		String path = f.toPath().toAbsolutePath().normalize().toString().replace(File.separatorChar, '/');
 		boolean result = false;
 		for(Rule r : rules)
 		{

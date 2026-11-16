@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,10 +20,25 @@ public class GitRepo
 	static final String LOG_FORMAT = "--format=%H%x1f%P%x1f%an%x1f%ae%x1f%aI%x1f%cn%x1f%ce%x1f%cI%x1f%D%x1f%s%x1f%b%x1e";
 
 	private final File root;
+	// the root with symbolic links and . or .. segments resolved, for comparing paths
+	private final Path base;
 
 	public GitRepo(File root)
 	{
 		this.root = root;
+		this.base = real(root.toPath());
+	}
+
+	static Path real(Path p)
+	{
+		try
+		{
+			return p.toRealPath();
+		}
+		catch(IOException e)
+		{
+			return p.toAbsolutePath().normalize();
+		}
 	}
 
 	// The repository that contains dir, or null if there is none (or git is not installed).
@@ -54,13 +70,17 @@ public class GitRepo
 	// the path of a file relative to the repository root, "" for the root itself, null if it is outside
 	public String relative(File f)
 	{
-		String base = root.getAbsolutePath();
-		String abs = f.getAbsolutePath();
-		if(!abs.startsWith(base))
+		Path p = f.toPath().toAbsolutePath().normalize();
+		if(!p.startsWith(base))
+		{
+			// the file may be reached through a symbolic link
+			p = real(p);
+		}
+		if(!p.startsWith(base))
 		{
 			return null;
 		}
-		return abs.substring(base.length()).replace(File.separatorChar, '/').replaceFirst("^/", "");
+		return base.relativize(p).toString().replace(File.separatorChar, '/');
 	}
 
 	GitResult git(String... args)
