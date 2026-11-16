@@ -5,8 +5,14 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import javapad.model.EclipseProject;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeItem;
@@ -17,12 +23,17 @@ public class ProjectTree
 	private final boolean sourcesOnly;
 	private EclipseProject project;
 	private Consumer<File> opener;
+	// set when the project is in a git repository: tells which files are untracked
+	private Predicate<File> untracked;
+	private Image untrackedImage;
+	private Image blankImage;
 
 	public ProjectTree(Composite parent, boolean sourcesOnly)
 	{
 		this.sourcesOnly = sourcesOnly;
 		tree = new Tree(parent, SWT.BORDER | SWT.SINGLE | SWT.V_SCROLL | SWT.H_SCROLL);
 		tree.addListener(SWT.Expand, e -> fill((TreeItem)e.item));
+		tree.addListener(SWT.Dispose, e -> disposeImages());
 		tree.addListener(SWT.DefaultSelection, e ->
 		{
 			File f = selected();
@@ -45,6 +56,80 @@ public class ProjectTree
 	{
 		tree.setBackground(theme.sidebar);
 		tree.setForeground(theme.sidebarText);
+	}
+
+	// Marks the files the test calls untracked with a small box holding a question mark; null removes all marks.
+	public void setUntrackedTest(Predicate<File> test)
+	{
+		untracked = test;
+		if(test != null && untrackedImage == null)
+		{
+			untrackedImage = box(true);
+			blankImage = box(false);
+		}
+		for(TreeItem top : tree.getItems())
+		{
+			decorate(top);
+		}
+	}
+
+	void decorate(TreeItem item)
+	{
+		item.setImage(imageFor(item.getData()));
+		for(TreeItem child : item.getItems())
+		{
+			if(child.getData() instanceof File && !((File)child.getData()).getPath().equals("."))
+			{
+				decorate(child);
+			}
+		}
+	}
+
+	Image imageFor(Object data)
+	{
+		if(untracked == null || !(data instanceof File))
+		{
+			return null;
+		}
+		return untracked.test((File)data) ? untrackedImage : blankImage;
+	}
+
+	// a 12 by 12 image: an orange box with a question mark, or the same size and empty so that names line up
+	Image box(boolean mark)
+	{
+		RGB key = new RGB(255, 0, 255);
+		Image image = new Image(tree.getDisplay(), 12, 12);
+		GC gc = new GC(image);
+		gc.setBackground(new org.eclipse.swt.graphics.Color(tree.getDisplay(), key));
+		gc.fillRectangle(0, 0, 12, 12);
+		if(mark)
+		{
+			org.eclipse.swt.graphics.Color orange = new org.eclipse.swt.graphics.Color(tree.getDisplay(), 235, 160, 40);
+			gc.setForeground(orange);
+			gc.setAntialias(SWT.OFF);
+			gc.drawRectangle(0, 1, 10, 10);
+			Font small = new Font(tree.getDisplay(), "Sans", 7, SWT.BOLD);
+			gc.setFont(small);
+			gc.drawText("?", 2, 1, true);
+			small.dispose();
+			orange.dispose();
+		}
+		gc.dispose();
+		ImageData data = image.getImageData();
+		data.transparentPixel = data.palette.getPixel(key);
+		image.dispose();
+		return new Image(tree.getDisplay(), data);
+	}
+
+	void disposeImages()
+	{
+		if(untrackedImage != null)
+		{
+			untrackedImage.dispose();
+			blankImage.dispose();
+			untrackedImage = null;
+			blankImage = null;
+		}
 	}
 
 	public Tree getControl()
@@ -172,6 +257,7 @@ public class ProjectTree
 				TreeItem top = new TreeItem(tree, SWT.NONE);
 				top.setText(src.equals(project.root) ? project.name : project.relative(src));
 				top.setData(src);
+				top.setImage(imageFor(src));
 				fill(top);
 				top.setExpanded(true);
 			}
@@ -180,6 +266,7 @@ public class ProjectTree
 		TreeItem root = new TreeItem(tree, SWT.NONE);
 		root.setText(project.name);
 		root.setData(project.root);
+		root.setImage(imageFor(project.root));
 		fill(root);
 		root.setExpanded(true);
 		for(TreeItem child : root.getItems())
@@ -258,6 +345,7 @@ public class ProjectTree
 			TreeItem child = new TreeItem(item, SWT.NONE);
 			child.setText(f.getName());
 			child.setData(f);
+			child.setImage(imageFor(f));
 			if(f.isDirectory())
 			{
 				new TreeItem(child, SWT.NONE).setData(new File("."));

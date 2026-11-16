@@ -154,6 +154,8 @@ class MenuBuilder
 		menuItem(treeMenu, "New Folder...", 0, () -> w.files.newFolder());
 		menuItem(treeMenu, "Delete", 0, () -> w.files.deleteSelected());
 		menuItem(treeMenu, "Refresh", 0, () -> w.refreshTrees());
+		new MenuItem(treeMenu, SWT.SEPARATOR);
+		new GitMenu(w).attach(treeMenu);
 	}
 
 	Menu submenu(Menu bar, String label)

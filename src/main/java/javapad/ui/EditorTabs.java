@@ -188,6 +188,25 @@ public class EditorTabs
 		return true;
 	}
 
+	// Reloads the tabs without unsaved changes whose files changed on disk; tabs of deleted files are left alone.
+	public void reloadClean()
+	{
+		for(EditorTab tab : tabs())
+		{
+			if(!tab.isDirty() && tab.file.isFile())
+			{
+				try
+				{
+					tab.reload();
+				}
+				catch(java.io.IOException e)
+				{
+					// the file stays as it was in the editor
+				}
+			}
+		}
+	}
+
 	public boolean anyDirty()
 	{
 		for(EditorTab tab : tabs())

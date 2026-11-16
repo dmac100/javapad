@@ -46,6 +46,9 @@ public class MainWindow
 	final CTabItem problemsTab;
 	final CTabItem junitTab;
 	final CTabItem callTab;
+	final CTabItem historyTab;
+	final HistoryPane history;
+	final GitActions git;
 	private final CallHierarchyPane callPane;
 	final JUnitPane junitPane;
 	private final SashForm horizontal;
@@ -111,6 +114,18 @@ public class MainWindow
 		callTab = new CTabItem(bottom, SWT.NONE);
 		callTab.setText("Call Hierarchy");
 		callTab.setControl(callPane.getControl());
+		git = new GitActions(this);
+		history = new HistoryPane(bottom, theme, this);
+		historyTab = new CTabItem(bottom, SWT.NONE);
+		historyTab.setText("History");
+		historyTab.setControl(history.getControl());
+		bottom.addListener(SWT.Selection, e ->
+		{
+			if(bottom.getSelection() == historyTab)
+			{
+				history.refresh();
+			}
+		});
 		callPane.setModelSupplier(() -> assist.model());
 		callPane.setOpener(l -> openLine(l));
 		navigation.setHierarchy(t ->
@@ -146,6 +161,7 @@ public class MainWindow
 			run.sendInput(s);
 		});
 		shell.addListener(SWT.Close, e -> e.doit = confirmExit());
+		shell.addListener(SWT.Activate, e -> git.refresh());
 		applyTheme();
 	}
 
@@ -172,6 +188,7 @@ public class MainWindow
 		console.restyle();
 		junitPane.restyle();
 		callPane.restyle();
+		history.restyle();
 		for(EditorTab tab : editors.tabs())
 		{
 			tab.editor.restyle();
@@ -268,6 +285,7 @@ public class MainWindow
 		editors.setProblems(new ArrayList<Problem>());
 		console.clear();
 		shell.setText("JavaPad - " + project.name);
+		git.projectChanged();
 		for(String w : project.warnings)
 		{
 			console.append("warning: " + w + "\n", true);
@@ -362,6 +380,7 @@ public class MainWindow
 			error("Cannot save: " + e.getMessage());
 			return;
 		}
+		git.refresh();
 		if(project != null && project.isSource(tab.file))
 		{
 			run.build(null);
@@ -618,7 +637,7 @@ public class MainWindow
 	// Used by Automation: shows one of the tabs by name (problems, console, call at the bottom; junit in the sidebar).
 	void showBottomTab(String name)
 	{
-		CTabItem tab = name.equals("problems") ? problemsTab : name.equals("junit") ? junitTab : name.equals("console") ? consoleTab : name.equals("call") ? callTab : null;
+		CTabItem tab = name.equals("problems") ? problemsTab : name.equals("junit") ? junitTab : name.equals("console") ? consoleTab : name.equals("call") ? callTab : name.equals("history") ? historyTab : null;
 		if(tab != null)
 		{
 			tab.getParent().setSelection(tab);

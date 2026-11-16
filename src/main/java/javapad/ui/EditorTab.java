@@ -44,6 +44,18 @@ public class EditorTab
 		updateTitle();
 	}
 
+	// Re-reads the file if it changed on disk (after a git checkout, say) and keeps the tab clean.
+	public void reload() throws IOException
+	{
+		String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+		if(!content.equals(editor.getContent()))
+		{
+			editor.replaceContentMinimal(content);
+		}
+		dirty = false;
+		updateTitle();
+	}
+
 	void updateTitle()
 	{
 		item.setText((dirty ? "*" : "") + file.getName());
