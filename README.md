@@ -16,15 +16,17 @@ Without Maven: put the jars in `lib/` on the class path, compile `src/main/java`
 - **Ctrl+3** runs any menu command or switches to an open tab; **Ctrl+Shift+R** opens a file by name.
 - **Ctrl+Space** completes; typing `.` opens the list. **Ctrl+Shift+O** organizes imports, **Ctrl+Shift+M** adds the import for the name at the caret, **Ctrl+1** is quick fix, **Ctrl+Shift+F** formats the selection (or the file).
 - **F3** / Ctrl+click open a declaration, **Ctrl+T** an implementation, **Ctrl+Alt+H** the call hierarchy.
-- **Ctrl+B** builds, **Ctrl+R** / **F11** build and run, **Ctrl+F11** runs the tests, **Ctrl+Alt+R** the test at the caret.
+- **Ctrl+B** builds, **Ctrl+R** builds and runs the active file, **F11** repeats the last main class or test run, **Ctrl+F11** runs the tests, **Ctrl+Alt+R** the test at the caret.
 - The console is also stdin: type after the last output and press Enter.
+- **Git** (needs `git` on the PATH): the sidebar's right-click menu has a Git entry (commit, push, pull, switch, merge, rebase, reset, stash, ignore...), untracked files carry a small `?` box, and the History tab shows the commit graph, the changes of a commit and a context menu for commits and their files.
 
 ## Code map
 
 | Package | What it holds |
 | --- | --- |
-| `javapad.ui` | The SWT window. `MainWindow` wires the parts together; `MenuBuilder`, `EditorMenu`, `FileActions`, `RunController` and `Automation` are the pieces it delegates to. `CodeEditor` is the editor (key handling, styling, tooltips); `LineEdits` holds its line commands. |
+| `javapad.ui` | The SWT window. `MainWindow` wires the parts together; `MenuBuilder`, `EditorMenu`, `FileActions`, `RunController` and `Automation` are the pieces it delegates to. `GitActions`, `HistoryActions`, `HistoryPane`, `GitMenu` and `CommitDialog` are the git side. `CodeEditor` is the editor (key handling, styling, tooltips); `LineEdits` holds its line commands. |
 | `javapad.lang` | Code intelligence on javac's Tree API: `TypeIndex`, `CompletionEngine`, `ImportEditor`/`ImportFixer`, `CodeModel` (implementations, call hierarchy), `JavaFormatter`, `CodeMask`. No SWT. |
+| `javapad.git` | The `git` command line: `GitRepo` (commands), `GraphLayout` (the commit graph), parsers. No SWT. |
 | `javapad.run` | Starting programs and tests: `Launcher`, `MainFinder`, `TestFinder`, `JUnitReport`, `LiveTail`. |
 | `javapad.build` | `ProjectCompiler`, which compiles in process. |
 | `javapad.model` | `EclipseProject`, `ClasspathParser`, `ProjectGenerator`, `JavaTemplate`. |
