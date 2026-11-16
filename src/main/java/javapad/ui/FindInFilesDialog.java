@@ -1,5 +1,6 @@
 package javapad.ui;
 
+import java.util.regex.PatternSyntaxException;
 import javapad.lang.FileSearch;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
@@ -14,15 +15,15 @@ import org.eclipse.swt.widgets.Text;
 // Asks what to search the project for.
 class FindInFilesDialog
 {
+	private final Shell parent;
+	private Request result;
+
 	static class Request
 	{
 		String query;
 		boolean caseSensitive;
 		boolean regex;
 	}
-
-	private final Shell parent;
-	private Request result;
 
 	FindInFilesDialog(Shell parent)
 	{
@@ -73,7 +74,7 @@ class FindInFilesDialog
 			{
 				FileSearch.pattern(text.getText(), caseBox.getSelection(), regexBox.getSelection());
 			}
-			catch(java.util.regex.PatternSyntaxException ex)
+			catch(PatternSyntaxException ex)
 			{
 				error.setText("Not a valid regular expression: " + ex.getDescription());
 				dialog.pack();

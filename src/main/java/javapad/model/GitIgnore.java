@@ -11,6 +11,8 @@ import java.util.regex.Pattern;
 // Walk down a tree with child(dir), which adds the .gitignore found there.
 public class GitIgnore
 {
+	private final List<Rule> rules;
+
 	static class Rule
 	{
 		String base;
@@ -18,8 +20,6 @@ public class GitIgnore
 		boolean negate;
 		boolean dirOnly;
 	}
-
-	private final List<Rule> rules;
 
 	GitIgnore(List<Rule> rules)
 	{

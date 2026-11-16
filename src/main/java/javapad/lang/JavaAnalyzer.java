@@ -29,6 +29,10 @@ import javax.tools.ToolProvider;
 // tolerating errors, and exposes the Tree API objects needed to look things up.
 public class JavaAnalyzer
 {
+	private final EclipseProject project;
+	private final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+	private StandardJavaFileManager fileManager;
+
 	public static class Result
 	{
 		public JavacTask task;
@@ -62,10 +66,6 @@ public class JavaAnalyzer
 			return best[0];
 		}
 	}
-
-	private final EclipseProject project;
-	private final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-	private StandardJavaFileManager fileManager;
 
 	public JavaAnalyzer(EclipseProject project)
 	{

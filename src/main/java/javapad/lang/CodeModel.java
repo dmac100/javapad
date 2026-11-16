@@ -50,6 +50,13 @@ import javax.tools.ToolProvider;
 // which, and where every method is called. Built by one javac attribution pass over all source files.
 public class CodeModel
 {
+	private final Map<String, TypeInfo> types = new LinkedHashMap<String, TypeInfo>();
+	private final Map<String, MethodInfo> methods = new LinkedHashMap<String, MethodInfo>();
+	private final Map<String, List<Call>> byTarget = new LinkedHashMap<String, List<Call>>();
+	private final Map<String, List<Call>> byCaller = new LinkedHashMap<String, List<Call>>();
+	private final Map<String, List<MethodInfo>> overriders = new LinkedHashMap<String, List<MethodInfo>>();
+	private final Map<String, List<TypeInfo>> subtypes = new LinkedHashMap<String, List<TypeInfo>>();
+
 	public static class Place
 	{
 		public final File file;
@@ -92,13 +99,6 @@ public class CodeModel
 		public String callerKey;
 		public Place place;
 	}
-
-	private final Map<String, TypeInfo> types = new LinkedHashMap<String, TypeInfo>();
-	private final Map<String, MethodInfo> methods = new LinkedHashMap<String, MethodInfo>();
-	private final Map<String, List<Call>> byTarget = new LinkedHashMap<String, List<Call>>();
-	private final Map<String, List<Call>> byCaller = new LinkedHashMap<String, List<Call>>();
-	private final Map<String, List<MethodInfo>> overriders = new LinkedHashMap<String, List<MethodInfo>>();
-	private final Map<String, List<TypeInfo>> subtypes = new LinkedHashMap<String, List<TypeInfo>>();
 
 	public static String methodKey(ExecutableElement m, Elements elements, Types types)
 	{
@@ -201,7 +201,7 @@ public class CodeModel
 		{
 			return;
 		}
-		java.util.Arrays.sort(children);
+		Arrays.sort(children);
 		for(File f : children)
 		{
 			if(f.isDirectory())

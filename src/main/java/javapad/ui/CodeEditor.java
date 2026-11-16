@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
+import javapad.lang.CompletionEngine;
 import javapad.lang.ImportEditor;
 import javapad.lang.IndentConverter;
 import javapad.lang.JavaFormatter;
@@ -53,6 +54,8 @@ public class CodeEditor
 	// the places that use the selected identifier, as {start, end} offsets
 	private List<int[]> occurrences = new ArrayList<int[]>();
 	private int occurrenceRequest;
+	private CompletionPopup popup;
+	private int completionGeneration;
 
 	// Finds the other uses of the identifier text[offset, offset + length); calls back on the UI thread.
 	public interface OccurrenceFinder
@@ -66,12 +69,10 @@ public class CodeEditor
 
 		void implementation(int offset);
 	}
-	private CompletionPopup popup;
-	private int completionGeneration;
 
 	public interface Assist
 	{
-		void complete(String text, int offset, Consumer<javapad.lang.CompletionEngine.Completions> done);
+		void complete(String text, int offset, Consumer<CompletionEngine.Completions> done);
 	}
 
 	static class Edit

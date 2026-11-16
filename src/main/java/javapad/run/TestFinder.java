@@ -12,6 +12,9 @@ import java.util.regex.Pattern;
 public class TestFinder
 {
 	static final Pattern ABSTRACT = Pattern.compile("\\babstract\\s+class\\b");
+	static final Pattern TEST_METHOD = Pattern.compile("@(?:org\\.junit\\.(?:jupiter\\.api\\.)?)?(?:Test|ParameterizedTest|RepeatedTest|TestFactory)\\b"
+		+ "(?:\\s*\\([^)]*\\))?(?:\\s*@[\\w.]+(?:\\s*\\([^)]*\\))?)*\\s+(?:(?:public|protected|private|static|final|synchronized)\\s+)*(?:<[^>]*>\\s+)?"
+		+ "[\\w<>\\[\\],.?]+\\s+(\\w+)\\s*\\(");
 
 	public static boolean isTestClass(String content)
 	{
@@ -21,10 +24,6 @@ public class TestFinder
 		}
 		return !ABSTRACT.matcher(content).find();
 	}
-
-	static final Pattern TEST_METHOD = Pattern.compile("@(?:org\\.junit\\.(?:jupiter\\.api\\.)?)?(?:Test|ParameterizedTest|RepeatedTest|TestFactory)\\b"
-		+ "(?:\\s*\\([^)]*\\))?(?:\\s*@[\\w.]+(?:\\s*\\([^)]*\\))?)*\\s+(?:(?:public|protected|private|static|final|synchronized)\\s+)*(?:<[^>]*>\\s+)?"
-		+ "[\\w<>\\[\\],.?]+\\s+(\\w+)\\s*\\(");
 
 	// The name of the @Test method whose declaration or body contains the offset, or null.
 	public static String methodAt(String content, int offset)

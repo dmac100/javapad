@@ -20,14 +20,6 @@ import org.eclipse.swt.widgets.TreeItem;
 // Who calls a method (or what it calls), expanded one level at a time.
 public class CallHierarchyPane
 {
-	static class Node
-	{
-		String key;
-		List<CodeModel.Place> sites = new ArrayList<CodeModel.Place>();
-		int next;
-		boolean recursive;
-	}
-
 	private final Composite composite;
 	private final Label title;
 	private final Button callersButton;
@@ -39,6 +31,14 @@ public class CallHierarchyPane
 	private String rootKey;
 	private String rootDisplay;
 	private CodeModel.Place rootPlace;
+
+	static class Node
+	{
+		String key;
+		List<CodeModel.Place> sites = new ArrayList<CodeModel.Place>();
+		int next;
+		boolean recursive;
+	}
 
 	public CallHierarchyPane(Composite parent, Theme theme)
 	{

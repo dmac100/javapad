@@ -3,6 +3,7 @@ package javapad.build;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -13,15 +14,19 @@ import java.util.Locale;
 import java.util.stream.Stream;
 import javapad.model.EclipseProject;
 import javapad.model.Problem;
+import javapad.run.MainFinder;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
+import javax.tools.SimpleJavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 
 public class ProjectCompiler
 {
+	private static int lowest;
+
 	public static List<Problem> compile(EclipseProject project)
 	{
 		List<Problem> problems = new ArrayList<Problem>();
@@ -52,7 +57,7 @@ public class ProjectCompiler
 			options.add("-proc:none");
 			options.add("-Xlint:-options");
 			int feature = Runtime.version().feature();
-			project.preview = feature >= 21 && feature < 25 && javapad.run.MainFinder.needsPreview(javapad.run.MainFinder.inProject(project.sourceFolders, null));
+			project.preview = feature >= 21 && feature < 25 && MainFinder.needsPreview(MainFinder.inProject(project.sourceFolders, null));
 			int release = project.release;
 			int lowest = lowestRelease(compiler);
 			if(project.preview)
@@ -142,8 +147,6 @@ public class ProjectCompiler
 		return release > 0 ? Math.max(release, lowestRelease(compiler)) : 0;
 	}
 
-	private static int lowest;
-
 	// Asks the compiler itself which language levels it accepts (JDK 21 dropped 7 and below).
 	static synchronized int lowestRelease(JavaCompiler compiler)
 	{
@@ -153,7 +156,7 @@ public class ProjectCompiler
 			for(int n = 5; n < Runtime.version().feature(); n++)
 			{
 				StringWriter sink = new StringWriter();
-				JavaFileObject probe = new javax.tools.SimpleJavaFileObject(java.net.URI.create("string:///Probe.java"), JavaFileObject.Kind.SOURCE)
+				JavaFileObject probe = new SimpleJavaFileObject(URI.create("string:///Probe.java"), JavaFileObject.Kind.SOURCE)
 				{
 					public CharSequence getCharContent(boolean ignoreEncodingErrors)
 					{

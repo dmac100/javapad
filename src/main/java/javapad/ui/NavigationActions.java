@@ -16,6 +16,11 @@ import org.eclipse.swt.widgets.Shell;
 // Open Declaration (F3), Open Implementation (Ctrl+T) and the other jumps. Analysis runs off the UI thread.
 public class NavigationActions
 {
+	private final Shell shell;
+	private final CodeAssist assist;
+	private final Consumer<Location> lineOpener;
+	private Consumer<Target> hierarchy;
+
 	static class Target
 	{
 		Element element;
@@ -25,11 +30,6 @@ public class NavigationActions
 		boolean method;
 		boolean type;
 	}
-
-	private final Shell shell;
-	private final CodeAssist assist;
-	private final Consumer<Location> lineOpener;
-	private Consumer<Target> hierarchy;
 
 	public NavigationActions(Shell shell, CodeAssist assist, Consumer<Location> lineOpener)
 	{

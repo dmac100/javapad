@@ -40,6 +40,8 @@ public class CompletionEngine
 		"double", "else", "enum", "extends", "final", "finally", "float", "for", "if", "implements", "import", "instanceof", "int", "interface", "long",
 		"new", "package", "private", "protected", "public", "return", "short", "static", "super", "switch", "synchronized", "this", "throw", "throws",
 		"try", "void", "volatile", "while", "true", "false", "null"};
+	private final JavaAnalyzer analyzer;
+	private final Supplier<TypeIndex> indexSupplier;
 
 	public static class Completions
 	{
@@ -52,9 +54,6 @@ public class CompletionEngine
 			this.proposals = proposals;
 		}
 	}
-
-	private final JavaAnalyzer analyzer;
-	private final Supplier<TypeIndex> indexSupplier;
 
 	public CompletionEngine(JavaAnalyzer analyzer, Supplier<TypeIndex> index)
 	{

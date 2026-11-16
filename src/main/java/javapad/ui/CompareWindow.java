@@ -20,6 +20,16 @@ import org.eclipse.swt.widgets.TableItem;
 // Two versions of a file side by side, lined up and scrolling together. With several files, a list on the left chooses the file.
 class CompareWindow
 {
+	private final MainWindow w;
+	private final List<Entry> entries;
+	private final Source source;
+	private final Theme theme;
+	private final Shell shell;
+	private final StyledText left;
+	private final StyledText right;
+	private boolean syncing;
+	private int generation;
+
 	static class Entry
 	{
 		final String path;
@@ -40,16 +50,6 @@ class CompareWindow
 		// Reads both versions of the file: {left, right}. Called on a worker thread.
 		String[] versions(Entry entry);
 	}
-
-	private final MainWindow w;
-	private final List<Entry> entries;
-	private final Source source;
-	private final Theme theme;
-	private final Shell shell;
-	private final StyledText left;
-	private final StyledText right;
-	private boolean syncing;
-	private int generation;
 
 	// parent: the window this one belongs to (a dialog, when it is opened from a dialog)
 	static void open(MainWindow w, Shell parent, String title, String leftTitle, String rightTitle, List<Entry> entries, Source source)

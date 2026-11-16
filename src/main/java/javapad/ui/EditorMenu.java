@@ -1,5 +1,6 @@
 package javapad.ui;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.swt.SWT;
@@ -62,7 +63,7 @@ class EditorMenu
 		{
 			tab.reload();
 		}
-		catch(java.io.IOException e)
+		catch(IOException e)
 		{
 			w.error("Cannot reload " + tab.file.getName() + ": " + e.getMessage());
 		}

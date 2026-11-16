@@ -22,16 +22,6 @@ import org.eclipse.swt.widgets.Text;
 // The commit dialog: message, author, committer, amend, and the files to include.
 class CommitDialog
 {
-	static class Request
-	{
-		String message;
-		String author;
-		String committer;
-		boolean amend;
-		boolean push;
-		List<String> paths = new ArrayList<String>();
-	}
-
 	private final Shell parent;
 	private final GitRepo repo;
 	private final GitStatus status;
@@ -41,6 +31,16 @@ class CommitDialog
 	private Button untrackedBox;
 	private final List<FileChange> listed = new ArrayList<FileChange>();
 	private final List<String> checked = new ArrayList<String>();
+
+	static class Request
+	{
+		String message;
+		String author;
+		String committer;
+		boolean amend;
+		boolean push;
+		List<String> paths = new ArrayList<String>();
+	}
 
 	// comparer: shows a file next to its last committed version (double-click in the list)
 	CommitDialog(Shell parent, GitRepo repo, GitStatus status, BiConsumer<Shell, FileChange> comparer)

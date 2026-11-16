@@ -5,11 +5,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import javapad.git.Commit;
+import javapad.git.FileChange;
 import javapad.git.GitRepo;
 import javapad.git.GitResult;
 import javapad.git.GitStatus;
+import javapad.git.Stash;
 import javapad.model.EclipseProject;
+import org.eclipse.swt.widgets.Shell;
 
 // The project's git repository and the git commands of the sidebar menu. Git runs on a worker thread; the UI is updated on the UI thread.
 class GitActions
@@ -93,7 +97,7 @@ class GitActions
 		}
 		GitRepo r = repo;
 		GitStatus s = status;
-		java.util.function.Predicate<File> test = f ->
+		Predicate<File> test = f ->
 		{
 			String rel = r.relative(f);
 			return rel != null && !rel.isEmpty() && s.untracked(rel);
@@ -243,7 +247,7 @@ class GitActions
 	}
 
 	// Shows a changed file next to its last committed version; parent is the dialog it was asked from.
-	void compareWithHead(org.eclipse.swt.widgets.Shell parent, javapad.git.FileChange change)
+	void compareWithHead(Shell parent, FileChange change)
 	{
 		GitRepo r = repo;
 		CompareWindow.Entry entry = new CompareWindow.Entry(change.path, change.label(), null);
@@ -539,9 +543,9 @@ class GitActions
 		}
 	}
 
-	List<javapad.git.Stash> stashes()
+	List<Stash> stashes()
 	{
-		return repo == null ? new ArrayList<javapad.git.Stash>() : repo.stashes();
+		return repo == null ? new ArrayList<Stash>() : repo.stashes();
 	}
 
 	void stashApply(String ref)

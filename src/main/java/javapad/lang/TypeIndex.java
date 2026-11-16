@@ -37,6 +37,12 @@ public class TypeIndex
 	public static final int PROJECT = 0;
 	public static final int LIBRARY = 1;
 	public static final int JDK = 2;
+	private static List<Entry> jdk;
+	private static final Map<String, List<Entry>> jarCache = new LinkedHashMap<String, List<Entry>>();
+	private final Entry[] sorted;
+	private final Map<String, List<Entry>> bySimple = new LinkedHashMap<String, List<Entry>>();
+	private final Map<String, List<Entry>> byPackage = new LinkedHashMap<String, List<Entry>>();
+	private final TreeSet<String> packages = new TreeSet<String>();
 
 	public static class Entry
 	{
@@ -60,14 +66,6 @@ public class TypeIndex
 			return fqn;
 		}
 	}
-
-	private static List<Entry> jdk;
-	private static final Map<String, List<Entry>> jarCache = new LinkedHashMap<String, List<Entry>>();
-
-	private final Entry[] sorted;
-	private final Map<String, List<Entry>> bySimple = new LinkedHashMap<String, List<Entry>>();
-	private final Map<String, List<Entry>> byPackage = new LinkedHashMap<String, List<Entry>>();
-	private final TreeSet<String> packages = new TreeSet<String>();
 
 	public TypeIndex(Collection<Entry> entries)
 	{

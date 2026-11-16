@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javapad.model.ClasspathParser;
 import javapad.model.EclipseProject;
+import javapad.runner.JUnit4Runner;
 
 public class Launcher
 {
@@ -130,7 +131,7 @@ public class Launcher
 	{
 		try
 		{
-			return new File(javapad.runner.JUnit4Runner.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+			return new File(JUnit4Runner.class.getProtectionDomain().getCodeSource().getLocation().toURI());
 		}
 		catch(Exception e)
 		{

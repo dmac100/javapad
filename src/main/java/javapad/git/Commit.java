@@ -9,6 +9,17 @@ public class Commit
 	public static final int LOCAL = 0;
 	public static final int REMOTE = 1;
 	public static final int TAG = 2;
+	public final String hash;
+	public final List<String> parents;
+	public final String authorName;
+	public final String authorEmail;
+	public final String authorDate;
+	public final String committerName;
+	public final String committerEmail;
+	public final String commitDate;
+	public final List<Ref> refs;
+	public final String subject;
+	public final String body;
 
 	public static class Ref
 	{
@@ -24,18 +35,6 @@ public class Commit
 			this.current = current;
 		}
 	}
-
-	public final String hash;
-	public final List<String> parents;
-	public final String authorName;
-	public final String authorEmail;
-	public final String authorDate;
-	public final String committerName;
-	public final String committerEmail;
-	public final String commitDate;
-	public final List<Ref> refs;
-	public final String subject;
-	public final String body;
 
 	public Commit(String hash, List<String> parents, String authorName, String authorEmail, String authorDate, String committerName, String committerEmail, String commitDate,
 		List<Ref> refs, String subject, String body)

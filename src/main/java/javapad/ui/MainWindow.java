@@ -4,10 +4,13 @@ import java.io.File;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import javapad.lang.FileSearch;
 import javapad.model.EclipseProject;
 import javapad.model.GitIgnore;
@@ -17,6 +20,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
@@ -68,6 +72,13 @@ public class MainWindow
 	private final MenuBuilder menus = new MenuBuilder(this);
 	private CommandList lastCommands = new CommandList();
 	private CommandList lastFiles = new CommandList();
+	private String lastSearch = "";
+	private boolean searchCase;
+	private boolean searchRegex;
+	private int searchGeneration;
+	static final Set<String> BINARY = new HashSet<String>(Arrays.asList(
+		"class", "jar", "zip", "gz", "png", "jpg", "jpeg", "gif", "bmp", "ico", "so", "dll", "exe", "pdf", "wav", "mp3",
+		"ogg", "iso", "grp", "wad", "dylib", "o", "a", "tar", "7z"));
 
 	public MainWindow(Display display)
 	{
@@ -389,11 +400,6 @@ public class MainWindow
 		}
 	}
 
-	private String lastSearch = "";
-	private boolean searchCase;
-	private boolean searchRegex;
-	private int searchGeneration;
-
 	// Edit > Find in Files: asks what to look for, searches every project file (using unsaved editor text) and lists the lines in the Search tab.
 	void findInFiles()
 	{
@@ -420,8 +426,8 @@ public class MainWindow
 		lastSearch = req.query;
 		searchCase = req.caseSensitive;
 		searchRegex = req.regex;
-		java.util.regex.Pattern pattern = FileSearch.pattern(req.query, req.caseSensitive, req.regex);
-		java.util.Map<File, String> unsaved = new java.util.HashMap<File, String>();
+		Pattern pattern = FileSearch.pattern(req.query, req.caseSensitive, req.regex);
+		Map<File, String> unsaved = new HashMap<File, String>();
 		for(EditorTab tab : editors.tabs())
 		{
 			if(tab.isDirty())
@@ -456,7 +462,7 @@ public class MainWindow
 		if(tab != null)
 		{
 			tab.editor.goTo(line, column);
-			org.eclipse.swt.custom.StyledText t = tab.editor.getControl();
+			StyledText t = tab.editor.getControl();
 			int caret = t.getCaretOffset();
 			t.setSelection(caret, Math.min(t.getCharCount(), caret + length));
 			t.setFocus();
@@ -539,10 +545,6 @@ public class MainWindow
 			lastCommands.run(choice);
 		}
 	}
-
-	static final Set<String> BINARY = new HashSet<String>(Arrays.asList(
-		"class", "jar", "zip", "gz", "png", "jpg", "jpeg", "gif", "bmp", "ico", "so", "dll", "exe", "pdf", "wav", "mp3",
-		"ogg", "iso", "grp", "wad", "dylib", "o", "a", "tar", "7z"));
 
 	void listFiles(File dir, List<File> out, GitIgnore ignore)
 	{

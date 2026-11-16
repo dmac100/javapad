@@ -37,6 +37,8 @@ import javax.tools.ToolProvider;
 // constructor) an instance method; java 25 allows all of them, java 21 to 24 only as preview features.
 public class MainFinder
 {
+	private static final Map<String, Cached> cache = new HashMap<String, Cached>();
+
 	public static class Main
 	{
 		public final String className;
@@ -68,8 +70,6 @@ public class MainFinder
 		long length;
 		List<Main> mains;
 	}
-
-	private static final Map<String, Cached> cache = new HashMap<String, Cached>();
 
 	static int feature()
 	{

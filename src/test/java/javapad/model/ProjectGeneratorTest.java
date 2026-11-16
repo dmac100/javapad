@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import org.junit.Test;
 
@@ -49,7 +50,7 @@ public class ProjectGeneratorTest
 		EclipseProject p = EclipseProject.open(d);
 		assertTrue(new File(d, ".project").exists());
 		assertEquals(1, p.sourceFolders.size());
-		assertEquals(Arrays.asList(new File(d, "lib/a.jar").getAbsoluteFile(), new File(d, "lib/b.jar").getAbsoluteFile()), new java.util.ArrayList<File>(p.libraries));
+		assertEquals(Arrays.asList(new File(d, "lib/a.jar").getAbsoluteFile(), new File(d, "lib/b.jar").getAbsoluteFile()), new ArrayList<File>(p.libraries));
 		assertEquals(2, p.notes.size());
 	}
 

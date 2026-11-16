@@ -12,6 +12,10 @@ import org.eclipse.swt.widgets.Control;
 // The tabs of the bottom panel. They can be closed, and show() brings a closed one back at its original place.
 class BottomTabs
 {
+	private final CTabFolder folder;
+	// in display order
+	private final List<Tab> tabs = new ArrayList<Tab>();
+
 	static class Tab
 	{
 		final String name;
@@ -27,10 +31,6 @@ class BottomTabs
 			this.control = control;
 		}
 	}
-
-	private final CTabFolder folder;
-	// in display order
-	private final List<Tab> tabs = new ArrayList<Tab>();
 
 	BottomTabs(CTabFolder folder)
 	{

@@ -18,17 +18,17 @@ import org.eclipse.swt.widgets.TreeItem;
 // The Search tab: the lines found by "Find in Files", grouped by file.
 public class SearchPane
 {
-	public interface Opener
-	{
-		void open(File file, int line, int column, int length);
-	}
-
 	private final Composite composite;
 	private final Label summary;
 	private final Tree tree;
 	private final Theme theme;
 	private EclipseProject project;
 	private Opener opener;
+
+	public interface Opener
+	{
+		void open(File file, int line, int column, int length);
+	}
 
 	public SearchPane(Composite parent, Theme theme)
 	{

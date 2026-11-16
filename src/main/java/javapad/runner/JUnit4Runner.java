@@ -18,6 +18,9 @@ import org.junit.runner.notification.RunListener;
 
 public class JUnit4Runner
 {
+	private static final List<Case> cases = new ArrayList<Case>();
+	private static final Map<String, Case> byKey = new HashMap<String, Case>();
+
 	static class Case
 	{
 		String className;
@@ -28,9 +31,6 @@ public class JUnit4Runner
 		boolean skipped;
 		boolean started;
 	}
-
-	private static final List<Case> cases = new ArrayList<Case>();
-	private static final Map<String, Case> byKey = new HashMap<String, Case>();
 
 	public static void main(String[] args) throws Exception
 	{

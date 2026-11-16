@@ -9,6 +9,8 @@ public class AnsiParser
 {
 	public static final int DEFAULT = -1;
 	public static final int RGB = 0x1000000;
+	private Style current = new Style();
+	private String carry = "";
 
 	public static class Style
 	{
@@ -48,9 +50,6 @@ public class AnsiParser
 			this.style = style;
 		}
 	}
-
-	private Style current = new Style();
-	private String carry = "";
 
 	public List<Span> parse(String input)
 	{

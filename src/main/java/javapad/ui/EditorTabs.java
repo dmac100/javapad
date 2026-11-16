@@ -204,7 +204,7 @@ public class EditorTabs
 				{
 					tab.reload();
 				}
-				catch(java.io.IOException e)
+				catch(IOException e)
 				{
 					// the file stays as it was in the editor
 				}
