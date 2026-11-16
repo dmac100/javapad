@@ -1,6 +1,21 @@
 # JavaPad
 
-A small desktop editor (SWT) for Eclipse-style Java projects. It opens a project folder (`.project` and `.classpath`, created if missing), edits its sources, and builds, runs and tests it with the JDK it runs on.
+A small desktop editor (SWT) for Eclipse-style Java projects. It opens a project folder (`.project` and `.classpath`, created if missing), edits its sources, and builds, runs and tests the project with the JDK it runs on.
+
+![The editor, with the Problems tab](docs/editor.png)
+
+## Features
+
+- **Editor:** syntax colouring (dark and light themes), content assist, imports, quick fixes and formatting, all based on javac's analysis of the project. Selecting an identifier highlights its other uses.
+- **Build, run, test:** compiles in process, runs main classes and JUnit 4 or 5 tests, and shows problems, console output (which also takes input) and test results.
+- **Navigation:** open a declaration or implementation, call hierarchy, open a file by name, search the project's files.
+- **Git:** status in the sidebar, commit, branches and the usual commands, a history view with a commit graph, and side by side file comparison.
+
+| History | Comparing a file with an earlier version |
+| --- | --- |
+| ![The History tab](docs/history.png) | ![A side by side comparison](docs/compare.png) |
+
+Press **Ctrl+3** to run any menu command, switch to an open tab, or find a git command by name.
 
 ## Build and run
 
@@ -9,28 +24,35 @@ mvn package                      # target/javapad.jar (everything inside) and li
 java -jar target/javapad.jar [project-folder]
 ```
 
-Without Maven: put the jars in `lib/` on the class path, compile `src/main/java` with `javac`, and run `javapad.JavaPad`. The JDK must provide `jdk.compiler`.
+Without Maven: put the jars in `lib/` on the class path, compile `src/main/java` with `javac`, and run `javapad.JavaPad`. The JDK must provide `jdk.compiler`. The git features need `git` on the PATH.
 
-## Using it
+## Keyboard shortcuts
 
-- **Ctrl+3** runs any menu command or switches to an open tab; **Ctrl+Shift+R** opens a file by name.
-- **Ctrl+Space** completes; typing `.` opens the list. **Ctrl+Shift+O** organizes imports, **Ctrl+Shift+M** adds the import for the name at the caret, **Ctrl+1** is quick fix, **Ctrl+Shift+F** formats the selection (or the file).
-- **F3** / Ctrl+click open a declaration, **Ctrl+T** an implementation, **Ctrl+Alt+H** the call hierarchy.
-- **Ctrl+B** builds, **Ctrl+R** builds and runs the active file, **F11** repeats the last main class or test run, **Ctrl+F11** runs the tests, **Ctrl+Alt+R** the test at the caret.
-- The console is also stdin: type after the last output and press Enter.
-- **Git** (needs `git` on the PATH): the sidebar's right-click menu has a Git entry (commit, push, pull, switch, merge, rebase, reset, stash, ignore...), untracked files carry a small `?` box, and the History tab shows the commit graph, the changes of a commit and a context menu for commits and their files.
+| Keys | Action |
+| --- | --- |
+| Ctrl+3 | Run command |
+| Ctrl+Shift+R | Open file by name |
+| Ctrl+F / Ctrl+Shift+H | Find / find in files |
+| Ctrl+Space | Content assist |
+| Ctrl+1 | Quick fix |
+| Ctrl+Shift+O / Ctrl+Shift+F | Organize imports / format |
+| F3 | Open declaration |
+| Ctrl+B | Build |
+| Ctrl+R / F11 | Run the active file / repeat the last run |
+| Ctrl+F11 | Run the tests |
+
+The menus show the rest.
 
 ## Code map
 
 | Package | What it holds |
 | --- | --- |
-| `javapad.ui` | The SWT window. `MainWindow` wires the parts together; `MenuBuilder`, `EditorMenu`, `FileActions`, `RunController` and `Automation` are the pieces it delegates to. `GitActions`, `HistoryActions`, `HistoryPane`, `GitMenu` and `CommitDialog` are the git side. `CodeEditor` is the editor (key handling, styling, tooltips); `LineEdits` holds its line commands. |
-| `javapad.lang` | Code intelligence on javac's Tree API: `TypeIndex`, `CompletionEngine`, `ImportEditor`/`ImportFixer`, `CodeModel` (implementations, call hierarchy), `JavaFormatter`, `CodeMask`. No SWT. |
-| `javapad.git` | The `git` command line: `GitRepo` (commands), `GraphLayout` (the commit graph), parsers. No SWT. |
-| `javapad.run` | Starting programs and tests: `Launcher`, `MainFinder`, `TestFinder`, `JUnitReport`, `LiveTail`. |
-| `javapad.build` | `ProjectCompiler`, which compiles in process. |
-| `javapad.model` | `EclipseProject`, `ClasspathParser`, `ProjectGenerator`, `JavaTemplate`. |
-| `javapad.runner` | Classes that run inside the edited project's JVM (`JUnit4Runner`, `LiveLog`, `LiveJupiterListener`). |
+| `javapad.ui` | The SWT window (`MainWindow` and the classes it delegates to) and the editor. |
+| `javapad.lang` | Code intelligence on javac's Tree API, the formatter, and text search. No SWT. |
+| `javapad.git` | The `git` command line and what is parsed from it. No SWT. |
+| `javapad.run`, `javapad.build` | Compiling, and starting programs and tests. |
+| `javapad.model` | The Eclipse project files and `.gitignore` rules. |
+| `javapad.runner` | Classes that run inside the edited project's JVM. |
 
 Code style: tabs, `if(`, braces on every block and on their own line, one statement per line, fields first.
 
@@ -40,4 +62,4 @@ Code style: tabs, `if(`, braces on every block and on their own line, one statem
 
 ## Headless runs
 
-`Automation` reads `-Djavapad.*` properties (`open`, `file`, `action`, `tab`, `shot`, `wait`, `early`, …) so a run can be driven and screenshotted under `xvfb-run`; see the constants at the top of `ui/Automation.java`.
+`Automation` reads `-Djavapad.*` properties (`open`, `action`, `tab`, `shot`, …) so a run can be driven and screenshotted under `xvfb-run`; see the constants at the top of `ui/Automation.java`. Run with `-Djavapad.theme=light` for the light theme.
