@@ -35,6 +35,7 @@ class EditorMenu
 		cascade.setMenu(menu);
 		List<MenuItem> items = new ArrayList<MenuItem>();
 		items.add(contextItem(menu, "Compare with HEAD", () -> w.git.compareWithHead(tab.file)));
+		items.add(contextItem(menu, "Compare with Previous Revision", () -> w.git.compareWithPrevious(tab.file)));
 		items.add(contextItem(menu, "Show in History", () -> w.git.showInHistory(tab.file)));
 		new MenuItem(menu, SWT.SEPARATOR);
 		items.add(contextItem(menu, "Add to Index", () -> w.git.addToIndex(tab.file)));

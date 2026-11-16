@@ -65,6 +65,7 @@ class GitMenu
 		entry(replace, "Git > Replace with", "Previous Revision", () -> w.git.replaceWith(false));
 		needPath.add(replace.getParentItem());
 		new MenuItem(menu, SWT.SEPARATOR);
+		needPath.add(entry(menu, "Git", "Compare with Previous Revision", () -> w.git.comparePreviousOfSelected()));
 		needPath.add(entry(menu, "Git", "Show in History", () -> w.git.showInHistory()));
 		menu.addListener(SWT.Show, e ->
 		{

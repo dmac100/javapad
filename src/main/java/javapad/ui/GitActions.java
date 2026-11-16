@@ -469,6 +469,37 @@ class GitActions
 		}, true, after);
 	}
 
+	void comparePreviousOfSelected()
+	{
+		compareWithPrevious(selectedFile());
+	}
+
+	// The working tree file next to the version before its last change (the one "Replace with Previous Revision" would restore).
+	void compareWithPrevious(File f)
+	{
+		String path = pathOf(f);
+		if(path == null || path.equals(".") || !ready())
+		{
+			return;
+		}
+		GitRepo r = repo;
+		background(() ->
+		{
+			List<Commit> log = r.log(path, 2, false);
+			return () ->
+			{
+				if(log.size() < 2)
+				{
+					w.error("There is no previous revision of " + path + ".");
+					return;
+				}
+				String hash = log.get(1).hash;
+				CompareWindow.open(w, w.shell, path + ": previous revision and working tree", log.get(1).shortHash() + " (previous revision)", "Working tree", Arrays.asList(new CompareWindow.Entry(path, "", null)),
+					e -> new String[] {HistoryActions.orEmpty(r.show(hash, e.path)), r.working(e.path)});
+			};
+		});
+	}
+
 	void showInHistory()
 	{
 		showInHistory(selectedFile());

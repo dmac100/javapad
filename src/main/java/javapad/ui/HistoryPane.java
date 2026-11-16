@@ -39,6 +39,8 @@ public class HistoryPane
 	private final Composite composite;
 	private final Label title;
 	private final Button showAll;
+	private final Button currentRadio;
+	private final Button allRadio;
 	private final Table commitTable;
 	private final StyledText details;
 	private final Table fileTable;
@@ -63,17 +65,24 @@ public class HistoryPane
 		this.theme = theme;
 		this.actions = new HistoryActions(window);
 		composite = new Composite(parent, SWT.NONE);
-		GridLayout layout = new GridLayout(2, false);
+		GridLayout layout = new GridLayout(4, false);
 		layout.marginWidth = 4;
 		layout.marginHeight = 2;
 		composite.setLayout(layout);
 		title = new Label(composite, SWT.NONE);
 		title.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		currentRadio = new Button(composite, SWT.RADIO);
+		currentRadio.setText("Current branch");
+		allRadio = new Button(composite, SWT.RADIO);
+		allRadio.setText("All branches");
+		allRadio.setSelection(true);
+		currentRadio.addListener(SWT.Selection, e -> refresh());
+		allRadio.addListener(SWT.Selection, e -> refresh());
 		showAll = new Button(composite, SWT.PUSH);
 		showAll.setText("Show Whole Repository");
 		showAll.addListener(SWT.Selection, e -> showPath(null));
 		vertical = new SashForm(composite, SWT.VERTICAL);
-		vertical.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 2, 1));
+		vertical.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 4, 1));
 		commitTable = new Table(vertical, SWT.FULL_SELECTION | SWT.SINGLE | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
 		commitTable.setHeaderVisible(true);
 		String[] titles = {"Graph", "Message", "Commit", "Author", "Authored", "Committer", "Committed"};
@@ -143,7 +152,7 @@ public class HistoryPane
 		commitTable.setMenu(commitMenu());
 		fileTable.setMenu(fileMenu());
 		showAll.setVisible(false);
-		title.setText("History");
+		title.setText("");
 		restyle();
 	}
 
@@ -157,6 +166,11 @@ public class HistoryPane
 		composite.setBackground(theme.chrome);
 		title.setBackground(theme.chrome);
 		title.setForeground(theme.foreground);
+		for(Button radio : new Button[] {currentRadio, allRadio})
+		{
+			radio.setBackground(theme.chrome);
+			radio.setForeground(theme.foreground);
+		}
 		vertical.setBackground(theme.chrome);
 		lower.setBackground(theme.chrome);
 		for(Table t : new Table[] {commitTable, fileTable})
@@ -187,21 +201,27 @@ public class HistoryPane
 		if(repo == null)
 		{
 			setCommits(new ArrayList<Commit>());
-			title.setText(w.project() == null ? "History" : "Not a git repository");
+			title.setText(w.project() == null ? "" : "Not a git repository");
 			showAll.setVisible(false);
+			currentRadio.setEnabled(false);
+			allRadio.setEnabled(false);
 			composite.layout();
 			return;
 		}
 		String shownPath = path;
-		title.setText(shownPath == null ? "All branches" : "History of " + shownPath);
+		title.setText(shownPath == null ? "" : "History of " + shownPath);
 		showAll.setVisible(shownPath != null);
+		// the history of one file follows the current branch
+		currentRadio.setEnabled(shownPath == null);
+		allRadio.setEnabled(shownPath == null);
+		boolean everything = allRadio.getSelection();
 		composite.layout();
 		Commit before = selectedCommit();
 		String keep = before == null ? null : before.hash;
 		int mine = ++logGeneration;
 		w.git.background(() ->
 		{
-			List<Commit> list = repo.log(shownPath, LIMIT, shownPath == null);
+			List<Commit> list = repo.log(shownPath, LIMIT, shownPath == null && everything);
 			return () ->
 			{
 				if(mine == logGeneration && repo == w.git.repo())
