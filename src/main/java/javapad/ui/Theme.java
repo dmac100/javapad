@@ -33,6 +33,7 @@ public class Theme
 	public Color errorText;
 	public Color pass;
 	public Color bracket;
+	public Color occurrence;
 	public Color diffAdded;
 	public Color diffRemoved;
 	public Color diffHunk;
@@ -100,6 +101,7 @@ public class Theme
 			errorText = color(255, 110, 110);
 			pass = color(106, 190, 100);
 			bracket = color(0x25, 0x3e, 0x5a);
+			occurrence = color(84, 80, 44);
 			diffAdded = color(36, 70, 36);
 			diffRemoved = color(84, 36, 36);
 			diffHunk = color(86, 156, 214);
@@ -124,6 +126,7 @@ public class Theme
 			errorText = color(200, 0, 0);
 			pass = color(0, 130, 0);
 			bracket = color(190, 215, 255);
+			occurrence = color(255, 240, 170);
 			diffAdded = color(214, 245, 214);
 			diffRemoved = color(255, 218, 218);
 			diffHunk = color(0, 90, 160);

@@ -49,6 +49,16 @@ public class CodeEditor
 	private String shownTip;
 	private Assist assist;
 	private Navigation navigation;
+	private OccurrenceFinder occurrenceFinder;
+	// the places that use the selected identifier, as {start, end} offsets
+	private List<int[]> occurrences = new ArrayList<int[]>();
+	private int occurrenceRequest;
+
+	// Finds the other uses of the identifier text[offset, offset + length); calls back on the UI thread.
+	public interface OccurrenceFinder
+	{
+		void find(String text, int offset, int length, Consumer<List<int[]>> done);
+	}
 
 	public interface Navigation
 	{
@@ -108,6 +118,7 @@ public class CodeEditor
 			updateBracket();
 			popup.refresh();
 		});
+		text.addListener(SWT.Selection, e -> selectionChanged());
 		text.addListener(SWT.FocusOut, e -> popup.close());
 		text.addListener(SWT.MouseDown, e -> controlClick(e));
 		text.addListener(SWT.MouseDown, e -> popup.close());
@@ -117,6 +128,72 @@ public class CodeEditor
 		Display display = text.getDisplay();
 		display.addFilter(SWT.MouseWheel, wheel);
 		text.addListener(SWT.Dispose, e -> display.removeFilter(SWT.MouseWheel, wheel));
+	}
+
+	public void setOccurrenceFinder(OccurrenceFinder finder)
+	{
+		this.occurrenceFinder = finder;
+	}
+
+	// When a whole identifier is selected, shows where else the same thing is used.
+	void selectionChanged()
+	{
+		if(occurrenceFinder == null)
+		{
+			return;
+		}
+		int request = ++occurrenceRequest;
+		Point sel = text.getSelection();
+		boolean small = sel.y > sel.x && sel.y - sel.x <= 100;
+		String content = small ? text.getText() : "";
+		if(!small || !isIdentifier(content, sel.x, sel.y))
+		{
+			setOccurrences(new ArrayList<int[]>());
+			return;
+		}
+		// wait a moment so that dragging a selection does not start an analysis for every position
+		text.getDisplay().timerExec(250, () ->
+		{
+			if(text.isDisposed() || request != occurrenceRequest)
+			{
+				return;
+			}
+			occurrenceFinder.find(content, sel.x, sel.y - sel.x, found ->
+			{
+				if(!text.isDisposed() && request == occurrenceRequest && found != null)
+				{
+					setOccurrences(found.size() > 1 ? found : new ArrayList<int[]>());
+				}
+			});
+		});
+	}
+
+	static boolean isIdentifier(String content, int start, int end)
+	{
+		if(end > content.length() || !Character.isJavaIdentifierStart(content.charAt(start)))
+		{
+			return false;
+		}
+		for(int i = start; i < end; i++)
+		{
+			if(!Character.isJavaIdentifierPart(content.charAt(i)))
+			{
+				return false;
+			}
+		}
+		boolean before = start == 0 || !Character.isJavaIdentifierPart(content.charAt(start - 1));
+		boolean after = end >= content.length() || !Character.isJavaIdentifierPart(content.charAt(end));
+		return before && after && !JavaLexer.KEYWORDS.contains(content.substring(start, end));
+	}
+
+	void setOccurrences(List<int[]> list)
+	{
+		if(occurrences.isEmpty() && list.isEmpty())
+		{
+			return;
+		}
+		occurrences = list;
+		text.redraw();
 	}
 
 	void wheel(Event e)
@@ -361,6 +438,14 @@ public class CodeEditor
 				markBad(content, p.error ? bad : warn, p.column - 1);
 			}
 		}
+		boolean[] occ = new boolean[content.length()];
+		for(int[] range : occurrences)
+		{
+			for(int k = Math.max(range[0], e.lineOffset); k < Math.min(range[1], e.lineOffset + content.length()); k++)
+			{
+				occ[k - e.lineOffset] = true;
+			}
+		}
 		boolean[] match = new boolean[content.length()];
 		if(bracketPair != null)
 		{
@@ -377,11 +462,11 @@ public class CodeEditor
 		while(i < content.length())
 		{
 			int j = i + 1;
-			while(j < content.length() && styles[j] == styles[i] && bad[j] == bad[i] && warn[j] == warn[i] && match[j] == match[i])
+			while(j < content.length() && styles[j] == styles[i] && bad[j] == bad[i] && warn[j] == warn[i] && occ[j] == occ[i] && match[j] == match[i])
 			{
 				j++;
 			}
-			if(styles[i] != JavaLexer.PLAIN || bad[i] || warn[i] || match[i])
+			if(styles[i] != JavaLexer.PLAIN || bad[i] || warn[i] || occ[i] || match[i])
 			{
 				StyleRange r = new StyleRange();
 				r.start = e.lineOffset + i;
@@ -395,6 +480,10 @@ public class CodeEditor
 				{
 					r.background = theme.bracket;
 					r.fontStyle = SWT.BOLD;
+				}
+				else if(occ[i])
+				{
+					r.background = theme.occurrence;
 				}
 				if(bad[i] || warn[i])
 				{
@@ -457,6 +546,8 @@ public class CodeEditor
 	void modified(ExtendedModifyEvent e)
 	{
 		codeMask = null;
+		occurrenceRequest++;
+		occurrences = new ArrayList<int[]>();
 		int firstLine = text.getLineAtOffset(e.start);
 		lineStates.clear();
 		rebuildStates(0);

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import javapad.lang.Occurrences;
 import javapad.model.Problem;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder2Adapter;
@@ -99,6 +100,10 @@ public class EditorTabs
 			if(assist != null && java)
 			{
 				tab.editor.setAssist((t, o, d) -> assist.complete(tab.file, t, o, d));
+			}
+			if(assist != null && java)
+			{
+				tab.editor.setOccurrenceFinder((t, offset, length, done) -> assist.submit(() -> Occurrences.find(assist.analyzer(), tab.file, t, offset, length), done));
 			}
 			if(navigation != null && java)
 			{
