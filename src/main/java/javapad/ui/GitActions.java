@@ -198,13 +198,7 @@ class GitActions
 	// the selected file or folder in the sidebar, relative to the repository; "." for the repository itself
 	String selectedPath()
 	{
-		File f = w.activeTree().selected();
-		if(f == null || repo == null)
-		{
-			return null;
-		}
-		String rel = repo.relative(f);
-		return rel == null ? null : rel.isEmpty() ? "." : rel;
+		return pathOf(selectedFile());
 	}
 
 	File selectedFile()
@@ -389,9 +383,25 @@ class GitActions
 		run("Reset", r -> r.reset(kind, rev), true);
 	}
 
+	// the path relative to the repository, "." for the repository itself, null if there is no repository or the file is outside it
+	String pathOf(File f)
+	{
+		if(f == null || repo == null)
+		{
+			return null;
+		}
+		String rel = repo.relative(f);
+		return rel == null ? null : rel.isEmpty() ? "." : rel;
+	}
+
 	void addToIndex()
 	{
-		String path = selectedPath();
+		addToIndex(selectedFile());
+	}
+
+	void addToIndex(File f)
+	{
+		String path = pathOf(f);
 		if(path != null)
 		{
 			run("Add", r -> r.add(Arrays.asList(path)), false);
@@ -400,7 +410,12 @@ class GitActions
 
 	void untrack()
 	{
-		String path = selectedPath();
+		untrack(selectedFile());
+	}
+
+	void untrack(File f)
+	{
+		String path = pathOf(f);
 		if(path != null && ConfirmDialog.confirm(w.shell, "Untrack", "Stop tracking " + path + "? The files stay on disk."))
 		{
 			run("Untrack", r -> r.untrack(Arrays.asList(path)), false);
@@ -409,9 +424,13 @@ class GitActions
 
 	void ignore()
 	{
-		String path = selectedPath();
-		File f = selectedFile();
-		if(path != null && !path.equals(".") && f != null)
+		ignore(selectedFile());
+	}
+
+	void ignore(File f)
+	{
+		String path = pathOf(f);
+		if(path != null && !path.equals("."))
 		{
 			run("Ignore", r -> r.ignore(path, f.isDirectory()), false);
 		}
@@ -420,7 +439,13 @@ class GitActions
 	// head: the last commit; otherwise the version before the last change to the file
 	void replaceWith(boolean head)
 	{
-		String path = selectedPath();
+		replaceWith(selectedFile(), head, null);
+	}
+
+	// after: runs when the file has been replaced (an editor showing it can reload then)
+	void replaceWith(File f, boolean head, Runnable after)
+	{
+		String path = pathOf(f);
 		if(path == null || path.equals("."))
 		{
 			return;
@@ -441,15 +466,32 @@ class GitActions
 				return new GitResult(1, "", "There is no previous revision of " + path + ".");
 			}
 			return r.restore(log.get(1).hash, Arrays.asList(path));
-		}, true);
+		}, true, after);
 	}
 
 	void showInHistory()
 	{
-		String path = selectedPath();
+		showInHistory(selectedFile());
+	}
+
+	void showInHistory(File f)
+	{
+		String path = pathOf(f);
 		if(path != null)
 		{
 			w.history.showPath(path.equals(".") ? null : path);
+		}
+	}
+
+	// The file next to its last committed version.
+	void compareWithHead(File f)
+	{
+		String path = pathOf(f);
+		if(path != null && !path.equals("."))
+		{
+			GitRepo r = repo;
+			CompareWindow.open(w, w.shell, path + ": last commit and working tree", "Last commit (HEAD)", "Working tree", Arrays.asList(new CompareWindow.Entry(path, "", null)),
+				e -> new String[] {HistoryActions.orEmpty(r.show("HEAD", e.path)), r.working(e.path)});
 		}
 	}
 

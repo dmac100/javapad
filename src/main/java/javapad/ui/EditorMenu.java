@@ -26,6 +26,47 @@ class EditorMenu
 		return item;
 	}
 
+	// the git actions that make sense for the file of this editor
+	void addGit(Menu parent, EditorTab tab)
+	{
+		MenuItem cascade = new MenuItem(parent, SWT.CASCADE);
+		cascade.setText("Git");
+		Menu menu = new Menu(parent);
+		cascade.setMenu(menu);
+		List<MenuItem> items = new ArrayList<MenuItem>();
+		items.add(contextItem(menu, "Compare with HEAD", () -> w.git.compareWithHead(tab.file)));
+		items.add(contextItem(menu, "Show in History", () -> w.git.showInHistory(tab.file)));
+		new MenuItem(menu, SWT.SEPARATOR);
+		items.add(contextItem(menu, "Add to Index", () -> w.git.addToIndex(tab.file)));
+		items.add(contextItem(menu, "Untrack", () -> w.git.untrack(tab.file)));
+		items.add(contextItem(menu, "Ignore", () -> w.git.ignore(tab.file)));
+		new MenuItem(menu, SWT.SEPARATOR);
+		items.add(contextItem(menu, "Replace with Head Revision", () -> w.git.replaceWith(tab.file, true, () -> reload(tab))));
+		items.add(contextItem(menu, "Replace with Previous Revision", () -> w.git.replaceWith(tab.file, false, () -> reload(tab))));
+		parent.addListener(SWT.Show, e ->
+		{
+			boolean on = w.git.pathOf(tab.file) != null;
+			cascade.setEnabled(on);
+			for(MenuItem item : items)
+			{
+				item.setEnabled(on);
+			}
+		});
+	}
+
+	// shows what is now on disk, dropping unsaved edits (the caller has asked for that)
+	void reload(EditorTab tab)
+	{
+		try
+		{
+			tab.reload();
+		}
+		catch(java.io.IOException e)
+		{
+			w.error("Cannot reload " + tab.file.getName() + ": " + e.getMessage());
+		}
+	}
+
 	// The editor's right-click menu: editing, w.navigation and import features with their shortcuts.
 	void attach(EditorTab tab)
 	{
@@ -53,6 +94,8 @@ class EditorMenu
 		new MenuItem(menu, SWT.SEPARATOR);
 		javaItems.add(contextItem(menu, "Run Test at Cursor\tCtrl+Alt+R", () -> w.run.runTestAtCursor()));
 		javaItems.add(contextItem(menu, "Go to Matching Bracket\tCtrl+Shift+P", () -> tab.editor.goToMatchingBracket()));
+		new MenuItem(menu, SWT.SEPARATOR);
+		addGit(menu, tab);
 		t.setMenu(menu);
 		// a right click puts the caret where you clicked, unless that is inside the selection
 		t.addListener(SWT.MenuDetect, e ->
