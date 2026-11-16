@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import javapad.lang.FileSearch;
 import javapad.model.EclipseProject;
 import javapad.model.GitIgnore;
 import javapad.model.Problem;
@@ -47,6 +48,8 @@ public class MainWindow
 	final CTabItem junitTab;
 	final CTabItem callTab;
 	final CTabItem historyTab;
+	final CTabItem searchTab;
+	final SearchPane searchPane;
 	final HistoryPane history;
 	final GitActions git;
 	private final CallHierarchyPane callPane;
@@ -114,6 +117,11 @@ public class MainWindow
 		callTab = new CTabItem(bottom, SWT.NONE);
 		callTab.setText("Call Hierarchy");
 		callTab.setControl(callPane.getControl());
+		searchPane = new SearchPane(bottom, theme);
+		searchTab = new CTabItem(bottom, SWT.NONE);
+		searchTab.setText("Search");
+		searchTab.setControl(searchPane.getControl());
+		searchPane.setOpener((f, line, column, length) -> openMatch(f, line, column, length));
 		git = new GitActions(this);
 		history = new HistoryPane(bottom, theme, this);
 		historyTab = new CTabItem(bottom, SWT.NONE);
@@ -189,6 +197,7 @@ public class MainWindow
 		junitPane.restyle();
 		callPane.restyle();
 		history.restyle();
+		searchPane.restyle();
 		for(EditorTab tab : editors.tabs())
 		{
 			tab.editor.restyle();
@@ -286,6 +295,7 @@ public class MainWindow
 		console.clear();
 		shell.setText("JavaPad - " + project.name);
 		git.projectChanged();
+		searchPane.setProject(project);
 		for(String w : project.warnings)
 		{
 			console.append("warning: " + w + "\n", true);
@@ -384,6 +394,80 @@ public class MainWindow
 		if(project != null && project.isSource(tab.file))
 		{
 			run.build(null);
+		}
+	}
+
+	private String lastSearch = "";
+	private boolean searchCase;
+	private boolean searchRegex;
+	private int searchGeneration;
+
+	// Edit > Find in Files: asks what to look for, searches every project file (using unsaved editor text) and lists the lines in the Search tab.
+	void findInFiles()
+	{
+		if(project == null)
+		{
+			error("Open a project first.");
+			return;
+		}
+		String initial = lastSearch;
+		EditorTab active = editors.active();
+		if(active != null)
+		{
+			String selected = active.editor.getControl().getSelectionText();
+			if(!selected.isEmpty() && selected.indexOf('\n') < 0 && selected.length() <= 200)
+			{
+				initial = selected;
+			}
+		}
+		FindInFilesDialog.Request req = new FindInFilesDialog(shell).open(initial, searchCase, searchRegex);
+		if(req == null)
+		{
+			return;
+		}
+		lastSearch = req.query;
+		searchCase = req.caseSensitive;
+		searchRegex = req.regex;
+		java.util.regex.Pattern pattern = FileSearch.pattern(req.query, req.caseSensitive, req.regex);
+		java.util.Map<File, String> unsaved = new java.util.HashMap<File, String>();
+		for(EditorTab tab : editors.tabs())
+		{
+			if(tab.isDirty())
+			{
+				unsaved.put(tab.file, tab.editor.getContent());
+			}
+		}
+		int mine = ++searchGeneration;
+		searchPane.searching(req.query);
+		showBottomTab("search");
+		Thread t = new Thread(() ->
+		{
+			List<File> found = new ArrayList<File>();
+			listFiles(project.root, found, GitIgnore.of(project.root));
+			FileSearch.Result result = FileSearch.search(found, unsaved, pattern, 5000);
+			display.asyncExec(() ->
+			{
+				if(!shell.isDisposed() && mine == searchGeneration)
+				{
+					searchPane.show(req.query, result);
+				}
+			});
+		}, "find-in-files");
+		t.setDaemon(true);
+		t.start();
+	}
+
+	// opens a search result with the match selected
+	void openMatch(File file, int line, int column, int length)
+	{
+		EditorTab tab = editors.open(file);
+		if(tab != null)
+		{
+			tab.editor.goTo(line, column);
+			org.eclipse.swt.custom.StyledText t = tab.editor.getControl();
+			int caret = t.getCaretOffset();
+			t.setSelection(caret, Math.min(t.getCharCount(), caret + length));
+			t.setFocus();
 		}
 	}
 
@@ -638,7 +722,7 @@ public class MainWindow
 	// Used by Automation: shows one of the tabs by name (problems, console, call at the bottom; junit in the sidebar).
 	void showBottomTab(String name)
 	{
-		CTabItem tab = name.equals("problems") ? problemsTab : name.equals("junit") ? junitTab : name.equals("console") ? consoleTab : name.equals("call") ? callTab : name.equals("history") ? historyTab : null;
+		CTabItem tab = name.equals("problems") ? problemsTab : name.equals("junit") ? junitTab : name.equals("console") ? consoleTab : name.equals("call") ? callTab : name.equals("history") ? historyTab : name.equals("search") ? searchTab : null;
 		if(tab != null)
 		{
 			tab.getParent().setSelection(tab);

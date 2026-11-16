@@ -109,6 +109,7 @@ class MenuBuilder
 		menuItem(file, "Exit", 0, () -> w.shell.close());
 		Menu edit = submenu(bar, "Edit");
 		menuItem(edit, "Find...", SWT.MOD1 | 'F', () -> w.find());
+		menuItem(edit, "Find in Files...", SWT.MOD1 | SWT.SHIFT | 'H', () -> w.findInFiles());
 		menuItem(edit, "Go to Line...", SWT.MOD1 | 'L', () -> w.gotoLine());
 		menuItem(edit, "Content Assist", 0, () -> w.contentAssist());
 		menuItem(edit, "Go to Matching Bracket", SWT.MOD1 | SWT.SHIFT | 'P', () -> w.goToMatchingBracket());
