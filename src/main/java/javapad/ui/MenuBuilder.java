@@ -137,6 +137,16 @@ class MenuBuilder
 			darkItem.setSelection(!darkItem.getSelection());
 			w.setDark(darkItem.getSelection());
 		});
+		MenuItem toolbarItem = new MenuItem(view, SWT.CHECK);
+		toolbarItem.setText("Show Toolbar");
+		toolbarItem.setSelection(w.toolbarShown());
+		toolbarItem.addListener(SWT.Selection, e -> w.showToolbar(toolbarItem.getSelection()));
+		commands.add("View > Show Toolbar", () ->
+		{
+			toolbarItem.setSelection(!toolbarItem.getSelection());
+			w.showToolbar(toolbarItem.getSelection());
+		});
+		menuItem(view, "Editor Font...", 0, () -> w.chooseFont());
 		commands.add("View > Show Project", () -> w.left.setSelection(w.projectTab));
 		commands.add("View > Show Sources", () -> w.left.setSelection(w.sourceTab));
 		commands.add("View > Show Problems", () -> w.bottomTabs.show(w.problemsTab));

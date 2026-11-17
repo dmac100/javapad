@@ -6,11 +6,15 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import javapad.git.GitStatus;
 import javapad.model.EclipseProject;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeItem;
 
@@ -23,11 +27,14 @@ public class ProjectTree
 	// set when the project is in a git repository: tells which files are untracked, so their names are greyed
 	private Predicate<File> untracked;
 	private Color grey;
+	private Theme theme;
+	private GitStatus branch;
 
 	public ProjectTree(Composite parent, boolean sourcesOnly)
 	{
 		this.sourcesOnly = sourcesOnly;
 		tree = new Tree(parent, SWT.BORDER | SWT.SINGLE | SWT.V_SCROLL | SWT.H_SCROLL);
+		tree.addListener(SWT.PaintItem, e -> paintBranch(e));
 		tree.addListener(SWT.Expand, e -> fill((TreeItem)e.item));
 		tree.addListener(SWT.Dispose, e -> disposeColor());
 		tree.addListener(SWT.DefaultSelection, e ->
@@ -48,8 +55,84 @@ public class ProjectTree
 		});
 	}
 
+	// The branch and its commits ahead (up arrow) and behind (down arrow), shown after the name of the project folder; null for none.
+	public void setBranch(GitStatus status)
+	{
+		branch = status == null || status.branch.isEmpty() ? null : status;
+		for(TreeItem top : tree.getItems())
+		{
+			if(project != null && project.root.equals(top.getData()))
+			{
+				top.setText(label(top.getData(), top.getText()));
+			}
+		}
+		tree.redraw();
+	}
+
+	// the branch and its arrows, in square brackets
+	String info()
+	{
+		String s = branch.branch;
+		if(branch.ahead > 0)
+		{
+			s += " \u2191" + branch.ahead;
+		}
+		if(branch.behind > 0)
+		{
+			s += " \u2193" + branch.behind;
+		}
+		return "[" + s + "]";
+	}
+
+	// the name of an item; the project folder's also carries the branch
+	String label(Object data, String current)
+	{
+		String name = current;
+		int gap = name.indexOf("  ");
+		if(gap >= 0)
+		{
+			name = name.substring(0, gap);
+		}
+		if(branch == null || project == null || !project.root.equals(data))
+		{
+			return name;
+		}
+		return name + "  " + info();
+	}
+
+	// the branch and arrows are drawn over the plain text in one colour of their own
+	void paintBranch(Event e)
+	{
+		if(branch == null || theme == null || project == null || !(e.item instanceof TreeItem))
+		{
+			return;
+		}
+		TreeItem item = (TreeItem)e.item;
+		if(!project.root.equals(item.getData()))
+		{
+			return;
+		}
+		String text = item.getText();
+		int gap = text.indexOf("  ");
+		if(gap < 0)
+		{
+			return;
+		}
+		String name = text.substring(0, gap);
+		String info = text.substring(gap + 2);
+		GC gc = e.gc;
+		Rectangle b = item.getBounds(0);
+		int x = b.x + gc.stringExtent(name + "  ").x;
+		boolean selected = (e.detail & SWT.SELECTED) != 0;
+		gc.setBackground(selected ? tree.getDisplay().getSystemColor(SWT.COLOR_LIST_SELECTION) : theme.sidebar);
+		gc.fillRectangle(x, b.y, gc.stringExtent(info).x + 2, b.height);
+		gc.setForeground(theme.branch);
+		gc.drawString(info, x, b.y + 2, true);
+	}
+
 	public void restyle(Theme theme)
 	{
+		this.theme = theme;
 		tree.setBackground(theme.sidebar);
 		tree.setForeground(theme.sidebarText);
 		disposeColor();
@@ -226,7 +309,7 @@ public class ProjectTree
 			for(File src : project.sourceFolders)
 			{
 				TreeItem top = new TreeItem(tree, SWT.NONE);
-				top.setText(src.equals(project.root) ? project.name : project.relative(src));
+				top.setText(label(src, src.equals(project.root) ? project.name : project.relative(src)));
 				top.setData(src);
 				top.setForeground(colorFor(src));
 				fill(top);
@@ -235,7 +318,7 @@ public class ProjectTree
 			return;
 		}
 		TreeItem root = new TreeItem(tree, SWT.NONE);
-		root.setText(project.name);
+		root.setText(label(project.root, project.name));
 		root.setData(project.root);
 		root.setForeground(colorFor(project.root));
 		fill(root);

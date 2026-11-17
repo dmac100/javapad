@@ -12,8 +12,10 @@ import org.eclipse.swt.widgets.Display;
 public class Theme
 {
 	static final File PREFERENCE = new File(System.getProperty("user.home"), ".javapad/theme");
+	static final File FONT_PREFERENCE = new File(System.getProperty("user.home"), ".javapad/font");
+	static final File TOOLBAR_PREFERENCE = new File(System.getProperty("user.home"), ".javapad/toolbar");
 
-	public final Font font;
+	public Font font;
 	public boolean dark;
 	public Color background;
 	public Color foreground;
@@ -37,13 +39,74 @@ public class Theme
 	public Color diffAdded;
 	public Color diffRemoved;
 	public Color diffHunk;
+	public Color branch;
 	private final Display display;
 
 	public Theme(Display d)
 	{
 		display = d;
-		font = new Font(d, new FontData("Monospace", 11, SWT.NORMAL));
+		font = loadFont();
 		use(loadPreference());
+	}
+
+	Font loadFont()
+	{
+		String name = "Monospace";
+		int size = 11;
+		try
+		{
+			String[] f = new String(Files.readAllBytes(FONT_PREFERENCE.toPath()), StandardCharsets.UTF_8).trim().split("\t");
+			name = f[0];
+			size = Integer.parseInt(f[1]);
+		}
+		catch(Exception e)
+		{
+			// the font preference is optional
+		}
+		return new Font(display, new FontData(name, size, SWT.NORMAL));
+	}
+
+	// Replaces the editor font; the caller restyles the widgets and then calls disposeOld.
+	public Font changeFont(FontData data)
+	{
+		Font old = font;
+		FontData d = new FontData(data.getName(), Math.max(6, Math.round(data.height)), SWT.NORMAL);
+		font = new Font(display, d);
+		try
+		{
+			FONT_PREFERENCE.getParentFile().mkdirs();
+			Files.write(FONT_PREFERENCE.toPath(), (d.getName() + "\t" + d.getHeight()).getBytes(StandardCharsets.UTF_8));
+		}
+		catch(Exception e)
+		{
+			// the font preference is optional
+		}
+		return old;
+	}
+
+	public static boolean loadToolbar()
+	{
+		try
+		{
+			return !new String(Files.readAllBytes(TOOLBAR_PREFERENCE.toPath()), StandardCharsets.UTF_8).trim().equals("hidden");
+		}
+		catch(Exception e)
+		{
+			return true;
+		}
+	}
+
+	public static void saveToolbar(boolean shown)
+	{
+		try
+		{
+			TOOLBAR_PREFERENCE.getParentFile().mkdirs();
+			Files.write(TOOLBAR_PREFERENCE.toPath(), (shown ? "shown" : "hidden").getBytes(StandardCharsets.UTF_8));
+		}
+		catch(Exception e)
+		{
+			// the toolbar preference is optional
+		}
 	}
 
 	public static boolean loadPreference()
@@ -105,6 +168,7 @@ public class Theme
 			diffAdded = color(36, 70, 36);
 			diffRemoved = color(84, 36, 36);
 			diffHunk = color(86, 156, 214);
+			branch = color(120, 170, 220);
 		}
 		else
 		{
@@ -130,6 +194,7 @@ public class Theme
 			diffAdded = color(214, 245, 214);
 			diffRemoved = color(255, 218, 218);
 			diffHunk = color(0, 90, 160);
+			branch = color(30, 100, 170);
 		}
 	}
 

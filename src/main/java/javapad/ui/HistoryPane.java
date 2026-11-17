@@ -46,7 +46,7 @@ public class HistoryPane
 	private final Table fileTable;
 	private final SashForm vertical;
 	private final SashForm lower;
-	private final Font bold;
+	private Font bold;
 	private final Color[] laneColors = new Color[LANE_COLORS.length];
 	private final Color[] refColors = new Color[3];
 	private final Color refText;
@@ -109,12 +109,7 @@ public class HistoryPane
 		}
 		vertical.setWeights(new int[] {55, 45});
 		lower.setWeights(new int[] {70, 30});
-		FontData[] fd = theme.font.getFontData();
-		for(FontData d : fd)
-		{
-			d.setStyle(SWT.BOLD);
-		}
-		bold = new Font(parent.getDisplay(), fd);
+		bold = boldFont();
 		for(int i = 0; i < LANE_COLORS.length; i++)
 		{
 			laneColors[i] = new Color(parent.getDisplay(), LANE_COLORS[i][0], LANE_COLORS[i][1], LANE_COLORS[i][2]);
@@ -161,8 +156,21 @@ public class HistoryPane
 		return composite;
 	}
 
+	Font boldFont()
+	{
+		FontData[] fd = theme.font.getFontData();
+		for(FontData d : fd)
+		{
+			d.setStyle(SWT.BOLD);
+		}
+		return new Font(composite.getDisplay(), fd);
+	}
+
 	public void restyle()
 	{
+		details.setFont(theme.font);
+		bold.dispose();
+		bold = boldFont();
 		composite.setBackground(theme.chrome);
 		title.setBackground(theme.chrome);
 		title.setForeground(theme.foreground);

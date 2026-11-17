@@ -260,6 +260,7 @@ public class JUnitPane
 
 	public void restyle()
 	{
+		detail.setFont(theme.font);
 		composite.setBackground(theme.chrome);
 		sash.setBackground(theme.chrome);
 		summary.setBackground(theme.chrome);

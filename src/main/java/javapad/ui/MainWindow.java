@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import javapad.lang.FileSearch;
+import javapad.git.GitStatus;
 import javapad.model.EclipseProject;
 import javapad.model.GitIgnore;
 import javapad.model.Problem;
@@ -21,6 +22,8 @@ import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
@@ -28,6 +31,7 @@ import org.eclipse.swt.graphics.ImageLoader;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.FontDialog;
 import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
@@ -61,6 +65,7 @@ public class MainWindow
 	final JUnitPane junitPane;
 	private final SashForm horizontal;
 	private final SashForm vertical;
+	private final ToolBar toolbar;
 	private EclipseProject project;
 	private LaunchSettings settings;
 	RunController run;
@@ -91,7 +96,7 @@ public class MainWindow
 		shell.setLayout(new GridLayout(1, false));
 		((GridLayout)shell.getLayout()).marginWidth = 0;
 		((GridLayout)shell.getLayout()).marginHeight = 0;
-		ToolBar toolbar = new ToolBar(shell, SWT.FLAT);
+		toolbar = new ToolBar(shell, SWT.FLAT);
 		toolbar.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
 		horizontal = new SashForm(shell, SWT.HORIZONTAL);
 		horizontal.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
@@ -150,6 +155,7 @@ public class MainWindow
 		run = new RunController(display, shell, editors, console, problemsPane, junitPane, assist, bottomTabs, consoleTab, problemsTab, junitTab, () -> currentFile(), () -> refreshSources(), m -> error(m));
 		importActions = new ImportActions(shell, assist);
 		menus.addToolItems(toolbar);
+		showToolbar(Theme.loadToolbar());
 		files = new FileActions(shell, () -> project, () -> activeTree(), () -> left.getSelection() == sourceTab, () -> refreshTrees(), l -> open(l), m -> error(m));
 		menus.buildMenus();
 		editors.setCompileHook(() -> run.runActive());
@@ -205,6 +211,39 @@ public class MainWindow
 		{
 			tab.editor.restyle();
 		}
+	}
+
+	boolean toolbarShown()
+	{
+		return !((GridData)toolbar.getLayoutData()).exclude;
+	}
+
+	void showToolbar(boolean shown)
+	{
+		toolbar.setVisible(shown);
+		((GridData)toolbar.getLayoutData()).exclude = !shown;
+		shell.layout(true, true);
+		Theme.saveToolbar(shown);
+	}
+
+	void chooseFont()
+	{
+		FontDialog dialog = new FontDialog(shell);
+		dialog.setFontList(theme.font.getFontData());
+		FontData chosen = dialog.open();
+		if(chosen == null)
+		{
+			return;
+		}
+		Font old = theme.changeFont(chosen);
+		applyTheme();
+		old.dispose();
+	}
+
+	void updateBranch(GitStatus status)
+	{
+		projectTree.setBranch(status);
+		sourceTree.setBranch(status);
 	}
 
 	void setDark(boolean dark)

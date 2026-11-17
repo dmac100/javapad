@@ -27,6 +27,7 @@ public class NavigationActions
 		String key;
 		String description;
 		CodeModel.Place declaration;
+		CodeModel.Place variable;
 		boolean method;
 		boolean type;
 	}
@@ -87,15 +88,22 @@ public class NavigationActions
 				return null;
 			}
 			Element e = Navigator.elementAt(r, offset);
+			CodeModel.Place variable = null;
 			if(e != null && forTypeHierarchy)
 			{
-				e = Navigator.typeOrMethod(e);
+				Element asType = Navigator.typeOrMethod(e);
+				if(asType != e)
+				{
+					variable = Navigator.declaration(r, e);
+				}
+				e = asType;
 			}
 			if(e == null)
 			{
 				return null;
 			}
 			Target t = new Target();
+			t.variable = variable;
 			t.element = e;
 			t.key = Navigator.keyOf(e, r);
 			t.method = e instanceof ExecutableElement;
@@ -169,6 +177,12 @@ public class NavigationActions
 				{
 					found.put(label(t.display, t.place), t.place);
 				}
+			}
+			if(found.isEmpty() && target.variable != null)
+			{
+				// a field or variable whose type has no implementations here: go to the field itself
+				open(target.variable);
+				return;
 			}
 			if(found.isEmpty())
 			{

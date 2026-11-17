@@ -254,6 +254,14 @@ public class GitRepoTest
 	}
 
 	@Test
+	public void parsesAheadAndBehind()
+	{
+		GitStatus s = GitStatus.parse("# branch.oid abc\0# branch.head dev\0# branch.upstream origin/dev\0# branch.ab +3 -2\0");
+		assertEquals(3, s.ahead);
+		assertEquals(2, s.behind);
+	}
+
+	@Test
 	public void parsesCannedStatus()
 	{
 		String text = "# branch.oid abc\0# branch.head dev\0" + "1 .M N... 100644 100644 100644 aaa bbb src/A.java\0" + "2 R. N... 100644 100644 100644 aaa bbb R100 new name.txt\0old name.txt\0"

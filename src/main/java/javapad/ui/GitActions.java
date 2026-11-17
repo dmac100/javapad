@@ -89,6 +89,7 @@ class GitActions
 
 	void decorate()
 	{
+		w.updateBranch(repo == null ? null : status);
 		if(repo == null || status == null)
 		{
 			w.projectTree.setUntrackedTest(null);

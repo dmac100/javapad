@@ -216,6 +216,7 @@ public class CodeEditor
 
 	public void restyle()
 	{
+		text.setFont(theme.font);
 		text.setBackground(theme.background);
 		text.setForeground(theme.foreground);
 		makeBullets();

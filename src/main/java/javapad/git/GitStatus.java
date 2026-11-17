@@ -9,12 +9,21 @@ import java.util.Set;
 public class GitStatus
 {
 	public final String branch;
+	public final int ahead;
+	public final int behind;
 	public final List<FileChange> changes;
 	private final Set<String> untracked = new HashSet<String>();
 
 	public GitStatus(String branch, List<FileChange> changes)
 	{
+		this(branch, changes, 0, 0);
+	}
+
+	public GitStatus(String branch, List<FileChange> changes, int ahead, int behind)
+	{
 		this.branch = branch;
+		this.ahead = ahead;
+		this.behind = behind;
 		this.changes = changes;
 		for(FileChange c : changes)
 		{
@@ -71,6 +80,8 @@ public class GitStatus
 	public static GitStatus parse(String text)
 	{
 		String branch = "";
+		int ahead = 0;
+		int behind = 0;
 		List<FileChange> list = new ArrayList<FileChange>();
 		String[] parts = text.split("\0");
 		for(int i = 0; i < parts.length; i++)
@@ -79,6 +90,13 @@ public class GitStatus
 			if(p.startsWith("# branch.head "))
 			{
 				branch = p.substring("# branch.head ".length());
+			}
+			else if(p.startsWith("# branch.ab "))
+			{
+				// "# branch.ab +2 -1"
+				String[] f = p.split(" ");
+				ahead = Integer.parseInt(f[2].substring(1));
+				behind = Integer.parseInt(f[3].substring(1));
 			}
 			else if(p.startsWith("1 "))
 			{
@@ -102,7 +120,7 @@ public class GitStatus
 				list.add(new FileChange(p.substring(2), '?', '?'));
 			}
 		}
-		return new GitStatus(branch, list);
+		return new GitStatus(branch, list, ahead, behind);
 	}
 
 	static char column(char c)

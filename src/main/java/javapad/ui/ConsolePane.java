@@ -277,6 +277,7 @@ public class ConsolePane
 
 	public void restyle()
 	{
+		text.setFont(theme.font);
 		text.setBackground(theme.background);
 		text.setForeground(theme.foreground);
 		for(Seg seg : segments)
