@@ -48,6 +48,10 @@ public class JUnit4Runner
 				requests.add(Request.method(Class.forName(args[i].substring(0, hash)), args[i].substring(hash + 1)));
 			}
 		}
+		for(Request request : requests)
+		{
+			plan(request.getRunner().getDescription());
+		}
 		JUnitCore core = new JUnitCore();
 		core.addListener(new TextListener(System.out));
 		core.addListener(new RunListener()
@@ -98,6 +102,20 @@ public class JUnit4Runner
 		write(report);
 		System.out.flush();
 		System.exit(ok ? 0 : 1);
+	}
+
+	// tells JavaPad every test that is about to run, so it can show them all and count them
+	static void plan(Description d)
+	{
+		if(d.isTest())
+		{
+			LiveLog.event("PLAN", d.getClassName(), d.getMethodName() == null ? "<class>" : d.getMethodName());
+			return;
+		}
+		for(Description child : d.getChildren())
+		{
+			plan(child);
+		}
 	}
 
 	static void live(Case c)

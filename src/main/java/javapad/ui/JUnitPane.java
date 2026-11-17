@@ -2,6 +2,7 @@ package javapad.ui;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -16,9 +17,12 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Menu;
@@ -33,7 +37,10 @@ public class JUnitPane
 	private SashForm sash;
 	private final Composite composite;
 	private final Label summary;
-	private final Composite bar;
+	private final Canvas bar;
+	private int progressDone;
+	private int progressTotal;
+	private int progressFailed;
 	private final Tree tree;
 	private final StyledText detail;
 	private final Theme theme;
@@ -44,6 +51,8 @@ public class JUnitPane
 	private final Map<String, TreeItem> liveClasses = new LinkedHashMap<String, TreeItem>();
 	private final Map<String, TreeItem> liveTests = new LinkedHashMap<String, TreeItem>();
 	private final ArrayList<TestResult> liveResults = new ArrayList<TestResult>();
+	// per test class during a run: tests known, tests finished, tests that failed
+	private final Map<String, int[]> liveCounts = new HashMap<String, int[]>();
 
 	public JUnitPane(Composite parent, Theme theme)
 	{
@@ -56,10 +65,11 @@ public class JUnitPane
 		composite.setLayout(layout);
 		summary = new Label(composite, SWT.NONE);
 		summary.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
-		bar = new Composite(composite, SWT.NONE);
+		bar = new Canvas(composite, SWT.NO_BACKGROUND);
 		GridData barData = new GridData(SWT.FILL, SWT.TOP, true, false);
-		barData.heightHint = 6;
+		barData.heightHint = 12;
 		bar.setLayoutData(barData);
+		bar.addListener(SWT.Paint, e -> paintBar(e.gc));
 		sash = new SashForm(composite, SWT.VERTICAL);
 		sash.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		tree = new Tree(sash, SWT.BORDER | SWT.SINGLE | SWT.V_SCROLL | SWT.H_SCROLL);
@@ -159,10 +169,56 @@ public class JUnitPane
 		liveClasses.clear();
 		liveTests.clear();
 		liveResults.clear();
+		liveCounts.clear();
 		summary.setText("Running tests...");
 	}
 
-	// RUN class name | END class name status seconds message   (status P, F, E or K)
+	void paintBar(GC gc)
+	{
+		Rectangle r = bar.getClientArea();
+		gc.setBackground(theme.background);
+		gc.fillRectangle(r);
+		if(progressTotal > 0)
+		{
+			gc.setBackground(progressFailed > 0 ? theme.error : theme.pass);
+			gc.fillRectangle(0, 0, (int)((long)r.width * Math.min(progressDone, progressTotal) / progressTotal), r.height);
+		}
+		gc.setForeground(theme.gutter);
+		gc.drawRectangle(0, 0, r.width - 1, r.height - 1);
+	}
+
+	void setProgress(int done, int total, int failed)
+	{
+		progressDone = done;
+		progressTotal = total;
+		progressFailed = failed;
+		bar.redraw();
+	}
+
+	// the row of a test class in the tree, made when it is first seen
+	TreeItem classItem(String cls)
+	{
+		TreeItem classItem = liveClasses.get(cls);
+		if(classItem == null)
+		{
+			classItem = new TreeItem(tree, SWT.NONE);
+			classItem.setData("class", cls);
+			liveClasses.put(cls, classItem);
+			liveCounts.put(cls, new int[3]);
+		}
+		return classItem;
+	}
+
+	void updateClass(String cls)
+	{
+		TreeItem classItem = liveClasses.get(cls);
+		int[] n = liveCounts.get(cls);
+		boolean finished = n[1] == n[0];
+		classItem.setText((n[2] > 0 ? "✘ " : finished ? "✔ " : "▶ ") + cls + "  (" + n[1] + "/" + n[0] + ")");
+		classItem.setForeground(n[2] > 0 ? theme.errorText : finished ? theme.pass : theme.foreground);
+	}
+
+	// PLAN class name (a test that will run) | RUN class name | END class name status seconds message   (status P, F, E or K)
 	public void liveEvent(String[] f)
 	{
 		if(f.length < 3)
@@ -170,18 +226,14 @@ public class JUnitPane
 			return;
 		}
 		boolean end = f[0].equals("END");
-		if(!end && !f[0].equals("RUN"))
+		boolean plan = f[0].equals("PLAN");
+		if(!end && !plan && !f[0].equals("RUN"))
 		{
 			return;
 		}
 		String cls = f[1].isEmpty() ? "(tests)" : f[1];
-		TreeItem classItem = liveClasses.get(cls);
-		if(classItem == null)
-		{
-			classItem = new TreeItem(tree, SWT.NONE);
-			classItem.setData("class", cls);
-			liveClasses.put(cls, classItem);
-		}
+		TreeItem classItem = classItem(cls);
+		int[] counts = liveCounts.get(cls);
 		String key = cls + "#" + f[2];
 		TreeItem item = liveTests.get(key);
 		if(item == null)
@@ -189,11 +241,21 @@ public class JUnitPane
 			item = new TreeItem(classItem, SWT.NONE);
 			liveTests.put(key, item);
 			classItem.setExpanded(true);
+			counts[0]++;
+			item.setText("○ " + f[2]);
+			item.setForeground(theme.gutter);
+			updateClass(cls);
+		}
+		if(plan)
+		{
+			setProgress(liveResults.size(), liveTests.size(), failures(liveResults));
+			summary.setText("Running...  Tests: " + liveTests.size());
+			return;
 		}
 		if(!end)
 		{
 			item.setText("▶ " + f[2]);
-			item.setForeground(theme.gutter);
+			item.setForeground(theme.foreground);
 			if(tree.getSelectionCount() == 0)
 			{
 				tree.showItem(item);
@@ -212,35 +274,38 @@ public class JUnitPane
 			// a malformed time stays 0
 		}
 		TestResult r = new TestResult(cls, f[2], seconds, status, f.length > 5 ? f[5] : "", "");
+		if(item.getData() instanceof TestResult)
+		{
+			// a second end for the same name (a parameterized test, say) is counted as one more test
+			counts[0]++;
+		}
+		counts[1]++;
+		counts[2] += r.bad() ? 1 : 0;
 		liveResults.add(r);
 		item.setData(r);
 		item.setText(marker(r) + r.name + "  " + String.format("%.3f s", r.seconds));
 		item.setForeground(r.bad() ? theme.errorText : r.status == TestResult.SKIPPED ? theme.gutter : theme.pass);
-		int bad = 0;
-		int done = 0;
-		for(TreeItem t : classItem.getItems())
-		{
-			if(t.getData() instanceof TestResult)
-			{
-				done++;
-				bad += ((TestResult)t.getData()).bad() ? 1 : 0;
-			}
-		}
-		classItem.setText((bad > 0 ? "✘ " : "▶ ") + cls + "  (" + done + ")");
-		classItem.setForeground(bad > 0 ? theme.errorText : theme.pass);
-		int failed = 0;
-		for(TestResult t : liveResults)
-		{
-			failed += t.bad() ? 1 : 0;
-		}
+		updateClass(cls);
+		int failed = failures(liveResults);
 		results = new ArrayList<TestResult>(liveResults);
-		summary.setText("Running...  Done: " + liveResults.size() + "    Failures: " + failed);
-		bar.setBackground(failed > 0 ? theme.error : theme.pass);
+		int total = Math.max(liveTests.size(), liveResults.size());
+		summary.setText("Running...  Run: " + liveResults.size() + "/" + total + "    Failures: " + failed);
+		setProgress(liveResults.size(), total, failed);
 		if(r.bad() && tree.getSelectionCount() == 0)
 		{
 			tree.setSelection(item);
 			showDetail();
 		}
+	}
+
+	static int failures(List<TestResult> list)
+	{
+		int n = 0;
+		for(TestResult t : list)
+		{
+			n += t.bad() ? 1 : 0;
+		}
+		return n;
 	}
 
 	public Composite getControl()
@@ -275,7 +340,7 @@ public class JUnitPane
 		}
 		else
 		{
-			bar.setBackground(theme.chrome);
+			bar.redraw();
 		}
 	}
 
@@ -285,7 +350,7 @@ public class JUnitPane
 		tree.removeAll();
 		detail.setText("");
 		summary.setText("No test results yet. Run tests to see them here.");
-		bar.setBackground(theme.chrome);
+		setProgress(0, 0, 0);
 	}
 
 	public int failures()
@@ -353,7 +418,7 @@ public class JUnitPane
 		}
 		summary.setText("Runs: " + (list.size() - skipped) + "/" + list.size() + "    Failures: " + failed + "    Skipped: " + skipped
 			+ "    Time: " + String.format("%.2f s", seconds));
-		bar.setBackground(failed > 0 ? theme.error : theme.pass);
+		setProgress(list.size(), list.size(), failed);
 		if(firstBad != null)
 		{
 			tree.setSelection(firstBad);

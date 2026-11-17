@@ -8,6 +8,7 @@ import org.junit.platform.engine.TestSource;
 import org.junit.platform.engine.support.descriptor.MethodSource;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
+import org.junit.platform.launcher.TestPlan;
 
 // Registered through META-INF/services; does nothing unless JavaPad passed -Djavapad.live.
 public class LiveJupiterListener implements TestExecutionListener
@@ -22,6 +23,24 @@ public class LiveJupiterListener implements TestExecutionListener
 			return ((MethodSource)source.get()).getClassName();
 		}
 		return "";
+	}
+
+	public synchronized void testPlanExecutionStarted(TestPlan plan)
+	{
+		if(!LiveLog.enabled())
+		{
+			return;
+		}
+		for(TestIdentifier root : plan.getRoots())
+		{
+			for(TestIdentifier id : plan.getDescendants(root))
+			{
+				if(id.isTest())
+				{
+					LiveLog.event("PLAN", className(id), id.getDisplayName());
+				}
+			}
+		}
 	}
 
 	public synchronized void executionStarted(TestIdentifier id)
