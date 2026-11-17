@@ -58,6 +58,8 @@ public class MainWindow
 	final BottomTabs.Tab callTab;
 	final BottomTabs.Tab historyTab;
 	final BottomTabs.Tab searchTab;
+	final BottomTabs.Tab terminalTab;
+	private final TerminalPane terminal;
 	final SearchPane searchPane;
 	final HistoryPane history;
 	final GitActions git;
@@ -134,9 +136,16 @@ public class MainWindow
 		searchPane.setOpener((f, line, column, length) -> openMatch(f, line, column, length));
 		git = new GitActions(this);
 		history = new HistoryPane(bottom, theme, this);
+		terminal = new TerminalPane(bottom, theme);
+		terminal.setFocusListener(focus -> menus.setAccelerators(!focus));
+		terminalTab = bottomTabs.add("terminal", "Terminal", terminal.getControl(), true);
 		historyTab = bottomTabs.add("history", "History", history.getControl(), true);
 		bottom.addListener(SWT.Selection, e ->
 		{
+			if(bottomTabs.selected() == terminalTab)
+			{
+				terminal.ensureStarted();
+			}
 			if(bottomTabs.selected() == historyTab)
 			{
 				history.refresh();
@@ -178,6 +187,7 @@ public class MainWindow
 			run.sendInput(s);
 		});
 		shell.addListener(SWT.Close, e -> e.doit = confirmExit());
+		shell.addListener(SWT.Dispose, e -> terminal.stop());
 		shell.addListener(SWT.Activate, e -> git.refresh());
 		applyTheme();
 	}
@@ -203,6 +213,7 @@ public class MainWindow
 		sourceTree.restyle(theme);
 		problemsPane.restyle(theme);
 		console.restyle();
+		terminal.restyle();
 		junitPane.restyle();
 		callPane.restyle();
 		history.restyle();
@@ -342,6 +353,7 @@ public class MainWindow
 		projectTree.setProject(project);
 		sourceTree.setProject(project);
 		console.setProject(project);
+		terminal.setProject(project);
 		problemsPane.setProject(project);
 		junitPane.setProject(project);
 		junitPane.clear();
@@ -781,6 +793,10 @@ public class MainWindow
 		if(tab != null)
 		{
 			bottomTabs.show(tab);
+		}
+		if(tab == terminalTab)
+		{
+			terminal.ensureStarted();
 		}
 	}
 

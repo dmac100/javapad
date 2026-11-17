@@ -1,5 +1,7 @@
 package javapad.ui;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Menu;
@@ -15,6 +17,8 @@ class MenuBuilder
 	private String menuName;
 	private ToolItem stopItem;
 	private GitMenu gitMenu;
+	private final List<MenuItem> accelerated = new ArrayList<MenuItem>();
+	private final List<Integer> accelerators = new ArrayList<Integer>();
 
 	MenuBuilder(MainWindow window)
 	{
@@ -63,11 +67,25 @@ class MenuBuilder
 		if(accel != 0)
 		{
 			mi.setAccelerator(accel);
+			accelerated.add(mi);
+			accelerators.add(accel);
 		}
 		mi.addListener(SWT.Selection, e -> action.run());
 		if(menuName != null)
 		{
 			commands.add(menuName + " > " + label, action);
+		}
+	}
+
+	// While the terminal has the keyboard the shortcuts are off, so Ctrl+R, Ctrl+W and the like reach the shell.
+	void setAccelerators(boolean on)
+	{
+		for(int i = 0; i < accelerated.size(); i++)
+		{
+			if(!accelerated.get(i).isDisposed())
+			{
+				accelerated.get(i).setAccelerator(on ? accelerators.get(i) : 0);
+			}
 		}
 	}
 
@@ -155,6 +173,7 @@ class MenuBuilder
 		commands.add("View > Show JUnit", () -> w.junitTab.getParent().setSelection(w.junitTab));
 		commands.add("View > Show Call Hierarchy", () -> w.bottomTabs.show(w.callTab));
 		commands.add("View > Show Search", () -> w.bottomTabs.show(w.searchTab));
+		commands.add("View > Show Terminal", () -> w.showBottomTab("terminal"));
 		commands.add("View > Show History", () -> w.showBottomTab("history"));
 		Menu runMenu = submenu(bar, "Run");
 		menuItem(runMenu, "Build", SWT.MOD1 | 'B', () -> w.run.build(null));
