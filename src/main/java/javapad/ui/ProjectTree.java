@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import javapad.git.GitStatus;
@@ -297,7 +299,53 @@ public class ProjectTree
 		return null;
 	}
 
+	// the folders that are open, so a refresh can open them again
+	void collectExpanded(TreeItem item, Set<File> into)
+	{
+		if(item.getExpanded() && item.getData() instanceof File)
+		{
+			into.add((File)item.getData());
+			for(TreeItem child : item.getItems())
+			{
+				collectExpanded(child, into);
+			}
+		}
+	}
+
+	void restoreExpanded(TreeItem item, Set<File> open)
+	{
+		for(TreeItem child : item.getItems())
+		{
+			if(child.getData() instanceof File && open.contains(child.getData()))
+			{
+				fill(child);
+				child.setExpanded(true);
+				restoreExpanded(child, open);
+			}
+		}
+	}
+
+	// Rebuilds the tree from the disk, keeping the folders that were open.
 	public void refresh()
+	{
+		Set<File> open = new HashSet<File>();
+		for(TreeItem top : tree.getItems())
+		{
+			collectExpanded(top, open);
+		}
+		File selection = selected();
+		build();
+		for(TreeItem top : tree.getItems())
+		{
+			restoreExpanded(top, open);
+		}
+		if(selection != null)
+		{
+			reveal(selection);
+		}
+	}
+
+	void build()
 	{
 		tree.removeAll();
 		if(project == null)

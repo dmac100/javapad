@@ -279,6 +279,19 @@ public class MainWindow
 		}
 	}
 
+	// Picks up what changed outside the IDE: open files, the trees, the code analysis, and the git branch, status and history.
+	void refreshAll()
+	{
+		if(project == null)
+		{
+			return;
+		}
+		editors.reloadClean();
+		refreshTrees();
+		assist.setProject(project);
+		git.projectChanged();
+	}
+
 	void refreshTrees()
 	{
 		projectTree.refresh();

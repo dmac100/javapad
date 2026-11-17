@@ -106,6 +106,7 @@ class MenuBuilder
 		menuItem(file, "Save", SWT.MOD1 | 'S', () -> w.saveActive());
 		menuItem(file, "Save All", SWT.MOD1 | SWT.SHIFT | 'S', () -> w.editors.saveAll());
 		menuItem(file, "Close Tab", SWT.MOD1 | 'W', () -> w.editors.closeActive());
+		menuItem(file, "Refresh", SWT.F5, () -> w.refreshAll());
 		menuItem(file, "Exit", 0, () -> w.shell.close());
 		Menu edit = submenu(bar, "Edit");
 		menuItem(edit, "Find...", SWT.MOD1 | 'F', () -> w.find());
@@ -175,7 +176,7 @@ class MenuBuilder
 		menuItem(treeMenu, "New File...", 0, () -> w.files.newFile());
 		menuItem(treeMenu, "New Folder...", 0, () -> w.files.newFolder());
 		menuItem(treeMenu, "Delete", 0, () -> w.files.deleteSelected());
-		menuItem(treeMenu, "Refresh", 0, () -> w.refreshTrees());
+		menuItem(treeMenu, "Refresh", 0, () -> w.refreshAll());
 		new MenuItem(treeMenu, SWT.SEPARATOR);
 		menuName = null;
 		new GitMenu(w, commands).attach(treeMenu);
