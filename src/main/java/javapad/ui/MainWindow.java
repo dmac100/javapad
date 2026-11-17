@@ -325,6 +325,7 @@ public class MainWindow
 		}
 		catch(Exception e)
 		{
+			e.printStackTrace();
 			error("Cannot open project " + dir + ": " + e);
 			return false;
 		}
@@ -380,6 +381,7 @@ public class MainWindow
 		}
 		catch(Exception e)
 		{
+			e.printStackTrace();
 			error("Cannot regenerate project files: " + e);
 			return;
 		}
@@ -442,6 +444,7 @@ public class MainWindow
 		}
 		catch(Exception e)
 		{
+			e.printStackTrace();
 			error("Cannot save: " + e.getMessage());
 			return;
 		}
@@ -692,6 +695,7 @@ public class MainWindow
 		}
 		catch(Exception e)
 		{
+			e.printStackTrace();
 			error("Cannot update .classpath: " + e);
 		}
 	}

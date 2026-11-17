@@ -184,6 +184,7 @@ public class Launcher
 		}
 		catch(IOException e)
 		{
+			e.printStackTrace();
 			listener.output("Cannot start: " + e.getMessage() + "\n", true);
 			listener.finished(-1);
 			return;

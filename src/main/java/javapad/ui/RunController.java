@@ -445,6 +445,7 @@ class RunController
 				}
 				catch(Exception e)
 				{
+					e.printStackTrace();
 					console.append("Cannot read test report " + xml.getName() + ": " + e + "\n", true);
 				}
 			}

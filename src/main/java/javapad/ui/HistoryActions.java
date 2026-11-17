@@ -229,6 +229,7 @@ class HistoryActions
 				}
 				catch(IOException e)
 				{
+					e.printStackTrace();
 					w.error("Cannot write the file: " + e.getMessage());
 				}
 			};

@@ -65,6 +65,7 @@ class EditorMenu
 		}
 		catch(IOException e)
 		{
+			e.printStackTrace();
 			w.error("Cannot reload " + tab.file.getName() + ": " + e.getMessage());
 		}
 	}

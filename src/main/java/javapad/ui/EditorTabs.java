@@ -129,6 +129,7 @@ public class EditorTabs
 		}
 		catch(IOException e)
 		{
+			e.printStackTrace();
 			ConfirmDialog.message(shell, "Error", "Cannot open " + file + ": " + e.getMessage(), SWT.ICON_ERROR);
 			return null;
 		}
@@ -185,6 +186,7 @@ public class EditorTabs
 				}
 				catch(IOException e)
 				{
+					e.printStackTrace();
 					ConfirmDialog.message(shell, "Error", "Cannot save " + tab.file + ": " + e.getMessage(), SWT.ICON_ERROR);
 					return false;
 				}

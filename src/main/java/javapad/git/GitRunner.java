@@ -50,6 +50,7 @@ public class GitRunner
 		}
 		catch(IOException e)
 		{
+			e.printStackTrace();
 			return new GitResult(127, "", "git could not be started: " + e.getMessage());
 		}
 		catch(InterruptedException e)

@@ -360,6 +360,7 @@ public class GitRepo
 		}
 		catch(IOException e)
 		{
+			e.printStackTrace();
 			return new GitResult(1, "", "Cannot write .gitignore: " + e.getMessage());
 		}
 	}

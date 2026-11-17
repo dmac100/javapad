@@ -59,6 +59,7 @@ class FileActions
 		}
 		catch(Exception e)
 		{
+			e.printStackTrace();
 			error.accept(e.getMessage());
 		}
 	}
