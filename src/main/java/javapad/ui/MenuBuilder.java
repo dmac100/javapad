@@ -132,6 +132,9 @@ class MenuBuilder
 		menuItem(edit, "Go to Line...", SWT.MOD1 | 'L', () -> w.gotoLine());
 		menuItem(edit, "Content Assist", 0, () -> w.contentAssist());
 		menuItem(edit, "Go to Matching Bracket", SWT.MOD1 | SWT.SHIFT | 'P', () -> w.goToMatchingBracket());
+		// Alt+Shift+Up and Alt+Shift+Down are handled by the editor itself
+		menuItem(edit, "Expand Selection", 0, () -> w.withEditor(t -> t.editor.expandSelection()));
+		menuItem(edit, "Shrink Selection", 0, () -> w.withEditor(t -> t.editor.shrinkSelection()));
 		Menu source = submenu(bar, "Source");
 		menuItem(source, "Organize Imports", SWT.MOD1 | SWT.SHIFT | 'O', () -> w.withEditor(t -> w.importActions.organize(t)));
 		menuItem(source, "Format", SWT.MOD1 | SWT.SHIFT | 'F', () -> w.withEditor(t -> w.format(t)));

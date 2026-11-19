@@ -9,6 +9,7 @@ import javapad.lang.ImportEditor;
 import javapad.lang.IndentConverter;
 import javapad.lang.JavaFormatter;
 import javapad.lang.Proposal;
+import javapad.lang.SelectionRanges;
 import javapad.model.Problem;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.Bullet;
@@ -56,6 +57,10 @@ public class CodeEditor
 	private int occurrenceRequest;
 	private CompletionPopup popup;
 	private int completionGeneration;
+	private final boolean java;
+	// the selections that Alt+Shift+Up grew from, so Alt+Shift+Down can go back through them
+	private final List<Point> grownFrom = new ArrayList<Point>();
+	private Point grownTo;
 
 	// Finds the other uses of the identifier text[offset, offset + length); calls back on the UI thread.
 	public interface OccurrenceFinder
@@ -86,6 +91,7 @@ public class CodeEditor
 	public CodeEditor(Composite parent, Theme theme, boolean java)
 	{
 		this.theme = theme;
+		this.java = java;
 		lexer = new JavaLexer(java);
 		text = new StyledText(parent, SWT.V_SCROLL | SWT.H_SCROLL);
 		text.setFont(theme.font);
@@ -352,6 +358,50 @@ public class CodeEditor
 			text.setCaretOffset(target);
 			text.showSelection();
 		}
+	}
+
+	// Selects the next larger piece of code around the selection: word, expression, statement, block, method, class, file.
+	public void expandSelection()
+	{
+		Point sel = text.getSelection();
+		if(!sel.equals(grownTo))
+		{
+			grownFrom.clear();
+		}
+		int[] r = SelectionRanges.expand(text.getText(), sel.x, sel.y, java);
+		if(r[0] == sel.x && r[1] == sel.y)
+		{
+			return;
+		}
+		grownFrom.add(new Point(sel.x, sel.y));
+		select(r[0], r[1]);
+	}
+
+	// Undoes the last expandSelection, or picks the largest piece of code inside the selection around the caret.
+	public void shrinkSelection()
+	{
+		Point sel = text.getSelection();
+		if(sel.x == sel.y)
+		{
+			return;
+		}
+		if(sel.equals(grownTo) && !grownFrom.isEmpty())
+		{
+			Point p = grownFrom.remove(grownFrom.size() - 1);
+			select(p.x, p.y);
+			return;
+		}
+		grownFrom.clear();
+		int[] r = SelectionRanges.shrink(text.getText(), sel.x, sel.y, text.getCaretOffset(), java);
+		select(r[0], r[1]);
+	}
+
+	void select(int start, int end)
+	{
+		text.setSelection(start, end);
+		grownTo = text.getSelection();
+		text.showSelection();
+		selectionChanged();
 	}
 
 	String problemTip(int x, int y)
@@ -900,6 +950,18 @@ public class CodeEditor
 		if(ctrl && e.keyCode == SWT.ARROW_DOWN)
 		{
 			text.setTopPixel(text.getTopPixel() + 20);
+			return true;
+		}
+		if((e.stateMask & SWT.ALT) != 0 && shift && e.keyCode == SWT.ARROW_UP)
+		{
+			e.doit = false;
+			expandSelection();
+			return true;
+		}
+		if((e.stateMask & SWT.ALT) != 0 && shift && e.keyCode == SWT.ARROW_DOWN)
+		{
+			e.doit = false;
+			shrinkSelection();
 			return true;
 		}
 		if((e.stateMask & SWT.ALT) != 0 && e.keyCode == SWT.ARROW_UP)
