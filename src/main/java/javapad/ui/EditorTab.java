@@ -20,7 +20,9 @@ public class EditorTab
 		this.file = file;
 		item = new CTabItem(folder, SWT.CLOSE);
 		editor = new CodeEditor(folder, theme, file.getName().endsWith(".java"));
-		item.setControl(editor.getControl());
+		item.setControl(editor.getFrame());
+		// closing a tab does not dispose its control by itself
+		item.addListener(SWT.Dispose, e -> editor.getFrame().dispose());
 		item.setData(this);
 		item.setToolTipText(file.getAbsolutePath());
 		editor.setContent(new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8));

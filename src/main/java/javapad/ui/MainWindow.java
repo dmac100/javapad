@@ -170,6 +170,7 @@ public class MainWindow
 		editors.setCompileHook(() -> run.runActive());
 		projectTree.setOpener(f -> open(new Location(f, 1, 1)));
 		sourceTree.setOpener(f -> open(new Location(f, 1, 1)));
+		editors.setProblemsHook(list -> markErrorFiles(list));
 		console.setOpener(l -> openLine(l));
 		problemsPane.setOpener(l -> open(l));
 		problemsPane.setPreviewer(l ->
@@ -729,6 +730,21 @@ public class MainWindow
 			tab.editor.getControl().setFocus();
 			tab.editor.triggerCompletion(true);
 		}
+	}
+
+	// the files with errors get a mark in both sidebar trees
+	void markErrorFiles(List<Problem> problems)
+	{
+		Set<File> files = new HashSet<File>();
+		for(Problem p : problems)
+		{
+			if(p.error && !p.file.isEmpty())
+			{
+				files.add(new File(p.file));
+			}
+		}
+		projectTree.setErrorFiles(files);
+		sourceTree.setErrorFiles(files);
 	}
 
 	void goToMatchingBracket()

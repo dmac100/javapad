@@ -4,7 +4,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -31,12 +33,19 @@ public class ProjectTree
 	private Color grey;
 	private Theme theme;
 	private GitStatus branch;
+	// the files with errors and every folder above them, as real paths
+	private Set<File> withErrors = new HashSet<File>();
+	private final Map<File, File> realPaths = new HashMap<File, File>();
 
 	public ProjectTree(Composite parent, boolean sourcesOnly)
 	{
 		this.sourcesOnly = sourcesOnly;
 		tree = new Tree(parent, SWT.BORDER | SWT.SINGLE | SWT.V_SCROLL | SWT.H_SCROLL);
-		tree.addListener(SWT.PaintItem, e -> paintBranch(e));
+		tree.addListener(SWT.PaintItem, e ->
+		{
+			paintBranch(e);
+			paintError(e);
+		});
 		tree.addListener(SWT.Expand, e -> fill((TreeItem)e.item));
 		tree.addListener(SWT.Dispose, e -> disposeColor());
 		tree.addListener(SWT.DefaultSelection, e ->
@@ -130,6 +139,54 @@ public class ProjectTree
 		gc.fillRectangle(x, b.y, gc.stringExtent(info).x + 2, b.height);
 		gc.setForeground(theme.branch);
 		gc.drawString(info, x, b.y + 2, true);
+	}
+
+	// Marks the files with errors in them, and the folders that hold them.
+	public void setErrorFiles(Set<File> files)
+	{
+		realPaths.clear();
+		Set<File> marked = new HashSet<File>();
+		for(File f : files)
+		{
+			for(File up = EditorTabs.canonical(f); up != null; up = up.getParentFile())
+			{
+				marked.add(up);
+			}
+		}
+		if(!marked.equals(withErrors))
+		{
+			withErrors = marked;
+			tree.redraw();
+		}
+	}
+
+	File realPath(File f)
+	{
+		File real = realPaths.get(f);
+		if(real == null)
+		{
+			real = EditorTabs.canonical(f);
+			realPaths.put(f, real);
+		}
+		return real;
+	}
+
+	// an error sign after the name (and branch) of an item with errors in it
+	void paintError(Event e)
+	{
+		if(withErrors.isEmpty() || theme == null || !(e.item instanceof TreeItem))
+		{
+			return;
+		}
+		TreeItem item = (TreeItem)e.item;
+		if(!(item.getData() instanceof File) || !withErrors.contains(realPath((File)item.getData())))
+		{
+			return;
+		}
+		Rectangle b = item.getBounds(0);
+		int size = Math.max(7, Math.min(9, b.height - 8));
+		int x = b.x + e.gc.stringExtent(item.getText()).x + 6;
+		ProblemMarks.drawError(e.gc, theme, x, b.y + (b.height - size) / 2, size);
 	}
 
 	public void restyle(Theme theme)

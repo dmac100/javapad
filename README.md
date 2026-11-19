@@ -6,7 +6,7 @@ A small desktop editor (SWT) for Eclipse-style Java projects. It opens a project
 
 ## Features
 
-- **Editor:** syntax colouring (dark and light themes), content assist, imports, quick fixes and formatting, all based on javac's analysis of the project. Selecting an identifier highlights its other uses.
+- **Editor:** syntax colouring (dark and light themes), content assist, imports, quick fixes and formatting, all based on javac's analysis of the project. Selecting an identifier highlights its other uses. Errors and warnings are marked in the left margin and on a strip beside the scrollbar (click a mark to go to its line), and files with errors are marked in the sidebar.
 - **Build, run, test:** compiles in process, runs main classes and JUnit 4 or 5 tests, and shows problems, console output (which also takes input) and test results.
 - **Terminal:** a tab with your login shell on a real pseudo-terminal (colours, full-screen programs, scrollback), starting in the project folder.
 - **Navigation:** open a declaration or implementation, call hierarchy, open a file by name, search the project's files.

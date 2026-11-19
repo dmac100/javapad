@@ -25,6 +25,7 @@ public class EditorTabs
 	private CodeAssist assist;
 	private NavigationActions navigation;
 	private Consumer<EditorTab> tabHook;
+	private Consumer<List<Problem>> problemsHook;
 
 	public EditorTabs(Composite parent, Theme theme)
 	{
@@ -45,6 +46,12 @@ public class EditorTabs
 	public void setTabHook(Consumer<EditorTab> hook)
 	{
 		tabHook = hook;
+	}
+
+	// Called with every new list of problems, so other views can mark them too.
+	public void setProblemsHook(Consumer<List<Problem>> hook)
+	{
+		problemsHook = hook;
 	}
 
 	public void setNavigation(NavigationActions navigation)
@@ -257,6 +264,10 @@ public class EditorTabs
 		for(EditorTab tab : tabs())
 		{
 			tab.editor.setProblems(problemsFor(tab.file));
+		}
+		if(problemsHook != null)
+		{
+			problemsHook.accept(list);
 		}
 	}
 

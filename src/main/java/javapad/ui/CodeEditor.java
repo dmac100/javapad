@@ -23,6 +23,8 @@ import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.GlyphMetrics;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
@@ -30,7 +32,9 @@ import org.eclipse.swt.widgets.Listener;
 
 public class CodeEditor
 {
+	private final Composite frame;
 	private final StyledText text;
+	private final OverviewRuler ruler;
 	private final Theme theme;
 	private final JavaLexer lexer;
 	private final List<Integer> lineStates = new ArrayList<Integer>();
@@ -93,12 +97,24 @@ public class CodeEditor
 		this.theme = theme;
 		this.java = java;
 		lexer = new JavaLexer(java);
-		text = new StyledText(parent, SWT.V_SCROLL | SWT.H_SCROLL);
+		frame = new Composite(parent, SWT.NONE);
+		GridLayout layout = new GridLayout(2, false);
+		layout.marginWidth = 0;
+		layout.marginHeight = 0;
+		layout.horizontalSpacing = 0;
+		frame.setLayout(layout);
+		frame.setBackground(theme.background);
+		text = new StyledText(frame, SWT.V_SCROLL | SWT.H_SCROLL);
+		text.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		text.setFont(theme.font);
 		text.setBackground(theme.background);
 		text.setForeground(theme.foreground);
 		text.setTabs(4);
-		text.setLeftMargin(4);
+		ruler = new OverviewRuler(frame, text, theme, line -> goTo(line, 1));
+		GridData rulerData = new GridData(SWT.FILL, SWT.FILL, false, true);
+		rulerData.widthHint = OverviewRuler.WIDTH;
+		ruler.getControl().setLayoutData(rulerData);
+		text.addListener(SWT.Paint, e -> paintMarks(e.gc));
 		lineStates.add(JavaLexer.STATE_NORMAL);
 		makeBullets();
 		text.addLineStyleListener(e -> styleLine(e));
@@ -220,13 +236,21 @@ public class CodeEditor
 		return text;
 	}
 
+	// the editor with its overview ruler, the control to put in a tab
+	public Composite getFrame()
+	{
+		return frame;
+	}
+
 	public void restyle()
 	{
 		text.setFont(theme.font);
 		text.setBackground(theme.background);
 		text.setForeground(theme.foreground);
+		frame.setBackground(theme.background);
 		makeBullets();
 		text.redraw();
+		ruler.redraw();
 	}
 
 	public void setCompileHook(Runnable hook)
@@ -261,6 +285,7 @@ public class CodeEditor
 		problems = list;
 		makeBullets();
 		text.redraw();
+		ruler.setProblems(list);
 	}
 
 	public void goTo(int line, int column)
@@ -295,6 +320,7 @@ public class CodeEditor
 		gc.setFont(theme.font);
 		int charWidth = gc.getFontMetrics().getAverageCharWidth();
 		gc.dispose();
+		text.setLeftMargin(markSize() + 6);
 		bulletDigits = Math.max(3, String.valueOf(text.getLineCount()).length());
 		StyleRange normal = new StyleRange();
 		normal.foreground = theme.gutter;
@@ -319,6 +345,42 @@ public class CodeEditor
 		{
 			makeBullets();
 			text.redraw();
+		}
+	}
+
+	// the error and warning signs are a little smaller than a line
+	int markSize()
+	{
+		return Math.max(7, Math.min(11, text.getLineHeight() - 6));
+	}
+
+	// an error or warning sign in the left margin of each line with a problem
+	void paintMarks(GC gc)
+	{
+		if(problems.isEmpty())
+		{
+			return;
+		}
+		int size = markSize();
+		int lines = text.getLineCount();
+		int first = text.getTopIndex();
+		int visible = text.getClientArea().height / Math.max(1, text.getLineHeight()) + 2;
+		for(int line = first; line < Math.min(lines, first + visible); line++)
+		{
+			boolean error = lineHasProblem(line, true);
+			if(!error && !lineHasProblem(line, false))
+			{
+				continue;
+			}
+			int y = text.getLinePixel(line) + (text.getLineHeight(text.getOffsetAtLine(line)) - size) / 2;
+			if(error)
+			{
+				ProblemMarks.drawError(gc, theme, 3, y, size);
+			}
+			else
+			{
+				ProblemMarks.drawWarning(gc, theme, 3, y, size);
+			}
 		}
 	}
 
@@ -608,6 +670,7 @@ public class CodeEditor
 			text.redraw();
 		}
 		updateBullets();
+		ruler.redraw();
 		if(!replaying)
 		{
 			record(e);
