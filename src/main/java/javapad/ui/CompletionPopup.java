@@ -57,7 +57,6 @@ public class CompletionPopup
 
 	public void show(CompletionEngine.Completions completions, boolean manual)
 	{
-		table.setFont(theme.font);
 		all = completions.proposals;
 		wordStart = completions.start;
 		if(!filter())
@@ -76,6 +75,8 @@ public class CompletionPopup
 		{
 			build();
 		}
+		// the editor font may have changed since the list was made
+		table.setFont(theme.font);
 		fill();
 		place();
 		table.setVisible(true);
