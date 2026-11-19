@@ -16,6 +16,7 @@ import java.util.function.Supplier;
 import javapad.build.ProjectCompiler;
 import javapad.model.EclipseProject;
 import javapad.model.Problem;
+import javapad.run.HotSwap;
 import javapad.run.JUnitReport;
 import javapad.run.LaunchSettings;
 import javapad.run.Launcher;
@@ -61,6 +62,9 @@ class RunController
 	private ToolItem stopItem;
 	private boolean busy;
 	private Runnable idleHook;
+	// connected to the running main program while hot swap is on; null otherwise
+	private HotSwap hotSwap;
+	private boolean hotSwapOn = HotSwap.enabled();
 
 	RunController(Display display, Shell shell, EditorTabs editors, ConsolePane console, ProblemsPane problemsPane, JUnitPane junitPane, CodeAssist assist,
 		BottomTabs bottom, BottomTabs.Tab consoleTab, BottomTabs.Tab problemsTab, CTabItem junitTab, Supplier<File> currentFile, Runnable beforeBuild, Consumer<String> errorSink)
@@ -98,6 +102,19 @@ class RunController
 	void setIdleHook(Runnable hook)
 	{
 		idleHook = hook;
+	}
+
+	boolean hotSwapOn()
+	{
+		return hotSwapOn;
+	}
+
+	// Turns hot swapping on or off for the programs started from now on, and remembers the choice.
+	void setHotSwap(boolean on)
+	{
+		hotSwapOn = on;
+		HotSwap.setEnabled(on);
+		console.append(on ? "Hot swap on: saved changes go into the running program (restart a program started before this)\n" : "Hot swap off\n", false);
 	}
 
 	void sendInput(String text)
@@ -164,6 +181,10 @@ class RunController
 			{
 				busy = false;
 				showProblems(problems);
+				if(then == null)
+				{
+					hotSwapAfterBuild();
+				}
 				if(then != null)
 				{
 					then.run();
@@ -186,6 +207,52 @@ class RunController
 		if(errors > 0)
 		{
 			bottom.show(problemsTab);
+		}
+	}
+
+	// after a save or Ctrl+B, puts the new code into the running program
+	void hotSwapAfterBuild()
+	{
+		if(hotSwap == null || launcher == null || !launcher.isRunning())
+		{
+			return;
+		}
+		if(hasErrors())
+		{
+			console.append("Not hot-swapped: the build has errors\n", true);
+			return;
+		}
+		hotSwap.swap();
+	}
+
+	// adds the debugging agent to a main program's command and starts attaching to it
+	List<String> withHotSwap(List<String> command)
+	{
+		closeHotSwap();
+		if(!hotSwapOn || HotSwap.hasAgent(command))
+		{
+			return command;
+		}
+		HotSwap swap = new HotSwap(project.outputFolder, (text, error) -> display.asyncExec(() ->
+		{
+			if(!console.getControl().isDisposed())
+			{
+				console.append(text, error);
+			}
+		}));
+		List<String> result = new ArrayList<String>(command);
+		result.add(1, swap.agentArgument());
+		hotSwap = swap;
+		swap.attach();
+		return result;
+	}
+
+	void closeHotSwap()
+	{
+		if(hotSwap != null)
+		{
+			hotSwap.close();
+			hotSwap = null;
 		}
 	}
 
@@ -312,7 +379,7 @@ class RunController
 			{
 				return;
 			}
-			startProcess(l -> l.mainCommand(cls, settings.getVmArgs(cls), settings.getArgs(cls)));
+			startProcess(l -> withHotSwap(l.mainCommand(cls, settings.getVmArgs(cls), settings.getArgs(cls))));
 		});
 	}
 
@@ -354,6 +421,7 @@ class RunController
 					{
 						return;
 					}
+					closeHotSwap();
 					collectReports();
 					if(!pending.isEmpty())
 					{
@@ -596,6 +664,7 @@ class RunController
 	void stop()
 	{
 		pending.clear();
+		closeHotSwap();
 		if(launcher != null && launcher.isRunning())
 		{
 			launcher.stop();

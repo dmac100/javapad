@@ -189,6 +189,15 @@ class MenuBuilder
 		menuItem(runMenu, "Re-run Failed Tests", 0, () -> w.run.runSpecs(w.junitPane.failedSpecs()));
 		menuItem(runMenu, "Program Arguments...", 0, () -> w.editArguments());
 		menuItem(runMenu, "Stop", 0, () -> w.run.stop());
+		MenuItem hotSwapItem = new MenuItem(runMenu, SWT.CHECK);
+		hotSwapItem.setText("Hot Swap on Save");
+		hotSwapItem.setSelection(w.run.hotSwapOn());
+		hotSwapItem.addListener(SWT.Selection, e -> w.run.setHotSwap(hotSwapItem.getSelection()));
+		commands.add("Run > Hot Swap on Save", () ->
+		{
+			hotSwapItem.setSelection(!hotSwapItem.getSelection());
+			w.run.setHotSwap(hotSwapItem.getSelection());
+		});
 		menuName = "Sidebar";
 		Menu treeMenu = new Menu(w.shell, SWT.POP_UP);
 		w.projectTree.getControl().setMenu(treeMenu);
