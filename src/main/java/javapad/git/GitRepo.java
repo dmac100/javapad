@@ -93,7 +93,7 @@ public class GitRepo
 	// allFiles: list every untracked file instead of just the untracked folder
 	public GitStatus status(boolean allFiles)
 	{
-		GitResult r = git("status", "--porcelain=v2", "-z", "--branch", allFiles ? "--untracked-files=all" : "--untracked-files=normal");
+		GitResult r = git("--no-optional-locks", "status", "--porcelain=v2", "-z", "--branch", allFiles ? "--untracked-files=all" : "--untracked-files=normal");
 		if(!r.ok())
 		{
 			return new GitStatus("", new ArrayList<FileChange>());

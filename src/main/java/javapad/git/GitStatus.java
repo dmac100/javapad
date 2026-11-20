@@ -44,6 +44,25 @@ public class GitStatus
 		}
 	}
 
+	// Whether the other status shows the same branch and the same changes.
+	public boolean sameAs(GitStatus o)
+	{
+		if(o == null || ahead != o.ahead || behind != o.behind || !branch.equals(o.branch) || changes.size() != o.changes.size())
+		{
+			return false;
+		}
+		for(int i = 0; i < changes.size(); i++)
+		{
+			FileChange a = changes.get(i);
+			FileChange b = o.changes.get(i);
+			if(!a.path.equals(b.path) || a.index != b.index || a.work != b.work)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
 	public FileChange find(String path)
 	{
 		for(FileChange c : changes)

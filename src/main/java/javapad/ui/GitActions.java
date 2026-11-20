@@ -22,9 +22,44 @@ class GitActions
 	private GitRepo repo;
 	private GitStatus status;
 
+	private boolean polling;
+
 	GitActions(MainWindow window)
 	{
 		this.w = window;
+		w.display.timerExec(POLL_MS, this::poll);
+	}
+
+	// How often the status is re-read, to notice changes made outside JavaPad (the terminal, Claude, other tools).
+	private static final int POLL_MS = 5000;
+
+	private void poll()
+	{
+		if(w.shell.isDisposed())
+		{
+			return;
+		}
+		w.display.timerExec(POLL_MS, this::poll);
+		if(repo == null || polling)
+		{
+			return;
+		}
+		polling = true;
+		GitRepo r = repo;
+		background(() ->
+		{
+			GitStatus s = r.status(false);
+			return () ->
+			{
+				polling = false;
+				if(r == repo && !s.sameAs(status))
+				{
+					status = s;
+					decorate();
+					w.history.refresh();
+				}
+			};
+		});
 	}
 
 	GitRepo repo()
