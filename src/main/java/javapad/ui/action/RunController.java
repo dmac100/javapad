@@ -43,8 +43,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.ToolItem;
 
 // Builds the project and runs its programs and tests, feeding output to the console, problems and JUnit panes.
-public class RunController
-{
+public class RunController {
 	private final Display display;
 	private final Shell shell;
 	private final EditorTabs editors;
@@ -81,8 +80,7 @@ public class RunController
 	private boolean hotSwapOn = HotSwap.enabled();
 
 	public RunController(Display display, Shell shell, EditorTabs editors, ConsolePane console, ProblemsPane problemsPane, JUnitPane junitPane, CodeAssist assist,
-		BottomTabs bottom, BottomTabs.Tab consoleTab, BottomTabs.Tab problemsTab, SideTabs.Tab junitTab, Supplier<File> currentFile, Runnable beforeBuild, Consumer<String> errorSink)
-	{
+		BottomTabs bottom, BottomTabs.Tab consoleTab, BottomTabs.Tab problemsTab, SideTabs.Tab junitTab, Supplier<File> currentFile, Runnable beforeBuild, Consumer<String> errorSink) {
 		this.display = display;
 		this.shell = shell;
 		this.editors = editors;
@@ -99,108 +97,86 @@ public class RunController
 		this.errorSink = errorSink;
 	}
 
-	public void setProject(EclipseProject project, LaunchSettings settings)
-	{
+	public void setProject(EclipseProject project, LaunchSettings settings) {
 		this.project = project;
 		this.settings = settings;
 		lastLaunch = null;
 	}
 
-	void setStopItem(ToolItem item)
-	{
+	void setStopItem(ToolItem item) {
 		stopItem = item;
 		updateStop();
 	}
 
 	// the callback that runs once the build and any process have finished (used by the headless automation)
-	void setIdleHook(Runnable hook)
-	{
+	void setIdleHook(Runnable hook) {
 		idleHook = hook;
 	}
 
-	boolean hotSwapOn()
-	{
+	boolean hotSwapOn() {
 		return hotSwapOn;
 	}
 
 	// Turns hot swapping on or off for the programs started from now on, and remembers the choice.
-	void setHotSwap(boolean on)
-	{
+	void setHotSwap(boolean on) {
 		hotSwapOn = on;
 		HotSwap.setEnabled(on);
 		console.append(on ? "Hot swap on: saved changes go into the running program (restart a program started before this)\n" : "Hot swap off\n", false);
 	}
 
-	public void sendInput(String text)
-	{
-		if(launcher != null)
-		{
+	public void sendInput(String text) {
+		if(launcher != null) {
 			launcher.sendInput(text);
 		}
 	}
 
-	void error(String message)
-	{
+	void error(String message) {
 		errorSink.accept(message);
 	}
 
 	// the stop button is only live while a process is running
-	public boolean testsRunning()
-	{
+	public boolean testsRunning() {
 		return testRunDir != null && launcher != null && launcher.isRunning();
 	}
 
-	public boolean hasTestRun()
-	{
+	public boolean hasTestRun() {
 		return allSpecs != null;
 	}
 
-	public void rerunAll()
-	{
-		if(allSpecs != null)
-		{
+	public void rerunAll() {
+		if(allSpecs != null) {
 			runSpecs(allSpecs);
 		}
 	}
 
 	// runs again the tests that failed in the last run
-	public void rerunFailed()
-	{
+	public void rerunFailed() {
 		List<String> failed = junitPane.failedSpecs();
-		if(failed.isEmpty())
-		{
+		if(failed.isEmpty()) {
 			return;
 		}
 		rerunningFailed = true;
-		try
-		{
+		try {
 			runSpecs(failed);
-		}
-		finally
-		{
+		} finally {
 			rerunningFailed = false;
 		}
 	}
 
-	void updateStop()
-	{
+	void updateStop() {
 		junitPane.updateToolbar();
-		if(stopItem != null && !stopItem.isDisposed())
-		{
+		if(stopItem != null && !stopItem.isDisposed()) {
 			stopItem.setEnabled(launcher != null && launcher.isRunning());
 		}
 	}
 
-	public void runActive()
-	{
+	public void runActive() {
 		runFrom(currentFile.get());
 	}
 
 	// Repeats the last main class or test run; the first time, it runs what the active file suggests.
-	void runLast()
-	{
-		if(lastLaunch == null)
-		{
+	void runLast() {
+		if(lastLaunch == null) {
 			runActive();
 			return;
 		}
@@ -208,37 +184,29 @@ public class RunController
 		lastLaunch.run();
 	}
 
-	public void build(Runnable then)
-	{
-		if(project == null)
-		{
+	public void build(Runnable then) {
+		if(project == null) {
 			return;
 		}
-		if(!editors.saveAll())
-		{
+		if(!editors.saveAll()) {
 			return;
 		}
 		beforeBuild.run();
-		if(busy)
-		{
+		if(busy) {
 			return;
 		}
 		busy = true;
 		console.append("Building " + project.name + "...\n", false);
 		EclipseProject p = project;
-		Thread t = new Thread(() ->
-		{
+		Thread t = new Thread(() -> {
 			List<Problem> problems = ProjectCompiler.compile(p);
-			display.asyncExec(() ->
-			{
+			display.asyncExec(() -> {
 				busy = false;
 				showProblems(problems);
-				if(then == null)
-				{
+				if(then == null) {
 					hotSwapAfterBuild();
 				}
-				if(then != null)
-				{
+				if(then != null) {
 					then.run();
 				}
 				done();
@@ -248,29 +216,24 @@ public class RunController
 		t.start();
 	}
 
-	void showProblems(List<Problem> problems)
-	{
+	void showProblems(List<Problem> problems) {
 		problemsPane.setProblems(problems);
 		editors.setProblems(problems);
 		int errors = problemsPane.errorCount();
 		bottom.setText(problemsTab, "Problems (" + problemsPane.count() + ")");
 		console.append(errors == 0 ? "Build OK\n" : "Build failed: " + errors + " error(s)\n", errors > 0);
 		assist.refresh();
-		if(errors > 0)
-		{
+		if(errors > 0) {
 			bottom.show(problemsTab);
 		}
 	}
 
 	// after a save or Ctrl+B, puts the new code into the running program
-	void hotSwapAfterBuild()
-	{
-		if(hotSwap == null || launcher == null || !launcher.isRunning())
-		{
+	void hotSwapAfterBuild() {
+		if(hotSwap == null || launcher == null || !launcher.isRunning()) {
 			return;
 		}
-		if(hasErrors())
-		{
+		if(hasErrors()) {
 			console.append("Not hot-swapped: the build has errors\n", true);
 			return;
 		}
@@ -278,17 +241,13 @@ public class RunController
 	}
 
 	// adds the debugging agent to a main program's command and starts attaching to it
-	List<String> withHotSwap(List<String> command)
-	{
+	List<String> withHotSwap(List<String> command) {
 		closeHotSwap();
-		if(!hotSwapOn || HotSwap.hasAgent(command))
-		{
+		if(!hotSwapOn || HotSwap.hasAgent(command)) {
 			return command;
 		}
-		HotSwap swap = new HotSwap(project.outputFolder, (text, error) -> display.asyncExec(() ->
-		{
-			if(!console.getControl().isDisposed())
-			{
+		HotSwap swap = new HotSwap(project.outputFolder, (text, error) -> display.asyncExec(() -> {
+			if(!console.getControl().isDisposed()) {
 				console.append(text, error);
 			}
 		}));
@@ -299,67 +258,53 @@ public class RunController
 		return result;
 	}
 
-	void closeHotSwap()
-	{
-		if(hotSwap != null)
-		{
+	void closeHotSwap() {
+		if(hotSwap != null) {
 			hotSwap.close();
 			hotSwap = null;
 		}
 	}
 
-	void done()
-	{
-		if(idleHook != null && !busy && (launcher == null || !launcher.isRunning()))
-		{
+	void done() {
+		if(idleHook != null && !busy && (launcher == null || !launcher.isRunning())) {
 			Runnable r = idleHook;
 			idleHook = null;
 			r.run();
 		}
 	}
 
-	boolean hasErrors()
-	{
+	boolean hasErrors() {
 		return problemsPane.errorCount() > 0;
 	}
 
-	public void runFrom(File f)
-	{
-		if(project == null)
-		{
+	public void runFrom(File f) {
+		if(project == null) {
 			error("Open a project first.");
 			return;
 		}
 		beforeBuild.run();
-		if(f != null && f.isFile() && TestFinder.isTestClass(FileUtil.contentOf(f)))
-		{
+		if(f != null && f.isFile() && TestFinder.isTestClass(FileUtil.contentOf(f))) {
 			runTestsIn(f);
 			return;
 		}
 		List<MainFinder.Main> mains = new ArrayList<MainFinder.Main>();
-		if(f != null && f.isFile() && f.getName().endsWith(".java"))
-		{
+		if(f != null && f.isFile() && f.getName().endsWith(".java")) {
 			EditorTab tab = tabFor(f);
 			mains = tab != null ? MainFinder.inSource(f, tab.editor.getContent()) : MainFinder.inFile(f);
 		}
-		if(mains.isEmpty())
-		{
+		if(mains.isEmpty()) {
 			mains = allMains();
 		}
-		if(mains.isEmpty())
-		{
+		if(mains.isEmpty()) {
 			error("No class with a main method found in " + project.name);
 			return;
 		}
 		runOneOf(mains);
 	}
 
-	EditorTab tabFor(File f)
-	{
-		for(EditorTab tab : editors.tabs())
-		{
-			if(tab.file.equals(f))
-			{
+	EditorTab tabFor(File f) {
+		for(EditorTab tab : editors.tabs()) {
+			if(tab.file.equals(f)) {
 				return tab;
 			}
 		}
@@ -367,13 +312,10 @@ public class RunController
 	}
 
 	// Every main in the project, using the text of files that have unsaved changes.
-	List<MainFinder.Main> allMains()
-	{
+	List<MainFinder.Main> allMains() {
 		Map<File, String> unsaved = new HashMap<File, String>();
-		for(EditorTab tab : editors.tabs())
-		{
-			if(tab.isDirty() && tab.file.getName().endsWith(".java"))
-			{
+		for(EditorTab tab : editors.tabs()) {
+			if(tab.isDirty() && tab.file.getName().endsWith(".java")) {
 				unsaved.put(tab.file, tab.editor.getContent());
 			}
 		}
@@ -381,22 +323,18 @@ public class RunController
 	}
 
 	// Runs the only candidate, or asks which one; the last choice is offered first.
-	void runOneOf(List<MainFinder.Main> mains)
-	{
+	void runOneOf(List<MainFinder.Main> mains) {
 		MainFinder.Main pick = mains.get(0);
-		if(mains.size() > 1)
-		{
+		if(mains.size() > 1) {
 			List<MainFinder.Main> ordered = new ArrayList<MainFinder.Main>(mains);
 			String last = settings.getLastMain();
 			ordered.sort((a, b) -> Boolean.compare(!b.className.equals(last), !a.className.equals(last)));
 			List<String> labels = new ArrayList<String>();
-			for(MainFinder.Main m : ordered)
-			{
+			for(MainFinder.Main m : ordered) {
 				labels.add(m.label());
 			}
 			String choice = ChoiceDialog.choose(shell, "Run which main class?", labels);
-			if(choice == null)
-			{
+			if(choice == null) {
 				return;
 			}
 			pick = ordered.get(labels.indexOf(choice));
@@ -404,79 +342,62 @@ public class RunController
 		launchMain(pick);
 	}
 
-	void runMainClass()
-	{
-		if(project == null)
-		{
+	void runMainClass() {
+		if(project == null) {
 			error("Open a project first.");
 			return;
 		}
 		List<MainFinder.Main> mains = allMains();
-		if(mains.isEmpty())
-		{
+		if(mains.isEmpty()) {
 			error("No class with a main method found in " + project.name);
 			return;
 		}
 		runOneOf(mains);
 	}
 
-	void launchMain(MainFinder.Main main)
-	{
+	void launchMain(MainFinder.Main main) {
 		String cls = main.className;
 		lastLaunch = () -> launchMain(main);
 		settings.setLastMain(cls);
-		build(() ->
-		{
-			if(hasErrors())
-			{
+		build(() -> {
+			if(hasErrors()) {
 				return;
 			}
 			startProcess(l -> withHotSwap(l.mainCommand(cls, settings.getVmArgs(cls), settings.getArgs(cls))));
 		});
 	}
 
-	void startProcess(Function<Launcher, List<String>> command)
-	{
+	void startProcess(Function<Launcher, List<String>> command) {
 		stop();
 		testRunDir = null;
 		launch(command);
 	}
 
-	void launch(Function<Launcher, List<String>> command)
-	{
+	void launch(Function<Launcher, List<String>> command) {
 		bottom.show(consoleTab);
 		Launcher[] self = new Launcher[1];
-		self[0] = launcher = new Launcher(project, new OutputListener()
-		{
-			public void output(String text, boolean error)
-			{
-				display.asyncExec(() ->
-				{
-					if(!console.getControl().isDisposed())
-					{
+		self[0] = launcher = new Launcher(project, new OutputListener() {
+			public void output(String text, boolean error) {
+				display.asyncExec(() -> {
+					if(!console.getControl().isDisposed()) {
 						console.append(text, error);
 					}
 				});
 			}
 
-			public void finished(int exitCode)
-			{
-				display.asyncExec(() ->
-				{
-					if(console.getControl().isDisposed())
-					{
+			public void finished(int exitCode) {
+				display.asyncExec(() -> {
+					if(console.getControl().isDisposed()) {
 						return;
 					}
 					console.append("\n<exited with code " + exitCode + ">\n", false);
 					updateStop();
-					if(launcher != self[0])
-					{
+					if(launcher != self[0]) {
 						return;
 					}
 					closeHotSwap();
 					collectReports();
-					if(!pending.isEmpty())
-					{
+					if(!pending.isEmpty()) {
 						launch(pending.remove(0));
 						return;
 					}
@@ -489,15 +410,11 @@ public class RunController
 		updateStop();
 	}
 
-	File newRunDir()
-	{
+	File newRunDir() {
 		stopLive();
-		try
-		{
+		try {
 			testRunDir = Files.createTempDirectory("javapad-tests").toFile();
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			testRunDir = new File(project.root, ".javapad/tests");
 			testRunDir.mkdirs();
 		}
@@ -506,8 +423,7 @@ public class RunController
 		junitPane.beginLive();
 		junitTab.setText("JUnit");
 		liveEvents.clear();
-		liveTail = new LiveTail(Launcher.liveLog(testRunDir), fields ->
-		{
+		liveTail = new LiveTail(Launcher.liveLog(testRunDir), fields -> {
 			liveEvents.add(fields);
 			display.asyncExec(() -> drainLive());
 		});
@@ -515,15 +431,11 @@ public class RunController
 		return testRunDir;
 	}
 
-	void drainLive()
-	{
+	void drainLive() {
 		String[] fields = liveEvents.poll();
-		while(fields != null)
-		{
-			if(!junitPane.getControl().isDisposed())
-			{
-				if(!junitTab.selected() && junitPane.total() == 0)
-				{
+		while(fields != null) {
+			if(!junitPane.getControl().isDisposed()) {
+				if(!junitTab.selected() && junitPane.total() == 0) {
 					junitTab.select();
 				}
 				junitPane.liveEvent(fields);
@@ -532,75 +444,56 @@ public class RunController
 		}
 	}
 
-	void stopLive()
-	{
-		if(liveTail != null)
-		{
+	void stopLive() {
+		if(liveTail != null) {
 			liveTail.stop();
 			liveTail = null;
 		}
 		drainLive();
 	}
 
-	void collectReports()
-	{
-		if(testRunDir == null)
-		{
+	void collectReports() {
+		if(testRunDir == null) {
 			return;
 		}
-		if(liveTail != null)
-		{
+		if(liveTail != null) {
 			liveTail.flush();
 		}
 		drainLive();
 		List<File> found = new ArrayList<File>();
 		findXml(testRunDir, found);
-		for(File xml : found)
-		{
-			if(parsedReports.add(xml))
-			{
-				try
-				{
+		for(File xml : found) {
+			if(parsedReports.add(xml)) {
+				try {
 					allResults.addAll(JUnitReport.parse(xml));
-				}
-				catch(Exception e)
-				{
+				} catch(Exception e) {
 					e.printStackTrace();
 					console.append("Cannot read test report " + xml.getName() + ": " + e + "\n", true);
 				}
 			}
 		}
-		if(!allResults.isEmpty() && pending.isEmpty())
-		{
+		if(!allResults.isEmpty() && pending.isEmpty()) {
 			junitPane.setResults(new ArrayList<TestResult>(allResults));
 		}
 	}
 
-	void findXml(File dir, List<File> out)
-	{
+	void findXml(File dir, List<File> out) {
 		File[] children = dir.listFiles();
-		if(children == null)
-		{
+		if(children == null) {
 			return;
 		}
 		Arrays.sort(children);
-		for(File f : children)
-		{
-			if(f.isDirectory())
-			{
+		for(File f : children) {
+			if(f.isDirectory()) {
 				findXml(f, out);
-			}
-			else if(f.getName().endsWith(".xml"))
-			{
+			} else if(f.getName().endsWith(".xml")) {
 				out.add(f);
 			}
 		}
 	}
 
-	void finishTestRun()
-	{
-		if(testRunDir == null)
-		{
+	void finishTestRun() {
+		if(testRunDir == null) {
 			return;
 		}
 		stopLive();
@@ -613,47 +506,38 @@ public class RunController
 		junitPane.updateToolbar();
 	}
 
-	void runTests()
-	{
+	void runTests() {
 		runTestsIn(currentFile.get());
 	}
 
-	void runTestsIn(File target)
-	{
-		if(project == null)
-		{
+	void runTestsIn(File target) {
+		if(project == null) {
 			error("Open a project first.");
 			return;
 		}
 		List<File> files = TestFinder.find(target, project.sourceFolders);
-		if(files.isEmpty())
-		{
+		if(files.isEmpty()) {
 			files = TestFinder.findAll(project.sourceFolders);
 		}
-		if(files.isEmpty())
-		{
+		if(files.isEmpty()) {
 			console.append("No JUnit test classes found in " + project.name + "\n", true);
 			error("No JUnit test classes found in " + project.name);
 			return;
 		}
 		List<String> specs = new ArrayList<String>();
-		for(File f : files)
-		{
+		for(File f : files) {
 			String cls = project.classNameOf(f);
-			if(cls != null)
-			{
+			if(cls != null) {
 				specs.add(cls);
 			}
 		}
 		runSpecs(specs);
 	}
 
-	public void runTestAtCursor()
-	{
+	public void runTestAtCursor() {
 		EditorTab tab = editors.active();
 		String cls = tab == null || project == null ? null : project.classNameOf(tab.file);
-		if(cls == null || !TestFinder.isTestClass(tab.editor.getContent()))
-		{
+		if(cls == null || !TestFinder.isTestClass(tab.editor.getContent())) {
 			error("Put the cursor in a JUnit test method.");
 			return;
 		}
@@ -662,68 +546,52 @@ public class RunController
 	}
 
 	// specs: class names, or class#method for a single test
-	public void runSpecs(List<String> specs)
-	{
-		if(project == null)
-		{
+	public void runSpecs(List<String> specs) {
+		if(project == null) {
 			error("Open a project first.");
 			return;
 		}
-		if(specs.isEmpty())
-		{
+		if(specs.isEmpty()) {
 			console.append("No tests to run\n", true);
 			return;
 		}
 		lastLaunch = () -> runSpecs(specs);
-		if(!rerunningFailed)
-		{
+		if(!rerunningFailed) {
 			allSpecs = specs;
 		}
-		build(() ->
-		{
-			if(hasErrors())
-			{
+		build(() -> {
+			if(hasErrors()) {
 				return;
 			}
 			List<String> four = new ArrayList<String>();
 			List<String> five = new ArrayList<String>();
-			for(String spec : specs)
-			{
+			for(String spec : specs) {
 				int hash = spec.indexOf('#');
 				File f = project.sourceFor(hash < 0 ? spec : spec.substring(0, hash));
-				if(f != null && TestFinder.isJupiter(FileUtil.contentOf(f)))
-				{
+				if(f != null && TestFinder.isJupiter(FileUtil.contentOf(f))) {
 					five.add(spec);
-				}
-				else
-				{
+				} else {
 					four.add(spec);
 				}
 			}
 			stop();
 			pending.clear();
 			File runDir = newRunDir();
-			if(!five.isEmpty())
-			{
+			if(!five.isEmpty()) {
 				pending.add(l -> l.junitCommand(five, true, runDir));
 			}
-			if(!four.isEmpty())
-			{
+			if(!four.isEmpty()) {
 				launch(l -> l.junitCommand(four, false, runDir));
-			}
-			else if(!pending.isEmpty())
-			{
+			} else if(!pending.isEmpty()) {
 				launch(pending.remove(0));
 			}
 		});
 	}
 
-	public void stop()
-	{
+	public void stop() {
 		pending.clear();
 		closeHotSwap();
-		if(launcher != null && launcher.isRunning())
-		{
+		if(launcher != null && launcher.isRunning()) {
 			launcher.stop();
 		}
 	}

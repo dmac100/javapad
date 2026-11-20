@@ -21,8 +21,7 @@ import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeItem;
 
 // Who calls a method (or what it calls), expanded one level at a time.
-public class CallHierarchyPane
-{
+public class CallHierarchyPane {
 	private final Composite composite;
 	private final Label title;
 	private final Button callersButton;
@@ -35,16 +34,14 @@ public class CallHierarchyPane
 	private String rootDisplay;
 	private CodeModel.Place rootPlace;
 
-	static class Node
-	{
+	static class Node {
 		String key;
 		List<CodeModel.Place> sites = new ArrayList<CodeModel.Place>();
 		int next;
 		boolean recursive;
 	}
 
-	public CallHierarchyPane(Composite parent, Theme theme)
-	{
+	public CallHierarchyPane(Composite parent, Theme theme) {
 		this.theme = theme;
 		composite = new Composite(parent, SWT.NONE);
 		GridLayout layout = new GridLayout(4, false);
@@ -69,23 +66,19 @@ public class CallHierarchyPane
 		restyle();
 	}
 
-	public Composite getControl()
-	{
+	public Composite getControl() {
 		return composite;
 	}
 
-	public void setModelSupplier(Supplier<CodeModel> models)
-	{
+	public void setModelSupplier(Supplier<CodeModel> models) {
 		this.models = models;
 	}
 
-	public void setOpener(Consumer<Location> opener)
-	{
+	public void setOpener(Consumer<Location> opener) {
 		this.opener = opener;
 	}
 
-	public void restyle()
-	{
+	public void restyle() {
 		composite.setBackground(theme.chrome);
 		title.setBackground(theme.chrome);
 		title.setForeground(theme.foreground);
@@ -97,48 +90,40 @@ public class CallHierarchyPane
 		tree.setForeground(theme.foreground);
 	}
 
-	public boolean showingCallers()
-	{
+	public boolean showingCallers() {
 		return callersButton.getSelection();
 	}
 
-	public void showCallees(boolean callees)
-	{
+	public void showCallees(boolean callees) {
 		callersButton.setSelection(!callees);
 		calleesButton.setSelection(callees);
 	}
 
-	public Tree getTree()
-	{
+	public Tree getTree() {
 		return tree;
 	}
 
-	public String rootDisplay()
-	{
+	public String rootDisplay() {
 		return rootDisplay;
 	}
 
-	public void show(String key, String display, CodeModel.Place place)
-	{
+	public void show(String key, String display, CodeModel.Place place) {
 		rootKey = key;
 		rootDisplay = display;
 		rootPlace = place;
 		rebuild();
 	}
 
-	void rebuild()
-	{
+	void rebuild() {
 		tree.removeAll();
-		if(rootKey == null)
-		{
+		if(rootKey == null) {
 			return;
 		}
 		title.setText((showingCallers() ? "Callers of " : "Callees of ") + rootDisplay);
 		TreeItem root = new TreeItem(tree, SWT.NONE);
 		Node node = new Node();
 		node.key = rootKey;
-		if(rootPlace != null)
-		{
+		if(rootPlace != null) {
 			node.sites.add(rootPlace);
 		}
 		root.setData(node);
@@ -148,52 +133,42 @@ public class CallHierarchyPane
 		composite.layout(true, true);
 	}
 
-	CodeModel model()
-	{
+	CodeModel model() {
 		return models == null ? null : models.get();
 	}
 
-	void expanding(TreeItem item)
-	{
+	void expanding(TreeItem item) {
 		TreeItem[] kids = item.getItems();
-		if(kids.length == 1 && kids[0].getData() == null)
-		{
+		if(kids.length == 1 && kids[0].getData() == null) {
 			populate(item);
 		}
 	}
 
-	String displayOf(CodeModel model, String key)
-	{
+	String displayOf(CodeModel model, String key) {
 		CodeModel.MethodInfo m = model == null ? null : model.method(key);
-		if(m != null)
-		{
+		if(m != null) {
 			return m.display;
 		}
 		int hash = key.indexOf('#');
-		if(hash < 0)
-		{
+		if(hash < 0) {
 			return key;
 		}
 		String owner = Names.simple(key.substring(0, hash));
 		String rest = key.substring(hash + 1);
-		if(rest.equals("<init>") || rest.equals("<clinit>"))
-		{
+		if(rest.equals("<init>") || rest.equals("<clinit>")) {
 			return owner + " (initializer)";
 		}
-		if(rest.startsWith("<init>"))
-		{
+		if(rest.startsWith("<init>")) {
 			return "new " + owner + Names.shorten(rest.substring("<init>".length()));
 		}
 		return owner + "." + Names.shorten(rest);
 	}
 
-	void populate(TreeItem item)
-	{
+	void populate(TreeItem item) {
 		CodeModel model = model();
 		Node node = (Node)item.getData();
 		item.removeAll();
-		if(model == null)
-		{
+		if(model == null) {
 			TreeItem wait = new TreeItem(item, SWT.NONE);
 			wait.setText("The project is still being analyzed...");
 			wait.setData(new Node());
@@ -202,12 +177,10 @@ public class CallHierarchyPane
 		boolean callers = showingCallers();
 		Map<String, Node> grouped = new LinkedHashMap<String, Node>();
 		List<CodeModel.Call> calls = callers ? model.callersOf(node.key) : model.calleesOf(node.key);
-		for(CodeModel.Call c : calls)
-		{
+		for(CodeModel.Call c : calls) {
 			String other = callers ? c.callerKey : c.targetKey;
 			Node n = grouped.get(other);
-			if(n == null)
-			{
+			if(n == null) {
 				n = new Node();
 				n.key = other;
 				grouped.put(other, n);
@@ -216,8 +189,7 @@ public class CallHierarchyPane
 		}
 		List<Node> sorted = new ArrayList<Node>(grouped.values());
 		sorted.sort((a, b) -> displayOf(model, a.key).compareToIgnoreCase(displayOf(model, b.key)));
-		for(Node n : sorted)
-		{
+		for(Node n : sorted) {
 			TreeItem child = new TreeItem(item, SWT.NONE);
 			n.recursive = isAncestor(item, n.key);
 			child.setData(n);
@@ -225,13 +197,11 @@ public class CallHierarchyPane
 			boolean project = callers || model.method(n.key) != null || model.calleesOf(n.key).size() > 0;
 			child.setText(displayOf(model, n.key) + where + (n.recursive ? "   (recursive)" : ""));
 			child.setForeground(project ? theme.foreground : theme.gutter);
-			if(!n.recursive && hasChildren(model, n.key, callers))
-			{
+			if(!n.recursive && hasChildren(model, n.key, callers)) {
 				new TreeItem(child, SWT.NONE);
 			}
 		}
-		if(sorted.isEmpty())
-		{
+		if(sorted.isEmpty()) {
 			TreeItem none = new TreeItem(item, SWT.NONE);
 			none.setText(callers ? "No callers found" : "No calls found");
 			none.setData(new Node());
@@ -239,18 +209,14 @@ public class CallHierarchyPane
 		}
 	}
 
-	boolean hasChildren(CodeModel model, String key, boolean callers)
-	{
+	boolean hasChildren(CodeModel model, String key, boolean callers) {
 		return callers ? !model.callersOf(key).isEmpty() : !model.calleesOf(key).isEmpty();
 	}
 
-	boolean isAncestor(TreeItem item, String key)
-	{
-		for(TreeItem t = item; t != null; t = t.getParentItem())
-		{
+	boolean isAncestor(TreeItem item, String key) {
+		for(TreeItem t = item; t != null; t = t.getParentItem()) {
 			Object data = t.getData();
-			if(data instanceof Node && key.equals(((Node)data).key))
-			{
+			if(data instanceof Node && key.equals(((Node)data).key)) {
 				return true;
 			}
 		}
@@ -258,16 +224,13 @@ public class CallHierarchyPane
 	}
 
 	// Opens the selected call site; activating the same row again moves to its next call site.
-	void activate()
-	{
+	void activate() {
 		TreeItem[] sel = tree.getSelection();
-		if(sel.length == 0 || !(sel[0].getData() instanceof Node) || opener == null)
-		{
+		if(sel.length == 0 || !(sel[0].getData() instanceof Node) || opener == null) {
 			return;
 		}
 		Node n = (Node)sel[0].getData();
-		if(n.sites.isEmpty())
-		{
+		if(n.sites.isEmpty()) {
 			return;
 		}
 		CodeModel.Place p = n.sites.get(n.next % n.sites.size());

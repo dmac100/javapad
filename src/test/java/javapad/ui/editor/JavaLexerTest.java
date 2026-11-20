@@ -4,11 +4,9 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-public class JavaLexerTest
-{
+public class JavaLexerTest {
 	@Test
-	public void keywordsStringsAndComments()
-	{
+	public void keywordsStringsAndComments() {
 		JavaLexer lexer = new JavaLexer();
 		String line = "public String s = \"a//b\"; // c";
 		int[] st = lexer.styles(line, JavaLexer.STATE_NORMAL);
@@ -20,8 +18,7 @@ public class JavaLexerTest
 	}
 
 	@Test
-	public void blockCommentSpansLines()
-	{
+	public void blockCommentSpansLines() {
 		JavaLexer lexer = new JavaLexer();
 		lexer.styles("int a; /* start", JavaLexer.STATE_NORMAL);
 		assertEquals(JavaLexer.STATE_BLOCK_COMMENT, lexer.endState);
@@ -32,8 +29,7 @@ public class JavaLexerTest
 	}
 
 	@Test
-	public void textBlockSpansLines()
-	{
+	public void textBlockSpansLines() {
 		JavaLexer lexer = new JavaLexer();
 		lexer.styles("String s = \"\"\"", JavaLexer.STATE_NORMAL);
 		assertEquals(JavaLexer.STATE_TEXT_BLOCK, lexer.endState);
@@ -45,8 +41,7 @@ public class JavaLexerTest
 	}
 
 	@Test
-	public void numbersAnnotationsAndDoc()
-	{
+	public void numbersAnnotationsAndDoc() {
 		JavaLexer lexer = new JavaLexer();
 		int[] st = lexer.styles("@Override int x = 0x1F;", JavaLexer.STATE_NORMAL);
 		assertEquals(JavaLexer.ANNOTATION, st[0]);
@@ -56,8 +51,7 @@ public class JavaLexerTest
 	}
 
 	@Test
-	public void otherFilesOnlyColourNumbersAndQuotedText()
-	{
+	public void otherFilesOnlyColourNumbersAndQuotedText() {
 		JavaLexer lexer = new JavaLexer(false);
 		int[] s = lexer.styles("class a1 = 3.5 + \"if 4\" // x 'y'", 0);
 		String line = "class a1 = 3.5 + \"if 4\" // x 'y'";

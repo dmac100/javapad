@@ -19,27 +19,21 @@ import javapad.git.GitRepo;
 import org.eclipse.swt.SWT;
 
 // What the History tab's context menus do with a commit or one of its files.
-public class HistoryActions
-{
+public class HistoryActions {
 	private final MainWindow w;
 
-	HistoryActions(MainWindow window)
-	{
+	HistoryActions(MainWindow window) {
 		this.w = window;
 	}
 
-	GitRepo repo()
-	{
+	GitRepo repo() {
 		return w.git.repo();
 	}
 
-	static List<String> branchNames(Commit c)
-	{
+	static List<String> branchNames(Commit c) {
 		List<String> list = new ArrayList<String>();
-		for(Commit.Ref r : c.branches())
-		{
-			if(!r.name.equals("HEAD"))
-			{
+		for(Commit.Ref r : c.branches()) {
+			if(!r.name.equals("HEAD")) {
 				list.add(r.name);
 			}
 		}
@@ -47,11 +41,9 @@ public class HistoryActions
 	}
 
 	// the local branches at the commit; picks one if there are several, complains if there are none
-	String branchAt(Commit c, String title)
-	{
+	String branchAt(Commit c, String title) {
 		List<String> names = branchNames(c);
-		if(names.isEmpty())
-		{
+		if(names.isEmpty()) {
 			w.error("No branch points at " + c.shortHash() + ".");
 			return null;
 		}
@@ -60,14 +52,11 @@ public class HistoryActions
 
 	// ---- commits
 
-	void compareWithWorkingTree(Commit c)
-	{
+	void compareWithWorkingTree(Commit c) {
 		GitRepo r = repo();
-		w.git.background(() ->
-		{
+		w.git.background(() -> {
 			List<CompareWindow.Entry> entries = new ArrayList<CompareWindow.Entry>();
-			for(ChangedFile f : r.diffFiles(c.hash))
-			{
+			for(ChangedFile f : r.diffFiles(c.hash)) {
 				entries.add(new CompareWindow.Entry(f.path, f.label(), f.oldPath));
 			}
 			return () -> CompareWindow.open(w, w.shell, "Compare " + c.shortHash() + " with working tree", c.shortHash(), "Working tree", entries,
@@ -75,18 +64,14 @@ public class HistoryActions
 		});
 	}
 
-	static String orEmpty(String s)
-	{
+	static String orEmpty(String s) {
 		return s == null ? "" : s;
 	}
 
-	void checkout(Commit c)
-	{
+	void checkout(Commit c) {
 		List<String> names = branchNames(c);
-		if(names.isEmpty())
-		{
-			if(ConfirmDialog.confirm(w.shell, "Checkout", "Check out " + c.shortHash() + " as a detached HEAD?"))
-			{
+		if(names.isEmpty()) {
+			if(ConfirmDialog.confirm(w.shell, "Checkout", "Check out " + c.shortHash() + " as a detached HEAD?")) {
 				w.git.run("Checkout", r -> r.checkout(c.hash), true);
 			}
 			return;
@@ -94,113 +79,90 @@ public class HistoryActions
 		List<String> options = new ArrayList<String>(names);
 		options.add("detached: " + c.shortHash());
 		String pick = options.size() == 2 ? options.get(0) : ChoiceDialog.choose(w.shell, "Check out", options);
-		if(pick != null)
-		{
+		if(pick != null) {
 			String target = pick.startsWith("detached: ") ? c.hash : pick;
 			w.git.run("Checkout", r -> r.checkout(target), true);
 		}
 	}
 
-	void pushBranch(Commit c)
-	{
+	void pushBranch(Commit c) {
 		String branch = branchAt(c, "Push which branch?");
-		if(branch != null)
-		{
+		if(branch != null) {
 			w.git.run("Push", r -> r.push("origin", branch), false);
 		}
 	}
 
-	void createBranch(Commit c)
-	{
+	void createBranch(Commit c) {
 		String name = Prompt.ask(w.shell, "Create Branch", "Name of the new branch at " + c.shortHash() + ":", "");
-		if(name != null && !name.trim().isEmpty())
-		{
+		if(name != null && !name.trim().isEmpty()) {
 			w.git.run("Create branch", r -> r.createBranch(name.trim(), c.hash), false);
 		}
 	}
 
-	void deleteBranch(Commit c)
-	{
+	void deleteBranch(Commit c) {
 		String branch = branchAt(c, "Delete which branch?");
-		if(branch == null || !ConfirmDialog.confirm(w.shell, "Delete Branch", "Delete the branch " + branch + "?"))
-		{
+		if(branch == null || !ConfirmDialog.confirm(w.shell, "Delete Branch", "Delete the branch " + branch + "?")) {
 			return;
 		}
 		// git itself explains how to force the delete when the branch is not fully merged
 		w.git.run("Delete branch", r -> r.deleteBranch(branch, false), false);
 	}
 
-	void renameBranch(Commit c)
-	{
+	void renameBranch(Commit c) {
 		String branch = branchAt(c, "Rename which branch?");
-		if(branch == null)
-		{
+		if(branch == null) {
 			return;
 		}
 		String name = Prompt.ask(w.shell, "Rename Branch", "New name for " + branch + ":", branch);
-		if(name != null && !name.trim().isEmpty() && !name.trim().equals(branch))
-		{
+		if(name != null && !name.trim().isEmpty() && !name.trim().equals(branch)) {
 			w.git.run("Rename branch", r -> r.renameBranch(branch, name.trim()), false);
 		}
 	}
 
-	void createTag(Commit c)
-	{
+	void createTag(Commit c) {
 		String name = Prompt.ask(w.shell, "Create Tag", "Tag name for " + c.shortHash() + ":", "");
-		if(name != null && !name.trim().isEmpty())
-		{
+		if(name != null && !name.trim().isEmpty()) {
 			w.git.run("Create tag", r -> r.createTag(name.trim(), c.hash), false);
 		}
 	}
 
-	void cherryPick(Commit c)
-	{
+	void cherryPick(Commit c) {
 		w.git.run("Cherry-pick", r -> r.cherryPick(c.hash), true);
 	}
 
-	void merge(Commit c)
-	{
-		if(ConfirmDialog.confirm(w.shell, "Merge", "Merge " + c.shortHash() + " into the current branch?"))
-		{
+	void merge(Commit c) {
+		if(ConfirmDialog.confirm(w.shell, "Merge", "Merge " + c.shortHash() + " into the current branch?")) {
 			w.git.run("Merge", r -> r.merge(c.hash), true);
 		}
 	}
 
-	void reset(Commit c)
-	{
+	void reset(Commit c) {
 		w.git.reset(c.hash);
 	}
 
-	void revert(Commit c)
-	{
-		if(ConfirmDialog.confirm(w.shell, "Revert", "Create a commit that reverts " + c.shortHash() + "?"))
-		{
+	void revert(Commit c) {
+		if(ConfirmDialog.confirm(w.shell, "Revert", "Create a commit that reverts " + c.shortHash() + "?")) {
 			w.git.run("Revert", r -> r.revert(c.hash), true);
 		}
 	}
 
 	// ---- files of a commit
 
-	void openWorkingTree(ChangedFile f)
-	{
+	void openWorkingTree(ChangedFile f) {
 		File file = repo().file(f.path);
-		if(!file.isFile())
-		{
+		if(!file.isFile()) {
 			w.error(f.path + " does not exist in the working tree.");
 			return;
 		}
 		w.open(new Location(file, 1, 1));
 	}
 
-	void openThisVersion(Commit c, ChangedFile f)
-	{
+	void openThisVersion(Commit c, ChangedFile f) {
 		openRevision(c.hash, f.path, c.shortHash());
 	}
 
-	void openPreviousVersion(Commit c, ChangedFile f)
-	{
-		if(c.parents.isEmpty())
-		{
+	void openPreviousVersion(Commit c, ChangedFile f) {
+		if(c.parents.isEmpty()) {
 			w.error(c.shortHash() + " is the first commit; it has no previous version.");
 			return;
 		}
@@ -209,21 +171,16 @@ public class HistoryActions
 	}
 
 	// writes the file as it was at the revision to a temporary file and opens that
-	void openRevision(String rev, String path, String label)
-	{
+	void openRevision(String rev, String path, String label) {
 		GitRepo r = repo();
-		w.git.background(() ->
-		{
+		w.git.background(() -> {
 			String content = r.show(rev, path);
-			return () ->
-			{
-				if(content == null)
-				{
+			return () -> {
+				if(content == null) {
 					w.error(path + " does not exist in " + label + ".");
 					return;
 				}
-				try
-				{
+				try {
 					String name = new File(path).getName();
 					int dot = name.lastIndexOf('.');
 					String versioned = dot < 0 ? name + "@" + label : name.substring(0, dot) + "@" + label + name.substring(dot);
@@ -232,9 +189,7 @@ public class HistoryActions
 					File out = new File(dir, versioned);
 					Files.write(out.toPath(), content.getBytes(StandardCharsets.UTF_8));
 					w.open(new Location(out, 1, 1));
-				}
-				catch(IOException e)
-				{
+				} catch(IOException e) {
 					e.printStackTrace();
 					w.error("Cannot write the file: " + e.getMessage());
 				}
@@ -242,21 +197,17 @@ public class HistoryActions
 		});
 	}
 
-	void checkoutThisVersion(Commit c, ChangedFile f)
-	{
-		if(f.status == 'D')
-		{
+	void checkoutThisVersion(Commit c, ChangedFile f) {
+		if(f.status == 'D') {
 			w.error(f.path + " was deleted in " + c.shortHash() + ".");
 			return;
 		}
-		if(ConfirmDialog.confirm(w.shell, "Checkout", "Replace " + f.path + " with its version from " + c.shortHash() + "? Local changes are lost."))
-		{
+		if(ConfirmDialog.confirm(w.shell, "Checkout", "Replace " + f.path + " with its version from " + c.shortHash() + "? Local changes are lost.")) {
 			w.git.run("Checkout", r -> r.restore(c.hash, Arrays.asList(f.path)), true);
 		}
 	}
 
-	void compareWithPrevious(Commit c, ChangedFile f)
-	{
+	void compareWithPrevious(Commit c, ChangedFile f) {
 		GitRepo r = repo();
 		String before = c.parents.isEmpty() ? "(nothing)" : c.parents.get(0).substring(0, Math.min(8, c.parents.get(0).length()));
 		CompareWindow.Entry entry = new CompareWindow.Entry(f.path, f.label(), f.oldPath);
@@ -264,8 +215,7 @@ public class HistoryActions
 			e -> new String[] {c.parents.isEmpty() ? "" : orEmpty(r.show(c.hash + "^", e.oldPath)), orEmpty(r.show(c.hash, e.path))});
 	}
 
-	void compareWithWorkingTree(Commit c, ChangedFile f)
-	{
+	void compareWithWorkingTree(Commit c, ChangedFile f) {
 		GitRepo r = repo();
 		CompareWindow.Entry entry = new CompareWindow.Entry(f.path, f.label(), null);
 		CompareWindow.open(w, w.shell, f.path + ": " + c.shortHash() + " and the working tree", c.shortHash(), "Working tree", Arrays.asList(entry),

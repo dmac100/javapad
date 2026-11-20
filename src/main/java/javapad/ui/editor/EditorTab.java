@@ -10,8 +10,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabItem;
 
-public class EditorTab
-{
+public class EditorTab {
 	public File file;
 	public CTabItem item;
 	public final CodeEditor editor;
@@ -19,8 +18,7 @@ public class EditorTab
 	// set while the tab is moved to another folder, when its control must outlive the old item
 	private boolean moving;
 
-	public EditorTab(CTabFolder folder, File file, Theme theme) throws IOException
-	{
+	public EditorTab(CTabFolder folder, File file, Theme theme) throws IOException {
 		this.file = file;
 		item = new CTabItem(folder, SWT.CLOSE);
 		editor = new CodeEditor(folder, theme, file.getName().endsWith(".java"));
@@ -28,20 +26,16 @@ public class EditorTab
 		bind(item);
 		editor.setContent(new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8));
 		updateTitle();
-		editor.setModifyHook(() ->
-		{
+		editor.setModifyHook(() -> {
 			dirty = true;
 			updateTitle();
 		});
 	}
 
 	// closing a tab does not dispose its control by itself
-	private void bind(CTabItem bound)
-	{
-		bound.addListener(SWT.Dispose, e ->
-		{
-			if(!moving)
-			{
+	private void bind(CTabItem bound) {
+		bound.addListener(SWT.Dispose, e -> {
+			if(!moving) {
 				editor.getFrame().dispose();
 			}
 		});
@@ -50,15 +44,13 @@ public class EditorTab
 	}
 
 	// Moves the tab (with its editor) to a folder, at the index.
-	public void moveTo(CTabFolder folder, int index)
-	{
+	public void moveTo(CTabFolder folder, int index) {
 		CTabItem old = item;
 		boolean sameFolder = old.getParent() == folder;
 		moving = true;
 		old.dispose();
 		item = new CTabItem(folder, SWT.CLOSE, Math.min(index, folder.getItemCount()));
-		if(!sameFolder)
-		{
+		if(!sameFolder) {
 			editor.getFrame().setParent(folder);
 		}
 		item.setControl(editor.getFrame());
@@ -69,39 +61,33 @@ public class EditorTab
 	}
 
 	// The file was moved or renamed on disk; the tab, with any unsaved changes, follows it.
-	public void rename(File moved)
-	{
+	public void rename(File moved) {
 		file = moved;
 		item.setToolTipText(moved.getAbsolutePath());
 		updateTitle();
 	}
 
-	public boolean isDirty()
-	{
+	public boolean isDirty() {
 		return dirty;
 	}
 
-	public void save() throws IOException
-	{
+	public void save() throws IOException {
 		Files.write(file.toPath(), editor.getContent().getBytes(StandardCharsets.UTF_8));
 		dirty = false;
 		updateTitle();
 	}
 
 	// Re-reads the file if it changed on disk (after a git checkout, say) and keeps the tab clean.
-	public void reload() throws IOException
-	{
+	public void reload() throws IOException {
 		String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-		if(!content.equals(editor.getContent()))
-		{
+		if(!content.equals(editor.getContent())) {
 			editor.replaceContentMinimal(content);
 		}
 		dirty = false;
 		updateTitle();
 	}
 
-	void updateTitle()
-	{
+	void updateTitle() {
 		item.setText((dirty ? "*" : "") + file.getName());
 	}
 }

@@ -7,11 +7,9 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Test;
 
-public class ClaudeStreamTest
-{
+public class ClaudeStreamTest {
 	@Test
-	public void jsonReadsObjectsArraysAndEscapes()
-	{
+	public void jsonReadsObjectsArraysAndEscapes() {
 		Map<String, Object> o = Json.object(Json.parse("{\"a\": [1, 2.5, true, null], \"b\": \"x\\n\\u0041\\\"\", \"c\": {}}"));
 		assertEquals(4, Json.array(o.get("a")).size());
 		assertEquals("x\nA\"", o.get("b"));
@@ -19,14 +17,12 @@ public class ClaudeStreamTest
 	}
 
 	@Test(expected = IllegalArgumentException.class)
-	public void jsonRejectsText()
-	{
+	public void jsonRejectsText() {
 		Json.parse("not json");
 	}
 
 	@Test
-	public void assistantMessagesGiveThoughtsToolsAndText()
-	{
+	public void assistantMessagesGiveThoughtsToolsAndText() {
 		String line = "{\"type\":\"assistant\",\"message\":{\"content\":["
 			+ "{\"type\":\"thinking\",\"thinking\":\"Let me look.\"},"
 			+ "{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"src/A.java\"}},"
@@ -41,8 +37,7 @@ public class ClaudeStreamTest
 	}
 
 	@Test
-	public void resultsAndErrors()
-	{
+	public void resultsAndErrors() {
 		assertEquals(ClaudeStream.RESULT, ClaudeStream.parse("{\"type\":\"result\",\"is_error\":false,\"result\":\"ok\"}").get(0).kind);
 		ClaudeStream.Event error = ClaudeStream.parse("{\"type\":\"result\",\"is_error\":true,\"result\":\"bad\"}").get(0);
 		assertEquals(ClaudeStream.ERROR, error.kind);
@@ -50,8 +45,7 @@ public class ClaudeStreamTest
 	}
 
 	@Test
-	public void otherLinesAreIgnoredOrShownAsText()
-	{
+	public void otherLinesAreIgnoredOrShownAsText() {
 		assertTrue(ClaudeStream.parse("{\"type\":\"system\",\"subtype\":\"init\"}").isEmpty());
 		assertTrue(ClaudeStream.parse("   ").isEmpty());
 		ClaudeStream.Event plain = ClaudeStream.parse("warning from the shell").get(0);
@@ -60,8 +54,7 @@ public class ClaudeStreamTest
 	}
 
 	@Test
-	public void longToolDetailsAreCut()
-	{
+	public void longToolDetailsAreCut() {
 		String text = ClaudeStream.toolSummary("Bash", Json.object(Json.parse("{\"command\":\"" + "x".repeat(300) + "\"}")));
 		assertTrue(text.length() < 120);
 		assertTrue(text.endsWith("..."));

@@ -12,20 +12,17 @@ import javapad.model.EclipseProject;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class CodeModelTest
-{
+public class CodeModelTest {
 	static CodeModel model;
 
-	static void write(File dir, String name, String text) throws Exception
-	{
+	static void write(File dir, String name, String text) throws Exception {
 		File f = new File(dir, "src/p/" + name);
 		f.getParentFile().mkdirs();
 		Files.write(f.toPath(), text.getBytes());
 	}
 
 	@BeforeClass
-	public static void build() throws Exception
-	{
+	public static void build() throws Exception {
 		File dir = Files.createTempDirectory("cm").toFile();
 		write(dir, "Shape.java", "package p;\npublic interface Shape {\n\tdouble area();\n\tdefault String describe() {\n\t\treturn \"shape \" + area();\n\t}\n}\n");
 		write(dir, "Circle.java", "package p;\npublic class Circle implements Shape {\n\tpublic double area() {\n\t\treturn 3.0;\n\t}\n}\n");
@@ -38,19 +35,16 @@ public class CodeModelTest
 		model = CodeModel.build(project);
 	}
 
-	static List<String> names(List<CodeModel.TypeInfo> list)
-	{
+	static List<String> names(List<CodeModel.TypeInfo> list) {
 		List<String> names = new ArrayList<String>();
-		for(CodeModel.TypeInfo t : list)
-		{
+		for(CodeModel.TypeInfo t : list) {
 			names.add(t.display);
 		}
 		return names;
 	}
 
 	@Test
-	public void subtypesAtAnyDepth()
-	{
+	public void subtypesAtAnyDepth() {
 		List<String> shapes = names(model.allSubtypes("p.Shape"));
 		assertTrue(shapes.toString(), shapes.contains("p.Circle"));
 		assertTrue(shapes.contains("p.Square"));
@@ -61,11 +55,9 @@ public class CodeModelTest
 	}
 
 	@Test
-	public void implementersOfInterfaceAndAbstractMethods()
-	{
+	public void implementersOfInterfaceAndAbstractMethods() {
 		List<String> area = new ArrayList<String>();
-		for(CodeModel.MethodInfo m : model.implementers("p.Shape#area()"))
-		{
+		for(CodeModel.MethodInfo m : model.implementers("p.Shape#area()")) {
 			area.add(m.display);
 		}
 		assertEquals(3, area.size());
@@ -73,8 +65,7 @@ public class CodeModelTest
 		assertTrue(area.contains("Square.area()"));
 		assertTrue(area.contains("<anonymous Shape>.area()"));
 		List<String> speak = new ArrayList<String>();
-		for(CodeModel.MethodInfo m : model.implementers("p.Animal#speak()"))
-		{
+		for(CodeModel.MethodInfo m : model.implementers("p.Animal#speak()")) {
 			speak.add(m.display);
 		}
 		assertTrue(speak.contains("Dog.speak()"));
@@ -82,19 +73,16 @@ public class CodeModelTest
 	}
 
 	@Test
-	public void objectMethodOverridesAreTracked()
-	{
+	public void objectMethodOverridesAreTracked() {
 		CodeModel.MethodInfo toString = model.method("p.Square#toString()");
 		assertNotNull(toString);
 		assertTrue(toString.overrides.contains("java.lang.Object#toString()"));
 	}
 
 	@Test
-	public void callersIncludeCallsThroughTheInterface()
-	{
+	public void callersIncludeCallsThroughTheInterface() {
 		List<String> callers = new ArrayList<String>();
-		for(CodeModel.Call c : model.callersOf("p.Circle#area()"))
-		{
+		for(CodeModel.Call c : model.callersOf("p.Circle#area()")) {
 			callers.add(c.callerKey);
 		}
 		assertTrue(callers.toString(), callers.contains("p.Main#run()"));
@@ -102,8 +90,7 @@ public class CodeModelTest
 	}
 
 	@Test
-	public void callersOfStaticHelperComeFromTheFieldInitializer()
-	{
+	public void callersOfStaticHelperComeFromTheFieldInitializer() {
 		List<CodeModel.Call> calls = model.callersOf("p.Main#helper()");
 		assertEquals(1, calls.size());
 		assertEquals("p.Main#<init>", calls.get(0).callerKey);
@@ -111,11 +98,9 @@ public class CodeModelTest
 	}
 
 	@Test
-	public void calleesOfAMethod()
-	{
+	public void calleesOfAMethod() {
 		List<String> targets = new ArrayList<String>();
-		for(CodeModel.Call c : model.calleesOf("p.Main#run()"))
-		{
+		for(CodeModel.Call c : model.calleesOf("p.Main#run()")) {
 			targets.add(c.targetKey);
 		}
 		assertTrue(targets.toString(), targets.contains("p.Circle#<init>()"));
@@ -125,25 +110,20 @@ public class CodeModelTest
 	}
 
 	@Test
-	public void superCallsAreFound()
-	{
+	public void superCallsAreFound() {
 		boolean found = false;
-		for(CodeModel.Call c : model.callersOf("p.Dog#speak()"))
-		{
+		for(CodeModel.Call c : model.callersOf("p.Dog#speak()")) {
 			found |= c.callerKey.equals("p.Puppy#speak()");
 		}
 		assertTrue(found);
 	}
 
 	@Test
-	public void constructorsReadAsNewExpressions()
-	{
+	public void constructorsReadAsNewExpressions() {
 		CodeModel.MethodInfo any = null;
-		for(CodeModel.Call c : model.calleesOf("p.Main#run()"))
-		{
+		for(CodeModel.Call c : model.calleesOf("p.Main#run()")) {
 			CodeModel.MethodInfo m = model.method(c.targetKey);
-			if(m != null && m.display.startsWith("new "))
-			{
+			if(m != null && m.display.startsWith("new ")) {
 				any = m;
 			}
 		}
@@ -151,8 +131,7 @@ public class CodeModelTest
 	}
 
 	@Test
-	public void placesPointAtDeclarationNames()
-	{
+	public void placesPointAtDeclarationNames() {
 		CodeModel.MethodInfo area = model.method("p.Circle#area()");
 		assertEquals(3, area.place.line);
 		assertEquals("\tpublic double ".length() + 1, area.place.column);

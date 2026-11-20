@@ -9,21 +9,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import org.junit.Test;
 
-public class GitIgnoreTest
-{
-	GitIgnore rules(String... lines)
-	{
+public class GitIgnoreTest {
+	GitIgnore rules(String... lines) {
 		return new GitIgnore(new ArrayList<GitIgnore.Rule>()).child("/p", Arrays.asList(lines));
 	}
 
-	boolean ignored(GitIgnore g, String path, boolean dir)
-	{
+	boolean ignored(GitIgnore g, String path, boolean dir) {
 		return g.ignored(new File("/p/" + path), dir);
 	}
 
 	@Test
-	public void namesMatchAtAnyDepth()
-	{
+	public void namesMatchAtAnyDepth() {
 		GitIgnore g = rules("*.class", "bin/");
 		assertTrue(ignored(g, "A.class", false));
 		assertTrue(ignored(g, "src/x/A.class", false));
@@ -34,8 +30,7 @@ public class GitIgnoreTest
 	}
 
 	@Test
-	public void slashAnchorsToTheFolder()
-	{
+	public void slashAnchorsToTheFolder() {
 		GitIgnore g = rules("/out", "doc/*.txt");
 		assertTrue(ignored(g, "out", true));
 		assertFalse(ignored(g, "src/out", true));
@@ -44,16 +39,14 @@ public class GitIgnoreTest
 	}
 
 	@Test
-	public void negationAndComments()
-	{
+	public void negationAndComments() {
 		GitIgnore g = rules("# comment", "", "*.log", "!keep.log");
 		assertTrue(ignored(g, "a.log", false));
 		assertFalse(ignored(g, "keep.log", false));
 	}
 
 	@Test
-	public void doubleStar()
-	{
+	public void doubleStar() {
 		GitIgnore g = rules("a/**/z", "logs/**");
 		assertTrue(ignored(g, "a/z", false));
 		assertTrue(ignored(g, "a/b/c/z", false));
@@ -62,8 +55,7 @@ public class GitIgnoreTest
 	}
 
 	@Test
-	public void dotSegmentsInThePathDoNotHideAnchoredRules()
-	{
+	public void dotSegmentsInThePathDoNotHideAnchoredRules() {
 		GitIgnore g = rules("/out");
 		assertTrue(g.ignored(new File("/p/./sub/../out"), true));
 	}

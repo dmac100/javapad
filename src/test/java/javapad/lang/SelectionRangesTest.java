@@ -4,8 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-public class SelectionRangesTest
-{
+public class SelectionRangesTest {
 	static final String SRC = "package p;\n"
 		+ "public class Main {\n"
 		+ "\tint f(int a, int b) {\n"
@@ -14,12 +13,10 @@ public class SelectionRangesTest
 		+ "\t}\n"
 		+ "}\n";
 
-	static String grow(String text, String from, int times)
-	{
+	static String grow(String text, String from, int times) {
 		int s = text.indexOf(from);
 		int e = s;
-		for(int i = 0; i < times; i++)
-		{
+		for(int i = 0; i < times; i++) {
 			int[] r = SelectionRanges.expand(text, s, e, true);
 			s = r[0];
 			e = r[1];
@@ -28,8 +25,7 @@ public class SelectionRangesTest
 	}
 
 	@Test
-	public void growsFromAWordOutwards()
-	{
+	public void growsFromAWordOutwards() {
 		String from = "ompute";
 		assertEquals("compute", grow(SRC, from, 1));
 		assertEquals("compute(a + 1, \"hi there\")", grow(SRC, from, 2));
@@ -40,8 +36,7 @@ public class SelectionRangesTest
 	}
 
 	@Test
-	public void growsThroughArgumentsAndStrings()
-	{
+	public void growsThroughArgumentsAndStrings() {
 		assertEquals("hi", grow(SRC, "hi", 1));
 		assertEquals("hi there", grow(SRC, "hi", 2));
 		assertEquals("\"hi there\"", grow(SRC, "hi", 3));
@@ -50,14 +45,12 @@ public class SelectionRangesTest
 	}
 
 	@Test
-	public void endsAtTheWholeText()
-	{
+	public void endsAtTheWholeText() {
 		assertEquals(SRC, grow(SRC, "x;", 20));
 	}
 
 	@Test
-	public void shrinksToTheLargestPartAroundTheCaret()
-	{
+	public void shrinksToTheLargestPartAroundTheCaret() {
 		int s = SRC.indexOf("int x");
 		int e = SRC.indexOf(";", s) + 1;
 		int caret = SRC.indexOf("compute");
@@ -66,8 +59,7 @@ public class SelectionRangesTest
 	}
 
 	@Test
-	public void plainTextUsesWordsLinesAndBrackets()
-	{
+	public void plainTextUsesWordsLinesAndBrackets() {
 		String text = "first line\n  call(one two)  \nlast";
 		int at = text.indexOf("ne two");
 		int[] r = SelectionRanges.expand(text, at, at, false);

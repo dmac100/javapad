@@ -12,17 +12,14 @@ import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 
 // The editor's right-click menu.
-public class EditorMenu
-{
+public class EditorMenu {
 	private final MainWindow w;
 
-	public EditorMenu(MainWindow window)
-	{
+	public EditorMenu(MainWindow window) {
 		this.w = window;
 	}
 
-	MenuItem contextItem(Menu menu, String text, Runnable action)
-	{
+	MenuItem contextItem(Menu menu, String text, Runnable action) {
 		MenuItem item = new MenuItem(menu, SWT.PUSH);
 		item.setText(text);
 		item.addListener(SWT.Selection, e -> action.run());
@@ -30,8 +27,7 @@ public class EditorMenu
 	}
 
 	// the git actions that make sense for the file of this editor
-	void addGit(Menu parent, EditorTab tab)
-	{
+	void addGit(Menu parent, EditorTab tab) {
 		MenuItem cascade = new MenuItem(parent, SWT.CASCADE);
 		cascade.setText("Git");
 		Menu menu = new Menu(parent);
@@ -51,12 +47,10 @@ public class EditorMenu
 		new MenuItem(menu, SWT.SEPARATOR);
 		items.add(contextItem(menu, "Replace with Head Revision", () -> w.git.replaceWith(tab.file, true, () -> reload(tab))));
 		items.add(contextItem(menu, "Replace with Previous Revision", () -> w.git.replaceWith(tab.file, false, () -> reload(tab))));
-		parent.addListener(SWT.Show, e ->
-		{
+		parent.addListener(SWT.Show, e -> {
 			boolean on = w.git.pathOf(tab.file) != null;
 			cascade.setEnabled(on);
-			for(MenuItem item : items)
-			{
+			for(MenuItem item : items) {
 				item.setEnabled(on);
 			}
 			assume.setSelection(on && w.git.assumedUnchanged(tab.file));
@@ -64,22 +58,17 @@ public class EditorMenu
 	}
 
 	// shows what is now on disk, dropping unsaved edits (the caller has asked for that)
-	void reload(EditorTab tab)
-	{
-		try
-		{
+	void reload(EditorTab tab) {
+		try {
 			tab.reload();
-		}
-		catch(IOException e)
-		{
+		} catch(IOException e) {
 			e.printStackTrace();
 			w.error("Cannot reload " + tab.file.getName() + ": " + e.getMessage());
 		}
 	}
 
 	// The editor's right-click menu: editing, w.navigation and import features with their shortcuts.
-	public void attach(EditorTab tab)
-	{
+	public void attach(EditorTab tab) {
 		StyledText t = tab.editor.getControl();
 		boolean java = tab.file.getName().endsWith(".java");
 		Menu menu = new Menu(t);
@@ -108,28 +97,21 @@ public class EditorMenu
 		addGit(menu, tab);
 		t.setMenu(menu);
 		// a right click puts the caret where you clicked, unless that is inside the selection
-		t.addListener(SWT.MenuDetect, e ->
-		{
-			try
-			{
+		t.addListener(SWT.MenuDetect, e -> {
+			try {
 				int offset = t.getOffsetAtPoint(t.toControl(e.x, e.y));
 				Point sel = t.getSelection();
-				if(offset < sel.x || offset > sel.y)
-				{
+				if(offset < sel.x || offset > sel.y) {
 					t.setCaretOffset(offset);
 				}
-			}
-			catch(IllegalArgumentException ex)
-			{
+			} catch(IllegalArgumentException ex) {
 				// the click was not over any text
 			}
 		});
-		menu.addListener(SWT.Show, e ->
-		{
+		menu.addListener(SWT.Show, e -> {
 			cut.setEnabled(t.getSelectionCount() > 0);
 			copy.setEnabled(t.getSelectionCount() > 0);
-			for(MenuItem item : javaItems)
-			{
+			for(MenuItem item : javaItems) {
 				item.setEnabled(java);
 			}
 		});

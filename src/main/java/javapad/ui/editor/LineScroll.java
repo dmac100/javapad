@@ -6,16 +6,12 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Listener;
 
 // Mouse wheel scrolling in whole lines, instead of the toolkit's pixel by pixel smooth scrolling.
-public class LineScroll
-{
+public class LineScroll {
 	static final int LINES = 3;
 
-	public static void install(StyledText text)
-	{
-		Listener wheel = e ->
-		{
-			if(e.widget != text || (e.stateMask & (SWT.SHIFT | SWT.MOD1)) != 0 || e.count == 0)
-			{
+	public static void install(StyledText text) {
+		Listener wheel = e -> {
+			if(e.widget != text || (e.stateMask & (SWT.SHIFT | SWT.MOD1)) != 0 || e.count == 0) {
 				return;
 			}
 			e.doit = false;

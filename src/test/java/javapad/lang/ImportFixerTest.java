@@ -11,15 +11,13 @@ import javapad.model.EclipseProject;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class ImportFixerTest
-{
+public class ImportFixerTest {
 	static File file;
 	static JavaAnalyzer analyzer;
 	static TypeIndex index;
 
 	@BeforeClass
-	public static void setUp() throws Exception
-	{
+	public static void setUp() throws Exception {
 		File dir = Files.createTempDirectory("fix").toFile();
 		new File(dir, "src/p").mkdirs();
 		new File(dir, "src/q").mkdirs();
@@ -30,19 +28,16 @@ public class ImportFixerTest
 		index = TypeIndex.build(project.sourceFolders, project.libraries);
 	}
 
-	static ImportFixer.Plan plan(String text)
-	{
+	static ImportFixer.Plan plan(String text) {
 		return ImportFixer.plan(text, analyzer.analyze(file, text), index);
 	}
 
 	@Test
-	public void findsUnresolvedTypeNames()
-	{
+	public void findsUnresolvedTypeNames() {
 		String text = "package p;\nclass A {\n\tvoid f() {\n\t\tList<String> a = new ArrayList<>();\n\t\tCollections.sort(a);\n\t\tfoo.bar();\n\t}\n}\n";
 		List<ImportFixer.Missing> missing = ImportFixer.unresolved(analyzer.analyze(file, text));
 		StringBuilder names = new StringBuilder();
-		for(ImportFixer.Missing m : missing)
-		{
+		for(ImportFixer.Missing m : missing) {
 			names.append(m.name).append(' ');
 		}
 		assertEquals("List ArrayList Collections ", names.toString());
@@ -50,8 +45,7 @@ public class ImportFixerTest
 	}
 
 	@Test
-	public void ranksCandidatesAndAutoAddsTheUnambiguousOnes()
-	{
+	public void ranksCandidatesAndAutoAddsTheUnambiguousOnes() {
 		String text = "package p;\nimport java.io.File;\nclass A {\n\tvoid f() {\n\t\tList<String> a = new ArrayList<>();\n\t\tCollections.sort(a);\n\t\tHelper h = null;\n\t}\n}\n";
 		ImportFixer.Plan plan = plan(text);
 		assertTrue(plan.added.contains("java.util.ArrayList"));
@@ -61,16 +55,14 @@ public class ImportFixerTest
 		List<TypeIndex.Entry> lists = plan.choices.get("List");
 		assertEquals("java.util.List", lists.get(0).fqn);
 		boolean awt = false;
-		for(TypeIndex.Entry e : lists)
-		{
+		for(TypeIndex.Entry e : lists) {
 			awt |= e.fqn.equals("java.awt.List");
 		}
 		assertTrue(awt);
 	}
 
 	@Test
-	public void keepsUsedImportsAndWildcards()
-	{
+	public void keepsUsedImportsAndWildcards() {
 		String text = "package p;\nimport java.util.*;\nimport java.io.File;\nclass A {\n\tFile f;\n\tList<String> l;\n}\n";
 		ImportFixer.Plan plan = plan(text);
 		assertEquals(Arrays.asList("java.util.*", "java.io.File"), plan.keep);
@@ -79,22 +71,19 @@ public class ImportFixerTest
 	}
 
 	@Test
-	public void unknownNamesAreReported()
-	{
+	public void unknownNamesAreReported() {
 		ImportFixer.Plan plan = plan("package p;\nclass A {\n\tNoSuchTypeAnywhere x;\n}\n");
 		assertEquals(Arrays.asList("NoSuchTypeAnywhere"), plan.notFound);
 	}
 
 	@Test
-	public void namesMentionedOnlyInJavadocKeepTheirImport()
-	{
+	public void namesMentionedOnlyInJavadocKeepTheirImport() {
 		String text = "package p;\nimport java.io.File;\n/** See {@link File}. */\nclass A {}\n";
 		assertTrue(plan(text).removed.isEmpty());
 	}
 
 	@Test
-	public void organizeRewritesTheBlock()
-	{
+	public void organizeRewritesTheBlock() {
 		String text = "package p;\nimport java.io.File;\nimport java.util.Map;\nclass A {\n\tMap<String, String> m;\n\tList<String> l;\n}\n";
 		ImportFixer.Plan plan = plan(text);
 		plan.keep.add("java.util.List");

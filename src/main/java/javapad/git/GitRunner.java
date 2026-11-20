@@ -10,20 +10,16 @@ import java.util.List;
 import java.util.Map;
 
 // Runs the git command line in a folder and captures what it prints.
-public class GitRunner
-{
-	public static GitResult run(File dir, String... args)
-	{
+public class GitRunner {
+	public static GitResult run(File dir, String... args) {
 		return run(dir, null, args);
 	}
 
 	// env: extra environment variables (may be null)
-	public static GitResult run(File dir, Map<String, String> env, String... args)
-	{
+	public static GitResult run(File dir, Map<String, String> env, String... args) {
 		List<String> command = new ArrayList<String>();
 		command.add("git");
-		for(String a : args)
-		{
+		for(String a : args) {
 			command.add(a);
 		}
 		ProcessBuilder pb = new ProcessBuilder(command);
@@ -31,13 +27,11 @@ public class GitRunner
 		pb.environment().put("GIT_TERMINAL_PROMPT", "0");
 		pb.environment().put("GIT_EDITOR", "true");
 		pb.environment().put("LC_ALL", "C");
-		if(env != null)
-		{
+		if(env != null) {
 			pb.environment().putAll(env);
 		}
 		pb.redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")));
-		try
-		{
+		try {
 			Process p = pb.start();
 			ByteArrayOutputStream err = new ByteArrayOutputStream();
 			Thread errThread = new Thread(() -> copy(p.getErrorStream(), err), "git-err");
@@ -47,27 +41,19 @@ public class GitRunner
 			int exit = p.waitFor();
 			errThread.join();
 			return new GitResult(exit, out.toString(StandardCharsets.UTF_8), err.toString(StandardCharsets.UTF_8));
-		}
-		catch(IOException e)
-		{
+		} catch(IOException e) {
 			e.printStackTrace();
 			return new GitResult(127, "", "git could not be started: " + e.getMessage());
-		}
-		catch(InterruptedException e)
-		{
+		} catch(InterruptedException e) {
 			Thread.currentThread().interrupt();
 			return new GitResult(130, "", "interrupted");
 		}
 	}
 
-	static void copy(InputStream in, ByteArrayOutputStream to)
-	{
-		try
-		{
+	static void copy(InputStream in, ByteArrayOutputStream to) {
+		try {
 			in.transferTo(to);
-		}
-		catch(IOException e)
-		{
+		} catch(IOException e) {
 			// the process ended; whatever arrived is kept
 		}
 	}

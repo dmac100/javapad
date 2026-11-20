@@ -20,15 +20,13 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Shell;
 
 // Open Declaration (F3), Open Implementation (Ctrl+T) and the other jumps. Analysis runs off the UI thread.
-public class NavigationActions
-{
+public class NavigationActions {
 	private final Shell shell;
 	private final CodeAssist assist;
 	private final Consumer<Location> lineOpener;
 	private Consumer<Target> hierarchy;
 
-	public static class Target
-	{
+	public static class Target {
 		public Element element;
 		public String key;
 		public String description;
@@ -38,74 +36,58 @@ public class NavigationActions
 		public boolean type;
 	}
 
-	public NavigationActions(Shell shell, CodeAssist assist, Consumer<Location> lineOpener)
-	{
+	public NavigationActions(Shell shell, CodeAssist assist, Consumer<Location> lineOpener) {
 		this.shell = shell;
 		this.assist = assist;
 		this.lineOpener = lineOpener;
 	}
 
-	public void setHierarchy(Consumer<Target> hierarchy)
-	{
+	public void setHierarchy(Consumer<Target> hierarchy) {
 		this.hierarchy = hierarchy;
 	}
 
-	public void callHierarchy(EditorTab tab, int offset)
-	{
-		resolve(tab, offset, false, target ->
-		{
-			if(target == null || !target.method || target.key == null)
-			{
+	public void callHierarchy(EditorTab tab, int offset) {
+		resolve(tab, offset, false, target -> {
+			if(target == null || !target.method || target.key == null) {
 				info("Call Hierarchy", "Put the cursor on a method or constructor.");
-			}
-			else if(hierarchy != null)
-			{
+			} else if(hierarchy != null) {
 				hierarchy.accept(target);
 			}
 		});
 	}
 
-	void info(String title, String message)
-	{
+	void info(String title, String message) {
 		ConfirmDialog.message(shell, title, message, SWT.ICON_INFORMATION);
 	}
 
 	// every target is shown with its whole line selected
-	void open(CodeModel.Place p)
-	{
+	void open(CodeModel.Place p) {
 		lineOpener.accept(new Location(p.file, p.line, p.column));
 	}
 
 	// Finds what is at the offset, on the worker thread.
-	void resolve(EditorTab tab, int offset, boolean forTypeHierarchy, Consumer<Target> done)
-	{
+	void resolve(EditorTab tab, int offset, boolean forTypeHierarchy, Consumer<Target> done) {
 		JavaAnalyzer analyzer = assist.analyzer();
-		if(analyzer == null)
-		{
+		if(analyzer == null) {
 			info("Navigate", "Open a project first.");
 			return;
 		}
 		String content = tab.editor.getContent();
-		assist.submit(() ->
-		{
+		assist.submit(() -> {
 			JavaAnalyzer.Result r = analyzer.analyze(tab.file, content);
-			if(r == null)
-			{
+			if(r == null) {
 				return null;
 			}
 			Element e = Navigator.elementAt(r, offset);
 			CodeModel.Place variable = null;
-			if(e != null && forTypeHierarchy)
-			{
+			if(e != null && forTypeHierarchy) {
 				Element asType = Navigator.typeOrMethod(e);
-				if(asType != e)
-				{
+				if(asType != e) {
 					variable = Navigator.declaration(r, e);
 				}
 				e = asType;
 			}
-			if(e == null)
-			{
+			if(e == null) {
 				return null;
 			}
 			Target t = new Target();
@@ -120,96 +102,71 @@ public class NavigationActions
 		}, done);
 	}
 
-	public void openDeclaration(EditorTab tab, int offset)
-	{
-		resolve(tab, offset, false, target ->
-		{
-			if(target == null)
-			{
+	public void openDeclaration(EditorTab tab, int offset) {
+		resolve(tab, offset, false, target -> {
+			if(target == null) {
 				info("Open Declaration", "There is no declaration at the cursor.");
-			}
-			else if(target.declaration == null)
-			{
+			} else if(target.declaration == null) {
 				CodeModel model = assist.model();
 				CodeModel.Place place = null;
-				if(model != null && target.key != null)
-				{
+				if(model != null && target.key != null) {
 					CodeModel.MethodInfo m = model.method(target.key);
 					CodeModel.TypeInfo t = model.type(target.key);
 					place = m != null ? m.place : t != null ? t.place : null;
 				}
-				if(place != null)
-				{
+				if(place != null) {
 					open(place);
-				}
-				else
-				{
+				} else {
 					info("Open Declaration", target.description + " comes from a library, so there is no source to open.");
 				}
-			}
-			else
-			{
+			} else {
 				open(target.declaration);
 			}
 		});
 	}
 
-	public void openImplementation(EditorTab tab, int offset)
-	{
-		resolve(tab, offset, true, target ->
-		{
-			if(target == null || target.key == null)
-			{
+	public void openImplementation(EditorTab tab, int offset) {
+		resolve(tab, offset, true, target -> {
+			if(target == null || target.key == null) {
 				info("Open Implementation", "Put the cursor on a method or a type.");
 				return;
 			}
 			CodeModel model = assist.model();
-			if(model == null)
-			{
+			if(model == null) {
 				info("Open Implementation", "The project is still being analyzed. Try again in a moment.");
 				return;
 			}
 			Map<String, CodeModel.Place> found = new LinkedHashMap<String, CodeModel.Place>();
-			if(target.method)
-			{
-				for(CodeModel.MethodInfo m : model.implementers(target.key))
-				{
+			if(target.method) {
+				for(CodeModel.MethodInfo m : model.implementers(target.key)) {
 					found.put(label(m.display, m.place), m.place);
 				}
-			}
-			else
-			{
-				for(CodeModel.TypeInfo t : model.allSubtypes(target.key))
-				{
+			} else {
+				for(CodeModel.TypeInfo t : model.allSubtypes(target.key)) {
 					found.put(label(t.display, t.place), t.place);
 				}
 			}
-			if(found.isEmpty() && target.variable != null)
-			{
+			if(found.isEmpty() && target.variable != null) {
 				// a field or variable whose type has no implementations here: go to the field itself
 				open(target.variable);
 				return;
 			}
-			if(found.isEmpty())
-			{
+			if(found.isEmpty()) {
 				info("Open Implementation", "No implementations of " + target.description + " were found in this project.");
 				return;
 			}
-			if(found.size() == 1)
-			{
+			if(found.size() == 1) {
 				open(found.values().iterator().next());
 				return;
 			}
 			String pick = ChoiceDialog.choose(shell, (target.method ? "Implementations of " : "Subtypes of ") + target.description, new ArrayList<String>(found.keySet()));
-			if(pick != null)
-			{
+			if(pick != null) {
 				open(found.get(pick));
 			}
 		});
 	}
 
-	static String label(String display, CodeModel.Place p)
-	{
+	static String label(String display, CodeModel.Place p) {
 		return display + "   (" + p.file.getName() + ":" + p.line + ")";
 	}
 }

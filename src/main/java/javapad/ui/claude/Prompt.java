@@ -9,10 +9,8 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
-public class Prompt
-{
-	public static String ask(Shell parent, String title, String message, String initial)
-	{
+public class Prompt {
+	public static String ask(Shell parent, String title, String message, String initial) {
 		String[] result = new String[1];
 		Shell dialog = new Shell(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL);
 		dialog.setText(title);
@@ -31,8 +29,7 @@ public class Prompt
 		ok.setLayoutData(new GridData(SWT.END, SWT.CENTER, true, false));
 		Button cancel = new Button(dialog, SWT.PUSH);
 		cancel.setText("Cancel");
-		ok.addListener(SWT.Selection, e ->
-		{
+		ok.addListener(SWT.Selection, e -> {
 			result[0] = text.getText();
 			dialog.dispose();
 		});
@@ -43,10 +40,8 @@ public class Prompt
 		dialog.setLocation(p.getLocation().x + 80, p.getLocation().y + 80);
 		dialog.open();
 		Display display = parent.getDisplay();
-		while(!dialog.isDisposed())
-		{
-			if(!display.readAndDispatch())
-			{
+		while(!dialog.isDisposed()) {
+			if(!display.readAndDispatch()) {
 				display.sleep();
 			}
 		}

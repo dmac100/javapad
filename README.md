@@ -67,7 +67,7 @@ The menus show the rest.
 | `javapad.model` | The Eclipse project files and `.gitignore` rules. |
 | `javapad.runner` | Classes that run inside the edited project's JVM. |
 
-Code style: tabs, `if(`, braces on every block and on their own line, one statement per line, fields first.
+Code style: tabs, `if(`, braces on every block, the opening brace on the same line, one statement per line, fields first.
 
 ## Tests
 

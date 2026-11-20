@@ -16,8 +16,7 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
-public class FindDialog
-{
+public class FindDialog {
 	private final Shell parent;
 	private final Supplier<StyledText> editor;
 	private Shell shell;
@@ -33,20 +32,16 @@ public class FindDialog
 	private String matchText;
 	private String matchReplacement;
 
-	public FindDialog(Shell parent, Supplier<StyledText> editor)
-	{
+	public FindDialog(Shell parent, Supplier<StyledText> editor) {
 		this.parent = parent;
 		this.editor = editor;
 	}
 
-	public void open()
-	{
+	public void open() {
 		StyledText text = editor.get();
 		String selected = text == null ? "" : text.getSelectionText();
-		if(shell != null && !shell.isDisposed())
-		{
-			if(!selected.isEmpty() && !selected.contains("\n"))
-			{
+		if(shell != null && !shell.isDisposed()) {
+			if(!selected.isEmpty() && !selected.contains("\n")) {
 				findText.setText(selected);
 			}
 			shell.forceActive();
@@ -62,8 +57,7 @@ public class FindDialog
 		form.setLayout(new GridLayout(2, false));
 		findText = field(form, "Find:");
 		replaceText = field(form, "Replace:");
-		if(!selected.contains("\n"))
-		{
+		if(!selected.contains("\n")) {
 			findText.setText(selected);
 		}
 		regexCheck = check("Regular Expression");
@@ -94,16 +88,13 @@ public class FindDialog
 		findText.setFocus();
 	}
 
-	public void close()
-	{
-		if(shell != null && !shell.isDisposed())
-		{
+	public void close() {
+		if(shell != null && !shell.isDisposed()) {
 			shell.dispose();
 		}
 	}
 
-	Text field(Composite form, String label)
-	{
+	Text field(Composite form, String label) {
 		new Label(form, SWT.NONE).setText(label);
 		Text t = new Text(form, SWT.BORDER);
 		GridData data = new GridData(SWT.FILL, SWT.NONE, true, false);
@@ -112,51 +103,42 @@ public class FindDialog
 		return t;
 	}
 
-	Button check(String label)
-	{
+	Button check(String label) {
 		Button b = new Button(shell, SWT.CHECK);
 		b.setText(label);
 		b.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true, false));
 		return b;
 	}
 
-	Button button(Composite parent, String label)
-	{
+	Button button(Composite parent, String label) {
 		Button b = new Button(parent, SWT.PUSH);
 		b.setText(label);
 		b.setLayoutData(new GridData(SWT.FILL, SWT.NONE, false, false));
 		return b;
 	}
 
-	Pattern pattern()
-	{
+	Pattern pattern() {
 		String source = regexCheck.getSelection() ? findText.getText() : Pattern.quote(findText.getText());
 		int flags = caseCheck.getSelection() ? 0 : Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE;
-		try
-		{
+		try {
 			status.setText("");
 			return Pattern.compile(source, flags);
-		}
-		catch(PatternSyntaxException e)
-		{
+		} catch(PatternSyntaxException e) {
 			status.setText("Invalid regular expression: " + e.getDescription());
 			return null;
 		}
 	}
 
-	String replacementText()
-	{
+	String replacementText() {
 		return regexCheck.getSelection() ? replaceText.getText() : Matcher.quoteReplacement(replaceText.getText());
 	}
 
-	void find()
-	{
+	void find() {
 		foundMatch = false;
 		replaceButton.setEnabled(false);
 		StyledText text = editor.get();
 		Pattern pattern = findText.getText().isEmpty() ? null : pattern();
-		if(text == null || pattern == null)
-		{
+		if(text == null || pattern == null) {
 			return;
 		}
 		String content = text.getText();
@@ -164,19 +146,16 @@ public class FindDialog
 		int from = sel.y > sel.x ? sel.y : sel.x;
 		Matcher m = pattern.matcher(content);
 		boolean found = from <= content.length() && m.find(from);
-		if(found && m.end() == m.start() && m.start() == sel.x && sel.x == sel.y)
-		{
+		if(found && m.end() == m.start() && m.start() == sel.x && sel.x == sel.y) {
 			found = m.start() + 1 <= content.length() && m.find(m.start() + 1);
 		}
 		boolean wrapped = false;
-		if(!found)
-		{
+		if(!found) {
 			m = pattern.matcher(content);
 			found = m.find(0);
 			wrapped = found;
 		}
-		if(!found)
-		{
+		if(!found) {
 			status.setText("Not found");
 			return;
 		}
@@ -184,13 +163,10 @@ public class FindDialog
 		matchLength = m.end() - m.start();
 		matchText = content.substring(matchStart, m.end());
 		StringBuilder sb = new StringBuilder();
-		try
-		{
+		try {
 			m.appendReplacement(sb, replacementText());
 			matchReplacement = sb.substring(matchStart);
-		}
-		catch(RuntimeException e)
-		{
+		} catch(RuntimeException e) {
 			status.setText("Invalid replacement: " + e.getMessage());
 			return;
 		}
@@ -201,46 +177,36 @@ public class FindDialog
 		replaceButton.setEnabled(true);
 	}
 
-	void replace()
-	{
+	void replace() {
 		StyledText text = editor.get();
-		if(!foundMatch || text == null || matchStart + matchLength > text.getCharCount())
-		{
+		if(!foundMatch || text == null || matchStart + matchLength > text.getCharCount()) {
 			return;
 		}
-		if(text.getTextRange(matchStart, matchLength).equals(matchText))
-		{
+		if(text.getTextRange(matchStart, matchLength).equals(matchText)) {
 			text.replaceTextRange(matchStart, matchLength, matchReplacement);
 			text.setCaretOffset(matchStart + matchReplacement.length());
 			find();
 		}
 	}
 
-	void replaceAll()
-	{
+	void replaceAll() {
 		StyledText text = editor.get();
 		Pattern pattern = findText.getText().isEmpty() ? null : pattern();
-		if(text == null || pattern == null)
-		{
+		if(text == null || pattern == null) {
 			return;
 		}
 		String content = text.getText();
 		Matcher m = pattern.matcher(content);
 		int count = 0;
-		while(m.find())
-		{
+		while(m.find()) {
 			count++;
 		}
-		try
-		{
+		try {
 			String result = pattern.matcher(content).replaceAll(replacementText());
-			if(count > 0)
-			{
+			if(count > 0) {
 				text.replaceTextRange(0, content.length(), result);
 			}
-		}
-		catch(RuntimeException e)
-		{
+		} catch(RuntimeException e) {
 			status.setText("Invalid replacement: " + e.getMessage());
 			return;
 		}

@@ -8,11 +8,9 @@ import java.nio.file.Files;
 import java.util.List;
 import org.junit.Test;
 
-public class JUnitReportTest
-{
+public class JUnitReportTest {
 	@Test
-	public void parsesPassFailErrorSkip() throws Exception
-	{
+	public void parsesPassFailErrorSkip() throws Exception {
 		String xml = "<testsuite><testcase classname=\"a.B\" name=\"ok\" time=\"0.5\"/>"
 			+ "<testcase classname=\"a.B\" name=\"bad\" time=\"0.1\"><failure message=\"x &lt; y\" type=\"java.lang.AssertionError\">trace here</failure></testcase>"
 			+ "<testcase classname=\"a.B\" name=\"boom\" time=\"0\"><error message=\"m\">t</error></testcase>"

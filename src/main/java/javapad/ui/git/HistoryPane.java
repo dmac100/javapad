@@ -31,8 +31,7 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 
 // The History tab: the commit graph above, and below it the details of the selected commit with its changed files.
-public class HistoryPane
-{
+public class HistoryPane {
 	static final int LANE = 12;
 	static final int LIMIT = 400;
 	static final int[][] LANE_COLORS = {{86, 156, 214}, {106, 190, 100}, {229, 192, 123}, {198, 120, 221}, {244, 112, 112}, {78, 201, 176}, {255, 160, 80}, {160, 160, 220}};
@@ -63,8 +62,7 @@ public class HistoryPane
 	private int diffGeneration;
 	private int detailLines;
 
-	public HistoryPane(Composite parent, Theme theme, MainWindow window)
-	{
+	public HistoryPane(Composite parent, Theme theme, MainWindow window) {
 		this.w = window;
 		this.theme = theme;
 		this.actions = new HistoryActions(window);
@@ -91,8 +89,7 @@ public class HistoryPane
 		commitTable.setHeaderVisible(true);
 		String[] titles = {"Graph", "Message", "Commit", "Author", "Authored", "Committer", "Committed"};
 		int[] widths = {80, 520, 80, 140, 130, 140, 130};
-		for(int i = 0; i < titles.length; i++)
-		{
+		for(int i = 0; i < titles.length; i++) {
 			TableColumn c = new TableColumn(commitTable, SWT.NONE);
 			c.setText(titles[i]);
 			c.setWidth(widths[i]);
@@ -105,8 +102,7 @@ public class HistoryPane
 		fileTable.setHeaderVisible(true);
 		String[] fileTitles = {"Changed Files", "State"};
 		int[] fileWidths = {300, 90};
-		for(int i = 0; i < fileTitles.length; i++)
-		{
+		for(int i = 0; i < fileTitles.length; i++) {
 			TableColumn c = new TableColumn(fileTable, SWT.NONE);
 			c.setText(fileTitles[i]);
 			c.setWidth(fileWidths[i]);
@@ -116,24 +112,20 @@ public class HistoryPane
 		vertical.setWeights(new int[] {55, 45});
 		lower.setWeights(new int[] {70, 30});
 		bold = boldFont();
-		for(int i = 0; i < LANE_COLORS.length; i++)
-		{
+		for(int i = 0; i < LANE_COLORS.length; i++) {
 			laneColors[i] = new Color(parent.getDisplay(), LANE_COLORS[i][0], LANE_COLORS[i][1], LANE_COLORS[i][2]);
 		}
 		refColors[Commit.LOCAL] = new Color(parent.getDisplay(), 150, 205, 150);
 		refColors[Commit.REMOTE] = new Color(parent.getDisplay(), 150, 185, 225);
 		refColors[Commit.TAG] = new Color(parent.getDisplay(), 235, 210, 130);
 		refText = new Color(parent.getDisplay(), 25, 25, 25);
-		commitTable.addListener(SWT.Dispose, e ->
-		{
+		commitTable.addListener(SWT.Dispose, e -> {
 			bold.dispose();
 			refText.dispose();
-			for(Color c : laneColors)
-			{
+			for(Color c : laneColors) {
 				c.dispose();
 			}
-			for(Color c : refColors)
-			{
+			for(Color c : refColors) {
 				c.dispose();
 			}
 		});
@@ -141,12 +133,10 @@ public class HistoryPane
 		commitTable.addListener(SWT.PaintItem, e -> paintCell(e));
 		commitTable.addListener(SWT.Selection, e -> commitSelected());
 		fileTable.addListener(SWT.Selection, e -> fileSelected());
-		fileTable.addListener(SWT.DefaultSelection, e ->
-		{
+		fileTable.addListener(SWT.DefaultSelection, e -> {
 			Commit c = selectedCommit();
 			ChangedFile f = selectedFile();
-			if(c != null && f != null)
-			{
+			if(c != null && f != null) {
 				actions.compareWithPrevious(c, f);
 			}
 		});
@@ -157,38 +147,32 @@ public class HistoryPane
 		restyle();
 	}
 
-	public Composite getControl()
-	{
+	public Composite getControl() {
 		return composite;
 	}
 
-	Font boldFont()
-	{
+	Font boldFont() {
 		FontData[] fd = theme.font.getFontData();
-		for(FontData d : fd)
-		{
+		for(FontData d : fd) {
 			d.setStyle(SWT.BOLD);
 		}
 		return new Font(composite.getDisplay(), fd);
 	}
 
-	public void restyle()
-	{
+	public void restyle() {
 		details.setFont(theme.font);
 		bold.dispose();
 		bold = boldFont();
 		composite.setBackground(theme.chrome);
 		title.setBackground(theme.chrome);
 		title.setForeground(theme.foreground);
-		for(Button radio : new Button[] {currentRadio, allRadio})
-		{
+		for(Button radio : new Button[] {currentRadio, allRadio}) {
 			radio.setBackground(theme.chrome);
 			radio.setForeground(theme.foreground);
 		}
 		vertical.setBackground(theme.divider);
 		lower.setBackground(theme.divider);
-		for(Table t : new Table[] {commitTable, fileTable})
-		{
+		for(Table t : new Table[] {commitTable, fileTable}) {
 			t.setBackground(theme.background);
 			t.setForeground(theme.foreground);
 			t.setHeaderBackground(theme.chrome);
@@ -202,18 +186,15 @@ public class HistoryPane
 	// ---- loading
 
 	// Shows the history of one file or folder; null for the whole repository.
-	public void showPath(String path)
-	{
+	public void showPath(String path) {
 		this.path = path;
 		w.showBottomTab("history");
 		refresh();
 	}
 
-	public void refresh()
-	{
+	public void refresh() {
 		GitRepo repo = w.git.repo();
-		if(repo == null)
-		{
+		if(repo == null) {
 			setCommits(new ArrayList<Commit>());
 			title.setText(w.project() == null ? "" : "Not a git repository");
 			showAll.setVisible(false);
@@ -233,13 +214,10 @@ public class HistoryPane
 		Commit before = selectedCommit();
 		String keep = before == null ? null : before.hash;
 		int mine = ++logGeneration;
-		w.git.background(() ->
-		{
+		w.git.background(() -> {
 			List<Commit> list = repo.log(shownPath, LIMIT, shownPath == null && everything);
-			return () ->
-			{
-				if(mine == logGeneration && repo == w.git.repo())
-				{
+			return () -> {
+				if(mine == logGeneration && repo == w.git.repo()) {
 					setCommits(shownPath == null ? list : linear(list));
 					select(keep);
 				}
@@ -248,14 +226,11 @@ public class HistoryPane
 	}
 
 	// a log of one file skips commits, so each commit's parent is simply the next one listed
-	static List<Commit> linear(List<Commit> list)
-	{
+	static List<Commit> linear(List<Commit> list) {
 		List<Commit> result = new ArrayList<Commit>();
-		for(int i = 0; i < list.size(); i++)
-		{
+		for(int i = 0; i < list.size(); i++) {
 			List<String> parents = new ArrayList<String>();
-			if(i + 1 < list.size())
-			{
+			if(i + 1 < list.size()) {
 				parents.add(list.get(i + 1).hash);
 			}
 			result.add(list.get(i).withParents(parents));
@@ -263,14 +238,12 @@ public class HistoryPane
 		return result;
 	}
 
-	void setCommits(List<Commit> list)
-	{
+	void setCommits(List<Commit> list) {
 		commits = list;
 		rows = GraphLayout.layout(list);
 		commitTable.setRedraw(false);
 		commitTable.removeAll();
-		for(Commit c : list)
-		{
+		for(Commit c : list) {
 			TableItem item = new TableItem(commitTable, SWT.NONE);
 			// the graph and message cells are drawn by paintCell
 			item.setText(new String[] {"", "", c.shortHash(), c.authorName, Commit.shortDate(c.authorDate), c.committerName, Commit.shortDate(c.commitDate)});
@@ -282,16 +255,12 @@ public class HistoryPane
 		details.setText("");
 	}
 
-	void select(String hash)
-	{
-		if(hash == null)
-		{
+	void select(String hash) {
+		if(hash == null) {
 			return;
 		}
-		for(int i = 0; i < commits.size(); i++)
-		{
-			if(commits.get(i).hash.equals(hash))
-			{
+		for(int i = 0; i < commits.size(); i++) {
+			if(commits.get(i).hash.equals(hash)) {
 				commitTable.setSelection(i);
 				commitSelected();
 				return;
@@ -299,25 +268,21 @@ public class HistoryPane
 		}
 	}
 
-	Commit selectedCommit()
-	{
+	Commit selectedCommit() {
 		int i = commitTable.getSelectionIndex();
 		return i < 0 || i >= commits.size() ? null : commits.get(i);
 	}
 
-	ChangedFile selectedFile()
-	{
+	ChangedFile selectedFile() {
 		int i = fileTable.getSelectionIndex();
 		return i < 0 || i >= files.size() ? null : files.get(i);
 	}
 
-	void commitSelected()
-	{
+	void commitSelected() {
 		Commit c = selectedCommit();
 		fileTable.removeAll();
 		files = new ArrayList<ChangedFile>();
-		if(c == null)
-		{
+		if(c == null) {
 			details.setText("");
 			return;
 		}
@@ -325,30 +290,23 @@ public class HistoryPane
 		GitRepo repo = w.git.repo();
 		// until a file is chosen, the pane shows the diff of the whole commit
 		int whole = ++diffGeneration;
-		w.git.background(() ->
-		{
+		w.git.background(() -> {
 			String diff = limited(repo.commitDiff(c.hash, null));
-			return () ->
-			{
-				if(whole == diffGeneration && c == selectedCommit() && selectedFile() == null)
-				{
+			return () -> {
+				if(whole == diffGeneration && c == selectedCommit() && selectedFile() == null) {
 					showDetails(c, diff);
 				}
 			};
 		});
 		int mine = ++filesGeneration;
-		w.git.background(() ->
-		{
+		w.git.background(() -> {
 			List<ChangedFile> list = repo.changedFiles(c.hash);
-			return () ->
-			{
-				if(mine != filesGeneration || c != selectedCommit())
-				{
+			return () -> {
+				if(mine != filesGeneration || c != selectedCommit()) {
 					return;
 				}
 				files = list;
-				for(ChangedFile f : list)
-				{
+				for(ChangedFile f : list) {
 					TableItem item = new TableItem(fileTable, SWT.NONE);
 					item.setText(new String[] {f.path, f.label()});
 				}
@@ -357,29 +315,23 @@ public class HistoryPane
 	}
 
 	// a huge diff would make the text widget crawl, so it is cut off
-	static String limited(String diff)
-	{
+	static String limited(String diff) {
 		int max = 400000;
 		return diff.length() <= max ? diff : diff.substring(0, max) + "\n... the diff is cut off here (" + (diff.length() - max) + " more characters). Select a file to see its own diff.\n";
 	}
 
-	void fileSelected()
-	{
+	void fileSelected() {
 		Commit c = selectedCommit();
 		ChangedFile f = selectedFile();
-		if(c == null || f == null)
-		{
+		if(c == null || f == null) {
 			return;
 		}
 		GitRepo repo = w.git.repo();
 		int mine = ++diffGeneration;
-		w.git.background(() ->
-		{
+		w.git.background(() -> {
 			String diff = limited(repo.commitDiff(c.hash, f.path));
-			return () ->
-			{
-				if(mine == diffGeneration && c == selectedCommit() && f == selectedFile())
-				{
+			return () -> {
+				if(mine == diffGeneration && c == selectedCommit() && f == selectedFile()) {
 					showDetails(c, diff);
 				}
 			};
@@ -387,33 +339,27 @@ public class HistoryPane
 	}
 
 	// the commit's details, then the diff if there is one
-	void showDetails(Commit c, String diff)
-	{
+	void showDetails(Commit c, String diff) {
 		StringBuilder sb = new StringBuilder();
 		sb.append("Commit:    ").append(c.hash).append('\n');
 		sb.append("Author:    ").append(c.authorName).append(" <").append(c.authorEmail).append(">  ").append(Commit.shortDate(c.authorDate)).append('\n');
 		sb.append("Committer: ").append(c.committerName).append(" <").append(c.committerEmail).append(">  ").append(Commit.shortDate(c.commitDate)).append('\n');
 		List<String> names = new ArrayList<String>();
-		for(Commit.Ref r : c.refs)
-		{
+		for(Commit.Ref r : c.refs) {
 			names.add(r.name);
 		}
-		if(!names.isEmpty())
-		{
+		if(!names.isEmpty()) {
 			sb.append("Refs:      ").append(String.join(", ", names)).append('\n');
 		}
-		if(!c.parents.isEmpty())
-		{
+		if(!c.parents.isEmpty()) {
 			List<String> shortParents = new ArrayList<String>();
-			for(String p : c.parents)
-			{
+			for(String p : c.parents) {
 				shortParents.add(p.substring(0, Math.min(8, p.length())));
 			}
 			sb.append("Parents:   ").append(String.join(", ", shortParents)).append('\n');
 		}
 		sb.append('\n').append(c.subject).append('\n');
-		if(!c.body.isEmpty())
-		{
+		if(!c.body.isEmpty()) {
 			sb.append('\n').append(c.body).append('\n');
 		}
 		sb.append('\n');
@@ -425,49 +371,39 @@ public class HistoryPane
 
 	// ---- drawing
 
-	void paintCell(Event e)
-	{
+	void paintCell(Event e) {
 		TableItem item = (TableItem)e.item;
 		int index = commitTable.indexOf(item);
-		if(index < 0 || index >= rows.size())
-		{
+		if(index < 0 || index >= rows.size()) {
 			return;
 		}
 		boolean selected = (e.detail & SWT.SELECTED) != 0;
 		GC gc = e.gc;
-		if(e.index == 0)
-		{
+		if(e.index == 0) {
 			paintGraph(gc, rows.get(index), e.x, e.y, e.height);
-		}
-		else if(e.index == 1)
-		{
+		} else if(e.index == 1) {
 			paintMessage(gc, commits.get(index), e.x, e.y, e.height, selected);
 		}
 	}
 
-	static int laneX(int x0, int lane)
-	{
+	static int laneX(int x0, int lane) {
 		return x0 + 8 + lane * LANE;
 	}
 
-	void paintGraph(GC gc, GraphLayout.Row row, int x0, int y, int h)
-	{
+	void paintGraph(GC gc, GraphLayout.Row row, int x0, int y, int h) {
 		gc.setAntialias(SWT.ON);
 		gc.setLineWidth(2);
 		int mid = y + h / 2;
 		int nodeX = laneX(x0, row.lane);
-		for(int lane : row.through)
-		{
+		for(int lane : row.through) {
 			gc.setForeground(laneColors[lane % laneColors.length]);
 			gc.drawLine(laneX(x0, lane), y, laneX(x0, lane), y + h);
 		}
-		for(int lane : row.from)
-		{
+		for(int lane : row.from) {
 			gc.setForeground(laneColors[lane % laneColors.length]);
 			gc.drawLine(laneX(x0, lane), y, nodeX, mid);
 		}
-		for(int lane : row.to)
-		{
+		for(int lane : row.to) {
 			gc.setForeground(laneColors[lane % laneColors.length]);
 			gc.drawLine(nodeX, mid, laneX(x0, lane), y + h);
 		}
@@ -478,13 +414,11 @@ public class HistoryPane
 		gc.drawOval(nodeX - 4, mid - 4, 9, 9);
 	}
 
-	void paintMessage(GC gc, Commit c, int x0, int y, int h, boolean selected)
-	{
+	void paintMessage(GC gc, Commit c, int x0, int y, int h, boolean selected) {
 		gc.setAntialias(SWT.ON);
 		int x = x0 + 4;
 		Font normal = gc.getFont();
-		for(Commit.Ref r : c.refs)
-		{
+		for(Commit.Ref r : c.refs) {
 			gc.setFont(r.current ? bold : normal);
 			Point size = gc.textExtent(r.name);
 			int boxH = size.y + 2;
@@ -503,8 +437,7 @@ public class HistoryPane
 
 	// ---- menus
 
-	Menu commitMenu()
-	{
+	Menu commitMenu() {
 		Menu menu = new Menu(commitTable);
 		List<MenuItem> items = new ArrayList<MenuItem>();
 		items.add(item(menu, "Compare with Working Tree", c -> actions.compareWithWorkingTree(c)));
@@ -521,19 +454,16 @@ public class HistoryPane
 		items.add(item(menu, "Merge", c -> actions.merge(c)));
 		items.add(item(menu, "Reset...", c -> actions.reset(c)));
 		items.add(item(menu, "Revert", c -> actions.revert(c)));
-		menu.addListener(SWT.Show, e ->
-		{
+		menu.addListener(SWT.Show, e -> {
 			boolean on = selectedCommit() != null;
-			for(MenuItem mi : items)
-			{
+			for(MenuItem mi : items) {
 				mi.setEnabled(on);
 			}
 		});
 		return menu;
 	}
 
-	Menu fileMenu()
-	{
+	Menu fileMenu() {
 		Menu menu = new Menu(fileTable);
 		List<MenuItem> items = new ArrayList<MenuItem>();
 		items.add(fileItem(menu, "Open Working Tree Version", (c, f) -> actions.openWorkingTree(f)));
@@ -544,52 +474,42 @@ public class HistoryPane
 		new MenuItem(menu, SWT.SEPARATOR);
 		items.add(fileItem(menu, "Compare with Previous Revision", (c, f) -> actions.compareWithPrevious(c, f)));
 		items.add(fileItem(menu, "Compare with Working Tree", (c, f) -> actions.compareWithWorkingTree(c, f)));
-		menu.addListener(SWT.Show, e ->
-		{
+		menu.addListener(SWT.Show, e -> {
 			boolean on = selectedCommit() != null && selectedFile() != null;
-			for(MenuItem mi : items)
-			{
+			for(MenuItem mi : items) {
 				mi.setEnabled(on);
 			}
 		});
 		return menu;
 	}
 
-	interface CommitAction
-	{
+	interface CommitAction {
 		void run(Commit c);
 	}
 
-	interface FileAction
-	{
+	interface FileAction {
 		void run(Commit c, ChangedFile f);
 	}
 
-	MenuItem item(Menu menu, String text, CommitAction action)
-	{
+	MenuItem item(Menu menu, String text, CommitAction action) {
 		MenuItem mi = new MenuItem(menu, SWT.PUSH);
 		mi.setText(text);
-		mi.addListener(SWT.Selection, e ->
-		{
+		mi.addListener(SWT.Selection, e -> {
 			Commit c = selectedCommit();
-			if(c != null && w.git.ready())
-			{
+			if(c != null && w.git.ready()) {
 				action.run(c);
 			}
 		});
 		return mi;
 	}
 
-	MenuItem fileItem(Menu menu, String text, FileAction action)
-	{
+	MenuItem fileItem(Menu menu, String text, FileAction action) {
 		MenuItem mi = new MenuItem(menu, SWT.PUSH);
 		mi.setText(text);
-		mi.addListener(SWT.Selection, e ->
-		{
+		mi.addListener(SWT.Selection, e -> {
 			Commit c = selectedCommit();
 			ChangedFile f = selectedFile();
-			if(c != null && f != null && w.git.ready())
-			{
+			if(c != null && f != null && w.git.ready()) {
 				action.run(c, f);
 			}
 		});

@@ -16,8 +16,7 @@ import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
 
 // The menu bar, the toolbar and the sidebar tree menu. Every menu item is also registered in the Ctrl+3 command list.
-public class MenuBuilder
-{
+public class MenuBuilder {
 	private final MainWindow w;
 	private final CommandList commands = new CommandList();
 	private String menuName;
@@ -26,24 +25,20 @@ public class MenuBuilder
 	private final List<MenuItem> accelerated = new ArrayList<MenuItem>();
 	private final List<Integer> accelerators = new ArrayList<Integer>();
 
-	public MenuBuilder(MainWindow window)
-	{
+	public MenuBuilder(MainWindow window) {
 		this.w = window;
 	}
 
-	public CommandList commands()
-	{
+	public CommandList commands() {
 		return commands;
 	}
 
 	// the git commands that depend on the repository's branches and stashes
-	public void addGitCommands(CommandList list)
-	{
+	public void addGitCommands(CommandList list) {
 		gitMenu.addDynamic(list);
 	}
 
-	public void addToolItems(ToolBar bar)
-	{
+	public void addToolItems(ToolBar bar) {
 		item(bar, "Open Project", Icons.FOLDER, () -> w.chooseProject());
 		item(bar, "Save All", Icons.SAVE, () -> w.editors.saveAll());
 		new ToolItem(bar, SWT.SEPARATOR);
@@ -55,8 +50,7 @@ public class MenuBuilder
 		w.run.setStopItem(stopItem);
 	}
 
-	ToolItem item(ToolBar bar, String label, int icon, Runnable action)
-	{
+	ToolItem item(ToolBar bar, String label, int icon, Runnable action) {
 		ToolItem b = new ToolItem(bar, SWT.PUSH);
 		Image image = Icons.create(w.display, icon);
 		b.setImage(image);
@@ -66,60 +60,48 @@ public class MenuBuilder
 		return b;
 	}
 
-	void menuItem(Menu menu, String label, int accel, Runnable action)
-	{
+	void menuItem(Menu menu, String label, int accel, Runnable action) {
 		MenuItem mi = new MenuItem(menu, SWT.PUSH);
 		mi.setText(accel == 0 ? label : label + "\t" + accelName(accel));
-		if(accel != 0)
-		{
+		if(accel != 0) {
 			mi.setAccelerator(accel);
 			accelerated.add(mi);
 			accelerators.add(accel);
 		}
 		mi.addListener(SWT.Selection, e -> action.run());
-		if(menuName != null)
-		{
+		if(menuName != null) {
 			commands.add(menuName + " > " + label, action);
 		}
 	}
 
 	// While the terminal has the keyboard the shortcuts are off, so Ctrl+R, Ctrl+W and the like reach the shell.
-	public void setAccelerators(boolean on)
-	{
-		for(int i = 0; i < accelerated.size(); i++)
-		{
-			if(!accelerated.get(i).isDisposed())
-			{
+	public void setAccelerators(boolean on) {
+		for(int i = 0; i < accelerated.size(); i++) {
+			if(!accelerated.get(i).isDisposed()) {
 				accelerated.get(i).setAccelerator(on ? accelerators.get(i) : 0);
 			}
 		}
 	}
 
-	static String accelName(int accel)
-	{
+	static String accelName(int accel) {
 		String s = "";
-		if((accel & SWT.MOD1) != 0)
-		{
+		if((accel & SWT.MOD1) != 0) {
 			s += "Ctrl+";
 		}
-		if((accel & SWT.SHIFT) != 0)
-		{
+		if((accel & SWT.SHIFT) != 0) {
 			s += "Shift+";
 		}
-		if((accel & SWT.ALT) != 0)
-		{
+		if((accel & SWT.ALT) != 0) {
 			s += "Alt+";
 		}
 		int key = accel & ~(SWT.MOD1 | SWT.SHIFT | SWT.ALT);
-		if(key >= SWT.F1 && key <= SWT.F12)
-		{
+		if(key >= SWT.F1 && key <= SWT.F12) {
 			return s + "F" + (key - SWT.F1 + 1);
 		}
 		return s + (char)key;
 	}
 
-	public void buildMenus()
-	{
+	public void buildMenus() {
 		Menu bar = new Menu(w.shell, SWT.BAR);
 		w.shell.setMenuBar(bar);
 		Menu file = submenu(bar, "File");
@@ -146,8 +128,7 @@ public class MenuBuilder
 		darkItem.setText("Dark Mode");
 		darkItem.setSelection(w.theme.dark);
 		darkItem.addListener(SWT.Selection, e -> w.setDark(darkItem.getSelection()));
-		commands.add("View > Dark Mode", () ->
-		{
+		commands.add("View > Dark Mode", () -> {
 			darkItem.setSelection(!darkItem.getSelection());
 			w.setDark(darkItem.getSelection());
 		});
@@ -155,8 +136,7 @@ public class MenuBuilder
 		toolbarItem.setText("Show Toolbar");
 		toolbarItem.setSelection(w.toolbarShown());
 		toolbarItem.addListener(SWT.Selection, e -> w.showToolbar(toolbarItem.getSelection()));
-		commands.add("View > Show Toolbar", () ->
-		{
+		commands.add("View > Show Toolbar", () -> {
 			toolbarItem.setSelection(!toolbarItem.getSelection());
 			w.showToolbar(toolbarItem.getSelection());
 		});
@@ -164,8 +144,7 @@ public class MenuBuilder
 		whitespaceItem.setText("Show Whitespace");
 		whitespaceItem.setSelection(w.theme.showWhitespace);
 		whitespaceItem.addListener(SWT.Selection, e -> w.showWhitespace(whitespaceItem.getSelection()));
-		commands.add("View > Show Whitespace", () ->
-		{
+		commands.add("View > Show Whitespace", () -> {
 			whitespaceItem.setSelection(!whitespaceItem.getSelection());
 			w.showWhitespace(whitespaceItem.getSelection());
 		});
@@ -184,8 +163,7 @@ public class MenuBuilder
 		menuItem(show, "Search", 0, () -> w.bottomTabs.show(w.searchTab));
 		menuItem(show, "Terminal", 0, () -> w.showBottomTab("terminal"));
 		menuItem(show, "History", 0, () -> w.showBottomTab("history"));
-		menuItem(show, "Claude", 0, () ->
-		{
+		menuItem(show, "Claude", 0, () -> {
 			w.showBottomTab("claude");
 			w.claude.focusInput();
 		});
@@ -223,8 +201,7 @@ public class MenuBuilder
 		hotSwapItem.setText("Hot Swap on Save");
 		hotSwapItem.setSelection(w.run.hotSwapOn());
 		hotSwapItem.addListener(SWT.Selection, e -> w.run.setHotSwap(hotSwapItem.getSelection()));
-		commands.add("Run > Hot Swap on Save", () ->
-		{
+		commands.add("Run > Hot Swap on Save", () -> {
 			hotSwapItem.setSelection(!hotSwapItem.getSelection());
 			w.run.setHotSwap(hotSwapItem.getSelection());
 		});
@@ -244,8 +221,7 @@ public class MenuBuilder
 		new GitMenu(w, commands).attach(treeMenu);
 	}
 
-	Menu submenu(Menu bar, String label)
-	{
+	Menu submenu(Menu bar, String label) {
 		menuName = label;
 		MenuItem mi = new MenuItem(bar, SWT.CASCADE);
 		mi.setText(label);

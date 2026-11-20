@@ -13,8 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 // A git working tree, driven through the git command line. Paths are relative to the repository root, with forward slashes.
-public class GitRepo
-{
+public class GitRepo {
 	static final String SEP = "\u001f";
 	static final String END = "\u001e";
 	static final String LOG_FORMAT = "--format=%H%x1f%P%x1f%an%x1f%ae%x1f%aI%x1f%cn%x1f%ce%x1f%cI%x1f%D%x1f%s%x1f%b%x1e";
@@ -23,99 +22,79 @@ public class GitRepo
 	// the root with symbolic links and . or .. segments resolved, for comparing paths
 	private final Path base;
 
-	public GitRepo(File root)
-	{
+	public GitRepo(File root) {
 		this.root = root;
 		this.base = real(root.toPath());
 	}
 
-	static Path real(Path p)
-	{
-		try
-		{
+	static Path real(Path p) {
+		try {
 			return p.toRealPath();
-		}
-		catch(IOException e)
-		{
+		} catch(IOException e) {
 			return p.toAbsolutePath().normalize();
 		}
 	}
 
 	// The repository that contains dir, or null if there is none (or git is not installed).
-	public static GitRepo find(File dir)
-	{
+	public static GitRepo find(File dir) {
 		GitResult r = GitRunner.run(dir, "rev-parse", "--show-toplevel");
-		if(!r.ok())
-		{
+		if(!r.ok()) {
 			return null;
 		}
 		return new GitRepo(new File(r.out.trim()));
 	}
 
-	public static GitResult init(File dir)
-	{
+	public static GitResult init(File dir) {
 		return GitRunner.run(dir, "init");
 	}
 
-	public File root()
-	{
+	public File root() {
 		return root;
 	}
 
-	public File file(String path)
-	{
+	public File file(String path) {
 		return new File(root, path);
 	}
 
 	// the path of a file relative to the repository root, "" for the root itself, null if it is outside
-	public String relative(File f)
-	{
+	public String relative(File f) {
 		Path p = f.toPath().toAbsolutePath().normalize();
-		if(!p.startsWith(base))
-		{
+		if(!p.startsWith(base)) {
 			// the file may be reached through a symbolic link
 			p = real(p);
 		}
-		if(!p.startsWith(base))
-		{
+		if(!p.startsWith(base)) {
 			return null;
 		}
 		return base.relativize(p).toString().replace(File.separatorChar, '/');
 	}
 
-	GitResult git(String... args)
-	{
+	GitResult git(String... args) {
 		return GitRunner.run(root, args);
 	}
 
 	// ---- reading
 
 	// allFiles: list every untracked file instead of just the untracked folder
-	public GitStatus status(boolean allFiles)
-	{
+	public GitStatus status(boolean allFiles) {
 		GitResult r = git("--no-optional-locks", "status", "--porcelain=v2", "-z", "--branch", allFiles ? "--untracked-files=all" : "--untracked-files=normal");
-		if(!r.ok())
-		{
+		if(!r.ok()) {
 			return new GitStatus("", new ArrayList<FileChange>());
 		}
 		return GitStatus.parse(r.out);
 	}
 
-	public boolean hasCommits()
-	{
+	public boolean hasCommits() {
 		return git("rev-parse", "--verify", "-q", "HEAD").ok();
 	}
 
 	// Commits newest first. path limits it to one file; all includes every branch, tag and remote branch.
-	public List<Commit> log(String path, int limit, boolean all)
-	{
+	public List<Commit> log(String path, int limit, boolean all) {
 		List<String> args = new ArrayList<String>(Arrays.asList("log", "-n", String.valueOf(limit), "--decorate=full", "--topo-order", LOG_FORMAT));
-		if(all)
-		{
+		if(all) {
 			args.add("--all");
 		}
-		if(path != null)
-		{
+		if(path != null) {
 			args.add("--follow");
 			args.add("--");
 			args.add(path);
@@ -124,26 +103,20 @@ public class GitRepo
 		return r.ok() ? parseLog(r.out) : new ArrayList<Commit>();
 	}
 
-	public static List<Commit> parseLog(String text)
-	{
+	public static List<Commit> parseLog(String text) {
 		List<Commit> list = new ArrayList<Commit>();
-		for(String rec : text.split(END))
-		{
+		for(String rec : text.split(END)) {
 			String r = rec.replaceFirst("^\n+", "");
-			if(r.trim().isEmpty())
-			{
+			if(r.trim().isEmpty()) {
 				continue;
 			}
 			String[] f = r.split(SEP, -1);
-			if(f.length < 11)
-			{
+			if(f.length < 11) {
 				continue;
 			}
 			List<String> parents = new ArrayList<String>();
-			for(String p : f[1].trim().split(" "))
-			{
-				if(!p.isEmpty())
-				{
+			for(String p : f[1].trim().split(" ")) {
+				if(!p.isEmpty()) {
 					parents.add(p);
 				}
 			}
@@ -153,39 +126,30 @@ public class GitRepo
 	}
 
 	// The files a commit changed (against its first parent).
-	public List<ChangedFile> changedFiles(String hash)
-	{
+	public List<ChangedFile> changedFiles(String hash) {
 		GitResult r = git("show", "--first-parent", "--name-status", "--format=", "-M", "-z", hash);
 		return r.ok() ? parseNameStatus(r.out) : new ArrayList<ChangedFile>();
 	}
 
 	// "git show --name-status -z": status, NUL, path, NUL (renames and copies have two paths)
-	public static List<ChangedFile> parseNameStatus(String text)
-	{
+	public static List<ChangedFile> parseNameStatus(String text) {
 		List<ChangedFile> list = new ArrayList<ChangedFile>();
 		String[] f = text.split("\0");
 		int i = 0;
-		while(i < f.length)
-		{
+		while(i < f.length) {
 			String status = f[i].trim();
-			if(status.isEmpty())
-			{
+			if(status.isEmpty()) {
 				i++;
 				continue;
 			}
 			char c = status.charAt(0);
-			if((c == 'R' || c == 'C') && i + 2 < f.length)
-			{
+			if((c == 'R' || c == 'C') && i + 2 < f.length) {
 				list.add(new ChangedFile(c, f[i + 2], f[i + 1]));
 				i += 3;
-			}
-			else if(i + 1 < f.length)
-			{
+			} else if(i + 1 < f.length) {
 				list.add(new ChangedFile(c, f[i + 1], null));
 				i += 2;
-			}
-			else
-			{
+			} else {
 				break;
 			}
 		}
@@ -193,11 +157,9 @@ public class GitRepo
 	}
 
 	// The unified diff of a commit against its first parent, for one file or (path null) all of it.
-	public String commitDiff(String hash, String path)
-	{
+	public String commitDiff(String hash, String path) {
 		List<String> args = new ArrayList<String>(Arrays.asList("show", "--first-parent", "--format=", "-M", "--no-color", hash));
-		if(path != null)
-		{
+		if(path != null) {
 			args.add("--");
 			args.add(path);
 		}
@@ -205,86 +167,67 @@ public class GitRepo
 	}
 
 	// The files that differ between a revision and the working tree (tracked files only).
-	public List<ChangedFile> diffFiles(String rev)
-	{
+	public List<ChangedFile> diffFiles(String rev) {
 		GitResult r = git("diff", "--name-status", "-M", "-z", rev);
 		return r.ok() ? parseNameStatus(r.out) : new ArrayList<ChangedFile>();
 	}
 
 	// The current contents of a file in the working tree, or "" if it does not exist.
-	public String working(String path)
-	{
-		try
-		{
+	public String working(String path) {
+		try {
 			File f = file(path);
 			return f.isFile() ? new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8) : "";
-		}
-		catch(IOException e)
-		{
+		} catch(IOException e) {
 			return "";
 		}
 	}
 
 	// "git diff a b" (b null: against the working tree), optionally for one path
-	public String diff(String a, String b, String path)
-	{
+	public String diff(String a, String b, String path) {
 		List<String> args = new ArrayList<String>(Arrays.asList("diff", "--no-color", a));
-		if(b != null)
-		{
+		if(b != null) {
 			args.add(b);
 		}
-		if(path != null)
-		{
+		if(path != null) {
 			args.add("--");
 			args.add(path);
 		}
 		return text(git(args.toArray(new String[0])));
 	}
 
-	static String text(GitResult r)
-	{
+	static String text(GitResult r) {
 		return r.ok() ? r.out : r.message();
 	}
 
 	// The contents of a file at a revision (HEAD, a hash, a branch), or null if it does not exist there.
-	public String show(String rev, String path)
-	{
+	public String show(String rev, String path) {
 		GitResult r = git("show", rev + ":" + path);
 		return r.ok() ? r.out : null;
 	}
 
-	public List<String> branches()
-	{
+	public List<String> branches() {
 		return lines(git("branch", "--format=%(refname:short)"));
 	}
 
-	public List<String> remoteBranches()
-	{
+	public List<String> remoteBranches() {
 		List<String> list = new ArrayList<String>();
-		for(String s : lines(git("branch", "-r", "--format=%(refname:short)")))
-		{
-			if(!s.endsWith("/HEAD"))
-			{
+		for(String s : lines(git("branch", "-r", "--format=%(refname:short)"))) {
+			if(!s.endsWith("/HEAD")) {
 				list.add(s);
 			}
 		}
 		return list;
 	}
 
-	public boolean hasRemote(String name)
-	{
+	public boolean hasRemote(String name) {
 		return lines(git("remote")).contains(name);
 	}
 
-	static List<String> lines(GitResult r)
-	{
+	static List<String> lines(GitResult r) {
 		List<String> list = new ArrayList<String>();
-		if(r.ok())
-		{
-			for(String line : r.out.split("\n"))
-			{
-				if(!line.trim().isEmpty())
-				{
+		if(r.ok()) {
+			for(String line : r.out.split("\n")) {
+				if(!line.trim().isEmpty()) {
 					list.add(line.trim());
 				}
 			}
@@ -292,76 +235,62 @@ public class GitRepo
 		return list;
 	}
 
-	public String config(String key)
-	{
+	public String config(String key) {
 		GitResult r = git("config", key);
 		return r.ok() ? r.out.trim() : "";
 	}
 
 	// "Name <email>" from the git configuration
-	public String identity()
-	{
+	public String identity() {
 		String name = config("user.name");
 		String email = config("user.email");
 		return name.isEmpty() && email.isEmpty() ? "" : name + " <" + email + ">";
 	}
 
-	public String lastMessage()
-	{
+	public String lastMessage() {
 		GitResult r = git("log", "-1", "--format=%B");
 		return r.ok() ? r.out.trim() : "";
 	}
 
-	public String lastAuthor()
-	{
+	public String lastAuthor() {
 		GitResult r = git("log", "-1", "--format=%an <%ae>");
 		return r.ok() ? r.out.trim() : "";
 	}
 
-	public boolean merging()
-	{
+	public boolean merging() {
 		return git("rev-parse", "-q", "--verify", "MERGE_HEAD").ok();
 	}
 
 	// ---- the index and the working tree
 
-	public GitResult add(List<String> paths)
-	{
+	public GitResult add(List<String> paths) {
 		return withPaths(Arrays.asList("add", "-A", "--"), paths);
 	}
 
-	public GitResult unstage(List<String> paths)
-	{
-		if(hasCommits())
-		{
+	public GitResult unstage(List<String> paths) {
+		if(hasCommits()) {
 			return withPaths(Arrays.asList("reset", "-q", "--"), paths);
 		}
 		return withPaths(Arrays.asList("rm", "-r", "-q", "--cached", "--"), paths);
 	}
 
 	// Stops tracking the files but keeps them on disk.
-	public GitResult untrack(List<String> paths)
-	{
+	public GitResult untrack(List<String> paths) {
 		return withPaths(Arrays.asList("rm", "-r", "-q", "--cached", "--"), paths);
 	}
 
 	// Whether git is told to assume that the tracked files at the path (a file, or a folder with files in it) are unchanged.
-	public boolean assumedUnchanged(String path)
-	{
+	public boolean assumedUnchanged(String path) {
 		GitResult r = git("ls-files", "-v", "-z", "--", path);
-		if(!r.ok())
-		{
+		if(!r.ok()) {
 			return false;
 		}
 		int count = 0;
-		for(String entry : r.out.split("\0"))
-		{
-			if(entry.length() < 3)
-			{
+		for(String entry : r.out.split("\0")) {
+			if(entry.length() < 3) {
 				continue;
 			}
-			if(!Character.isLowerCase(entry.charAt(0)))
-			{
+			if(!Character.isLowerCase(entry.charAt(0))) {
 				return false;
 			}
 			count++;
@@ -370,32 +299,25 @@ public class GitRepo
 	}
 
 	// Sets or clears the "assume unchanged" flag of the tracked files at the path, so that git stops looking at their changes.
-	public GitResult assumeUnchanged(String path, boolean on)
-	{
+	public GitResult assumeUnchanged(String path, boolean on) {
 		GitResult listed = git("ls-files", "-z", "--", path);
-		if(!listed.ok())
-		{
+		if(!listed.ok()) {
 			return listed;
 		}
 		List<String> files = new ArrayList<String>();
-		for(String f : listed.out.split("\0"))
-		{
-			if(!f.isEmpty())
-			{
+		for(String f : listed.out.split("\0")) {
+			if(!f.isEmpty()) {
 				files.add(f);
 			}
 		}
-		if(files.isEmpty())
-		{
+		if(files.isEmpty()) {
 			return new GitResult(1, "", "No tracked files at " + path);
 		}
 		GitResult result = new GitResult(0, "", "");
-		for(int i = 0; i < files.size(); i += 200)
-		{
+		for(int i = 0; i < files.size(); i += 200) {
 			List<String> chunk = files.subList(i, Math.min(files.size(), i + 200));
 			result = withPaths(Arrays.asList("update-index", on ? "--assume-unchanged" : "--no-assume-unchanged", "--"), chunk);
-			if(!result.ok())
-			{
+			if(!result.ok()) {
 				return result;
 			}
 		}
@@ -403,126 +325,99 @@ public class GitRepo
 	}
 
 	// Adds the path to the .gitignore in the repository root.
-	public GitResult ignore(String path, boolean directory)
-	{
+	public GitResult ignore(String path, boolean directory) {
 		File f = new File(root, ".gitignore");
-		try
-		{
+		try {
 			String existing = f.isFile() ? new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8) : "";
 			String line = "/" + path + (directory ? "/" : "") + "\n";
 			String prefix = existing.isEmpty() || existing.endsWith("\n") ? "" : "\n";
 			Files.write(f.toPath(), (prefix + line).getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 			// a file that is already tracked stays tracked until it is untracked
 			return new GitResult(0, "", "");
-		}
-		catch(IOException e)
-		{
+		} catch(IOException e) {
 			e.printStackTrace();
 			return new GitResult(1, "", "Cannot write .gitignore: " + e.getMessage());
 		}
 	}
 
 	// Replaces the files in the working tree (and index) with their state at a revision.
-	public GitResult restore(String rev, List<String> paths)
-	{
+	public GitResult restore(String rev, List<String> paths) {
 		return withPaths(Arrays.asList("checkout", rev, "--"), paths);
 	}
 
 	// Moves or renames a file or folder. Tracked ones go through "git mv", so that git records a rename; others are just moved on disk.
-	public GitResult move(File from, File to)
-	{
+	public GitResult move(File from, File to) {
 		String a = relative(from);
 		String b = relative(to);
-		try
-		{
-			if(to.exists())
-			{
+		try {
+			if(to.exists()) {
 				return new GitResult(1, "", to.getName() + " already exists.");
 			}
 			File parent = to.getAbsoluteFile().getParentFile();
-			if(parent != null)
-			{
+			if(parent != null) {
 				parent.mkdirs();
 			}
-			if(a != null && b != null && !a.isEmpty() && !b.isEmpty())
-			{
+			if(a != null && b != null && !a.isEmpty() && !b.isEmpty()) {
 				GitResult tracked = git("ls-files", "--", a);
-				if(tracked.ok() && !tracked.out.trim().isEmpty())
-				{
+				if(tracked.ok() && !tracked.out.trim().isEmpty()) {
 					return git("mv", "--", a, b);
 				}
 			}
 			Files.move(from.toPath(), to.toPath());
 			return new GitResult(0, "", "");
-		}
-		catch(IOException e)
-		{
+		} catch(IOException e) {
 			return new GitResult(1, "", String.valueOf(e.getMessage()));
 		}
 	}
 
 	// Throws away the changes of a tracked file, or deletes an untracked one. A rename goes back to the old name.
-	public GitResult discard(FileChange c)
-	{
-		if(c.oldPath != null)
-		{
+	public GitResult discard(FileChange c) {
+		if(c.oldPath != null) {
 			GitResult r = git("reset", "-q", "--", c.oldPath, c.path);
-			if(!r.ok())
-			{
+			if(!r.ok()) {
 				return r;
 			}
 			r = git("checkout", "--", c.oldPath);
-			if(!r.ok())
-			{
+			if(!r.ok()) {
 				return r;
 			}
 			return git("clean", "-f", "-q", "--", c.path);
 		}
-		if(c.untracked())
-		{
+		if(c.untracked()) {
 			return git("clean", "-f", "-q", "--", c.path);
 		}
 		return git("checkout", "HEAD", "--", c.path);
 	}
 
 	// Commits the given paths (untracked ones are added first). With no paths, commits what is staged. author and committer are "Name <email>", or empty for the configured ones.
-	public GitResult commit(String message, String author, String committer, boolean amend, List<String> paths)
-	{
-		if(!paths.isEmpty())
-		{
+	public GitResult commit(String message, String author, String committer, boolean amend, List<String> paths) {
+		if(!paths.isEmpty()) {
 			// a path that is gone (the old name of a rename) has nothing to add, and git refuses a pathspec that matches nothing
 			List<String> present = new ArrayList<String>();
-			for(String path : paths)
-			{
-				if(file(path).exists())
-				{
+			for(String path : paths) {
+				if(file(path).exists()) {
 					present.add(path);
 				}
 			}
 			GitResult added = present.isEmpty() ? new GitResult(0, "", "") : add(present);
-			if(!added.ok())
-			{
+			if(!added.ok()) {
 				return added;
 			}
 		}
 		List<String> args = new ArrayList<String>(Arrays.asList("commit", "-m", message));
-		if(amend)
-		{
+		if(amend) {
 			args.add("--amend");
 		}
 		Map<String, String> env = new HashMap<String, String>();
-		if(!author.trim().isEmpty())
-		{
+		if(!author.trim().isEmpty()) {
 			args.add("--author=" + author.trim());
 		}
 		String[] c = split(committer);
-		if(c != null)
-		{
+		if(c != null) {
 			env.put("GIT_COMMITTER_NAME", c[0]);
 			env.put("GIT_COMMITTER_EMAIL", c[1]);
 		}
-		if(!paths.isEmpty())
-		{
+		if(!paths.isEmpty()) {
 			args.add("--only");
 			args.add("--");
 			args.addAll(paths);
@@ -531,13 +426,11 @@ public class GitRepo
 	}
 
 	// "Name <email>" as {name, email}, or null if it is empty or malformed
-	public static String[] split(String identity)
-	{
+	public static String[] split(String identity) {
 		String s = identity.trim();
 		int lt = s.lastIndexOf('<');
 		int gt = s.lastIndexOf('>');
-		if(s.isEmpty() || lt < 0 || gt < lt)
-		{
+		if(s.isEmpty() || lt < 0 || gt < lt) {
 			return null;
 		}
 		return new String[] {s.substring(0, lt).trim(), s.substring(lt + 1, gt).trim()};
@@ -545,102 +438,82 @@ public class GitRepo
 
 	// ---- branches, tags and history
 
-	public GitResult checkout(String rev)
-	{
+	public GitResult checkout(String rev) {
 		return git("checkout", rev);
 	}
 
-	public GitResult switchNew(String name, String start)
-	{
+	public GitResult switchNew(String name, String start) {
 		return start == null || start.isEmpty() ? git("checkout", "-b", name) : git("checkout", "-b", name, start);
 	}
 
-	public GitResult createBranch(String name, String at)
-	{
+	public GitResult createBranch(String name, String at) {
 		return git("branch", name, at);
 	}
 
-	public GitResult deleteBranch(String name, boolean force)
-	{
+	public GitResult deleteBranch(String name, boolean force) {
 		return git("branch", force ? "-D" : "-d", name);
 	}
 
-	public GitResult renameBranch(String from, String to)
-	{
+	public GitResult renameBranch(String from, String to) {
 		return git("branch", "-m", from, to);
 	}
 
-	public GitResult createTag(String name, String at)
-	{
+	public GitResult createTag(String name, String at) {
 		return git("tag", name, at);
 	}
 
-	public GitResult merge(String rev)
-	{
+	public GitResult merge(String rev) {
 		return git("merge", "--no-edit", rev);
 	}
 
-	public GitResult rebase(String onto)
-	{
+	public GitResult rebase(String onto) {
 		return git("rebase", onto);
 	}
 
 	// mode: soft, mixed or hard
-	public GitResult reset(String mode, String rev)
-	{
+	public GitResult reset(String mode, String rev) {
 		return git("reset", "--" + mode, rev);
 	}
 
-	public GitResult revert(String rev)
-	{
+	public GitResult revert(String rev) {
 		return git("revert", "--no-edit", rev);
 	}
 
-	public GitResult cherryPick(String rev)
-	{
+	public GitResult cherryPick(String rev) {
 		return git("cherry-pick", rev);
 	}
 
-	public GitResult abortMerge()
-	{
+	public GitResult abortMerge() {
 		return git("merge", "--abort");
 	}
 
 	// ---- remotes
 
-	public GitResult push(String remote, String branch)
-	{
+	public GitResult push(String remote, String branch) {
 		return git("push", "-u", remote, branch);
 	}
 
-	public GitResult fetch(String remote)
-	{
+	public GitResult fetch(String remote) {
 		return git("fetch", "--prune", remote);
 	}
 
-	public GitResult pull()
-	{
+	public GitResult pull() {
 		return git("pull", "--no-edit");
 	}
 
 	// ---- stashes
 
-	public GitResult stash(String message)
-	{
+	public GitResult stash(String message) {
 		return message.trim().isEmpty() ? git("stash", "push", "--include-untracked") : git("stash", "push", "--include-untracked", "-m", message.trim());
 	}
 
-	public List<Stash> stashes()
-	{
+	public List<Stash> stashes() {
 		List<Stash> list = new ArrayList<Stash>();
 		GitResult r = git("stash", "list", "--format=%gd" + SEP + "%gs");
-		if(r.ok())
-		{
-			for(String line : r.out.split("\n"))
-			{
+		if(r.ok()) {
+			for(String line : r.out.split("\n")) {
 				String[] f = line.split(SEP, 2);
-				if(f.length == 2)
-				{
+				if(f.length == 2) {
 					list.add(new Stash(f[0], f[1]));
 				}
 			}
@@ -648,23 +521,19 @@ public class GitRepo
 		return list;
 	}
 
-	public GitResult stashApply(String ref)
-	{
+	public GitResult stashApply(String ref) {
 		return git("stash", "apply", ref);
 	}
 
-	public GitResult stashPop(String ref)
-	{
+	public GitResult stashPop(String ref) {
 		return git("stash", "pop", ref);
 	}
 
-	public GitResult stashDrop(String ref)
-	{
+	public GitResult stashDrop(String ref) {
 		return git("stash", "drop", ref);
 	}
 
-	GitResult withPaths(List<String> head, List<String> paths)
-	{
+	GitResult withPaths(List<String> head, List<String> paths) {
 		List<String> args = new ArrayList<String>(head);
 		args.addAll(paths);
 		return git(args.toArray(new String[0]));

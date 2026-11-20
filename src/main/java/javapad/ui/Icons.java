@@ -9,8 +9,7 @@ import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Display;
 
 // Toolbar icons, drawn in code so they need no resource files and look right on light and dark themes
-public class Icons
-{
+public class Icons {
 	public static final int FOLDER = 0;
 	public static final int SAVE = 1;
 	public static final int BUILD = 2;
@@ -23,8 +22,7 @@ public class Icons
 	static final int SIZE = 20;
 	static final RGB KEY = new RGB(255, 0, 255);
 
-	public static Image create(Display display, int icon)
-	{
+	public static Image create(Display display, int icon) {
 		Image image = new Image(display, SIZE, SIZE);
 		GC gc = new GC(image);
 		gc.setAntialias(SWT.OFF);
@@ -40,8 +38,7 @@ public class Icons
 		return new Image(display, data);
 	}
 
-	static void fill(Display d, GC gc, int r, int g, int b)
-	{
+	static void fill(Display d, GC gc, int r, int g, int b) {
 		Color c = new Color(d, r, g, b);
 		gc.setBackground(c);
 		gc.setForeground(c);
@@ -49,18 +46,15 @@ public class Icons
 	}
 
 	// an arc of almost a full circle that ends in an arrow head: "again"
-	static void circularArrow(GC gc)
-	{
+	static void circularArrow(GC gc) {
 		gc.setLineWidth(3);
 		gc.drawArc(3, 5, 12, 12, 80, 270);
 		gc.setLineWidth(1);
 		gc.fillPolygon(new int[] {11, 10, 19, 10, 15, 4});
 	}
 
-	static void draw(Display d, GC gc, int icon)
-	{
-		switch(icon)
-		{
+	static void draw(Display d, GC gc, int icon) {
+		switch(icon) {
 			case FOLDER:
 				fill(d, gc, 220, 170, 50);
 				gc.fillRectangle(2, 5, 7, 3);

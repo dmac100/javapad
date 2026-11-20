@@ -1,7 +1,6 @@
 package javapad.lang;
 
-public class Proposal
-{
+public class Proposal {
 	public static final int LOCAL = 0;
 	public static final int FIELD = 1;
 	public static final int METHOD = 2;
@@ -18,8 +17,7 @@ public class Proposal
 	public final boolean hasParams;
 	public final int rank;
 
-	public Proposal(int kind, String name, String label, String detail, String insert, String importType, boolean hasParams, int rank)
-	{
+	public Proposal(int kind, String name, String label, String detail, String insert, String importType, boolean hasParams, int rank) {
 		this.kind = kind;
 		this.name = name;
 		this.label = label;
@@ -30,15 +28,12 @@ public class Proposal
 		this.rank = rank;
 	}
 
-	public boolean isMethod()
-	{
+	public boolean isMethod() {
 		return kind == METHOD;
 	}
 
-	public String kindLetter()
-	{
-		switch(kind)
-		{
+	public String kindLetter() {
+		switch(kind) {
 		case LOCAL:
 			return "v";
 		case FIELD:
@@ -54,8 +49,7 @@ public class Proposal
 		}
 	}
 
-	public String toString()
-	{
+	public String toString() {
 		return label;
 	}
 }

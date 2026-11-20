@@ -16,13 +16,11 @@ import org.junit.runner.Request;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 
-public class JUnit4Runner
-{
+public class JUnit4Runner {
 	private static final List<Case> cases = new ArrayList<Case>();
 	private static final Map<String, Case> byKey = new HashMap<String, Case>();
 
-	static class Case
-	{
+	static class Case {
 		String className;
 		String name;
 		long start;
@@ -32,71 +30,57 @@ public class JUnit4Runner
 		boolean started;
 	}
 
-	public static void main(String[] args) throws Exception
-	{
+	public static void main(String[] args) throws Exception {
 		File report = new File(args[0]);
 		List<Request> requests = new ArrayList<Request>();
-		for(int i = 1; i < args.length; i++)
-		{
+		for(int i = 1; i < args.length; i++) {
 			int hash = args[i].indexOf('#');
-			if(hash < 0)
-			{
+			if(hash < 0) {
 				requests.add(Request.aClass(Class.forName(args[i])));
-			}
-			else
-			{
+			} else {
 				requests.add(Request.method(Class.forName(args[i].substring(0, hash)), args[i].substring(hash + 1)));
 			}
 		}
-		for(Request request : requests)
-		{
+		for(Request request : requests) {
 			plan(request.getRunner().getDescription());
 		}
 		JUnitCore core = new JUnitCore();
 		core.addListener(new TextListener(System.out));
-		core.addListener(new RunListener()
-		{
-			public void testStarted(Description d)
-			{
+		core.addListener(new RunListener() {
+			public void testStarted(Description d) {
 				Case c = caseFor(d);
 				c.start = System.nanoTime();
 				c.started = true;
 				LiveLog.event("RUN", c.className, c.name);
 			}
 
-			public void testFinished(Description d)
-			{
+			public void testFinished(Description d) {
 				Case c = caseFor(d);
 				c.nanos = System.nanoTime() - c.start;
 				live(c);
 			}
 
-			public void testFailure(Failure f)
-			{
+			public void testFailure(Failure f) {
 				Case c = caseFor(f.getDescription());
 				c.failure = f;
-				if(!c.started)
-				{
+				if(!c.started) {
 					// e.g. a class that cannot be constructed: there is no start/finish pair
 					live(c);
 				}
 			}
 
-			public void testAssumptionFailure(Failure f)
-			{
+			public void testAssumptionFailure(Failure f) {
 				caseFor(f.getDescription()).skipped = true;
 			}
 
-			public void testIgnored(Description d)
-			{
+			public void testIgnored(Description d) {
 				Case c = caseFor(d);
 				c.skipped = true;
 				live(c);
 			}
 		});
 		boolean ok = true;
-		for(Request request : requests)
-		{
+		for(Request request : requests) {
 			ok &= core.run(request).wasSuccessful();
 		}
 		write(report);
@@ -105,34 +89,28 @@ public class JUnit4Runner
 	}
 
 	// tells JavaPad every test that is about to run, so it can show them all and count them
-	static void plan(Description d)
-	{
-		if(d.isTest())
-		{
+	static void plan(Description d) {
+		if(d.isTest()) {
 			LiveLog.event("PLAN", d.getClassName(), d.getMethodName() == null ? "<class>" : d.getMethodName());
 			return;
 		}
-		for(Description child : d.getChildren())
-		{
+		for(Description child : d.getChildren()) {
 			plan(child);
 		}
 	}
 
-	static void live(Case c)
-	{
+	static void live(Case c) {
 		String status = c.failure != null ? (c.failure.getException() instanceof AssertionError ? "F" : "E") : c.skipped ? "K" : "P";
 		String message = c.failure == null || c.failure.getMessage() == null ? "" : c.failure.getMessage();
 		LiveLog.event("END", c.className, c.name, status, String.valueOf(c.nanos / 1e9), message);
 	}
 
-	static Case caseFor(Description d)
-	{
+	static Case caseFor(Description d) {
 		String cls = d.getClassName();
 		String name = d.getMethodName() == null ? "<class>" : d.getMethodName();
 		String key = cls + "#" + name;
 		Case c = byKey.get(key);
-		if(c == null)
-		{
+		if(c == null) {
 			c = new Case();
 			c.className = cls;
 			c.name = name;
@@ -142,25 +120,20 @@ public class JUnit4Runner
 		return c;
 	}
 
-	static void write(File report) throws Exception
-	{
+	static void write(File report) throws Exception {
 		report.getParentFile().mkdirs();
 		Writer w = new OutputStreamWriter(new FileOutputStream(report), StandardCharsets.UTF_8);
 		w.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuite name=\"junit4\" tests=\"" + cases.size() + "\">\n");
-		for(Case c : cases)
-		{
+		for(Case c : cases) {
 			w.write("<testcase classname=\"" + esc(c.className) + "\" name=\"" + esc(c.name) + "\" time=\"" + (c.nanos / 1e9) + "\">");
-			if(c.failure != null)
-			{
+			if(c.failure != null) {
 				boolean assertion = c.failure.getException() instanceof AssertionError;
 				String tag = assertion ? "failure" : "error";
 				String message = c.failure.getMessage() == null ? "" : c.failure.getMessage();
 				w.write("<" + tag + " message=\"" + esc(message) + "\" type=\"" + esc(c.failure.getException().getClass().getName()) + "\">");
 				w.write(esc(c.failure.getTrace()));
 				w.write("</" + tag + ">");
-			}
-			else if(c.skipped)
-			{
+			} else if(c.skipped) {
 				w.write("<skipped/>");
 			}
 			w.write("</testcase>\n");
@@ -169,30 +142,19 @@ public class JUnit4Runner
 		w.close();
 	}
 
-	static String esc(String s)
-	{
+	static String esc(String s) {
 		StringBuilder sb = new StringBuilder();
-		for(int i = 0; i < s.length(); i++)
-		{
+		for(int i = 0; i < s.length(); i++) {
 			char ch = s.charAt(i);
-			if(ch == '&')
-			{
+			if(ch == '&') {
 				sb.append("&amp;");
-			}
-			else if(ch == '<')
-			{
+			} else if(ch == '<') {
 				sb.append("&lt;");
-			}
-			else if(ch == '>')
-			{
+			} else if(ch == '>') {
 				sb.append("&gt;");
-			}
-			else if(ch == '"')
-			{
+			} else if(ch == '"') {
 				sb.append("&quot;");
-			}
-			else if(ch >= 32 || ch == '\n' || ch == '\t')
-			{
+			} else if(ch >= 32 || ch == '\n' || ch == '\t') {
 				sb.append(ch);
 			}
 		}

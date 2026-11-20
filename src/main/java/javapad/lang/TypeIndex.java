@@ -27,8 +27,7 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-public class TypeIndex
-{
+public class TypeIndex {
 	public static final int CLASS = 0;
 	public static final int INTERFACE = 1;
 	public static final int ENUM = 2;
@@ -44,16 +43,14 @@ public class TypeIndex
 	private final Map<String, List<Entry>> byPackage = new LinkedHashMap<String, List<Entry>>();
 	private final TreeSet<String> packages = new TreeSet<String>();
 
-	public static class Entry
-	{
+	public static class Entry {
 		public final String fqn;
 		public final String simple;
 		public final String pkg;
 		public final int kind;
 		public final int origin;
 
-		public Entry(String pkg, String simple, String fqn, int kind, int origin)
-		{
+		public Entry(String pkg, String simple, String fqn, int kind, int origin) {
 			this.pkg = pkg;
 			this.simple = simple;
 			this.fqn = fqn;
@@ -61,79 +58,61 @@ public class TypeIndex
 			this.origin = origin;
 		}
 
-		public String toString()
-		{
+		public String toString() {
 			return fqn;
 		}
 	}
 
-	public TypeIndex(Collection<Entry> entries)
-	{
+	public TypeIndex(Collection<Entry> entries) {
 		Map<String, Entry> unique = new LinkedHashMap<String, Entry>();
-		for(Entry e : entries)
-		{
+		for(Entry e : entries) {
 			Entry old = unique.get(e.fqn);
-			if(old == null || e.origin < old.origin)
-			{
+			if(old == null || e.origin < old.origin) {
 				unique.put(e.fqn, e);
 			}
 		}
 		sorted = unique.values().toArray(new Entry[0]);
 		Arrays.sort(sorted, Comparator.comparing((Entry e) -> e.simple.toLowerCase()).thenComparing(e -> e.fqn));
-		for(Entry e : sorted)
-		{
+		for(Entry e : sorted) {
 			bySimple.computeIfAbsent(e.simple, k -> new ArrayList<Entry>()).add(e);
 			byPackage.computeIfAbsent(e.pkg, k -> new ArrayList<Entry>()).add(e);
 			String p = e.pkg;
-			while(!p.isEmpty() && packages.add(p))
-			{
+			while(!p.isEmpty() && packages.add(p)) {
 				int dot = p.lastIndexOf('.');
 				p = dot < 0 ? "" : p.substring(0, dot);
 			}
 		}
 	}
 
-	public static TypeIndex build(Collection<File> sourceFolders, Collection<File> libraries)
-	{
+	public static TypeIndex build(Collection<File> sourceFolders, Collection<File> libraries) {
 		List<Entry> all = new ArrayList<Entry>(jdkEntries());
-		for(File lib : libraries)
-		{
-			if(lib.isFile() && lib.getName().toLowerCase().endsWith(".jar"))
-			{
+		for(File lib : libraries) {
+			if(lib.isFile() && lib.getName().toLowerCase().endsWith(".jar")) {
 				all.addAll(jarEntries(lib));
-			}
-			else if(lib.isDirectory())
-			{
+			} else if(lib.isDirectory()) {
 				readClassFolder(lib, lib, all);
 			}
 		}
-		for(File src : sourceFolders)
-		{
+		for(File src : sourceFolders) {
 			readSources(src, src, all);
 		}
 		return new TypeIndex(all);
 	}
 
-	public int size()
-	{
+	public int size() {
 		return sorted.length;
 	}
 
-	public List<Entry> exact(String simpleName)
-	{
+	public List<Entry> exact(String simpleName) {
 		List<Entry> list = bySimple.get(simpleName);
 		return list == null ? new ArrayList<Entry>() : new ArrayList<Entry>(list);
 	}
 
-	public Entry find(String fqn)
-	{
+	public Entry find(String fqn) {
 		List<Entry> list = bySimple.get(Names.simple(fqn));
-		if(list != null)
-		{
-			for(Entry e : list)
-			{
-				if(e.fqn.equals(fqn))
-				{
+		if(list != null) {
+			for(Entry e : list) {
+				if(e.fqn.equals(fqn)) {
 					return e;
 				}
 			}
@@ -141,42 +120,31 @@ public class TypeIndex
 		return null;
 	}
 
-	public List<Entry> withPrefix(String prefix, int limit)
-	{
+	public List<Entry> withPrefix(String prefix, int limit) {
 		List<Entry> result = new ArrayList<Entry>();
 		String lower = prefix.toLowerCase();
 		int lo = 0;
 		int hi = sorted.length;
-		while(lo < hi)
-		{
+		while(lo < hi) {
 			int mid = (lo + hi) >>> 1;
-			if(sorted[mid].simple.toLowerCase().compareTo(lower) < 0)
-			{
+			if(sorted[mid].simple.toLowerCase().compareTo(lower) < 0) {
 				lo = mid + 1;
-			}
-			else
-			{
+			} else {
 				hi = mid;
 			}
 		}
-		for(int i = lo; i < sorted.length && result.size() < limit; i++)
-		{
-			if(!sorted[i].simple.toLowerCase().startsWith(lower))
-			{
+		for(int i = lo; i < sorted.length && result.size() < limit; i++) {
+			if(!sorted[i].simple.toLowerCase().startsWith(lower)) {
 				break;
 			}
 			result.add(sorted[i]);
 		}
-		if(prefix.length() >= 2 && result.size() < limit)
-		{
-			for(Entry e : sorted)
-			{
-				if(result.size() >= limit)
-				{
+		if(prefix.length() >= 2 && result.size() < limit) {
+			for(Entry e : sorted) {
+				if(result.size() >= limit) {
 					break;
 				}
-				if(!e.simple.toLowerCase().startsWith(lower) && Names.matches(prefix, e.simple))
-				{
+				if(!e.simple.toLowerCase().startsWith(lower) && Names.matches(prefix, e.simple)) {
 					result.add(e);
 				}
 			}
@@ -184,20 +152,16 @@ public class TypeIndex
 		return result;
 	}
 
-	public boolean hasPackage(String pkg)
-	{
+	public boolean hasPackage(String pkg) {
 		return packages.contains(pkg);
 	}
 
 	// The next name segment of every package below parent ("" for the top level), without duplicates.
-	public List<String> childPackages(String parent)
-	{
+	public List<String> childPackages(String parent) {
 		TreeSet<String> names = new TreeSet<String>();
 		String start = parent.isEmpty() ? "" : parent + ".";
-		for(String p : packages.tailSet(start))
-		{
-			if(!p.startsWith(start))
-			{
+		for(String p : packages.tailSet(start)) {
+			if(!p.startsWith(start)) {
 				break;
 			}
 			String rest = p.substring(start.length());
@@ -207,71 +171,53 @@ public class TypeIndex
 		return new ArrayList<String>(names);
 	}
 
-	public List<Entry> typesIn(String pkg)
-	{
+	public List<Entry> typesIn(String pkg) {
 		List<Entry> list = byPackage.get(pkg);
 		return list == null ? new ArrayList<Entry>() : new ArrayList<Entry>(list);
 	}
 
-	static synchronized List<Entry> jdkEntries()
-	{
-		if(jdk != null)
-		{
+	static synchronized List<Entry> jdkEntries() {
+		if(jdk != null) {
 			return jdk;
 		}
 		List<Entry> list = new ArrayList<Entry>();
-		try
-		{
+		try {
 			FileSystem fs = FileSystems.getFileSystem(URI.create("jrt:/"));
-			for(ModuleReference ref : ModuleFinder.ofSystem().findAll())
-			{
+			for(ModuleReference ref : ModuleFinder.ofSystem().findAll()) {
 				ModuleDescriptor d = ref.descriptor();
-				for(ModuleDescriptor.Exports ex : d.exports())
-				{
-					if(ex.isQualified())
-					{
+				for(ModuleDescriptor.Exports ex : d.exports()) {
+					if(ex.isQualified()) {
 						continue;
 					}
 					Path dir = fs.getPath("/modules", d.name(), ex.source().replace('.', '/'));
-					if(!Files.isDirectory(dir))
-					{
+					if(!Files.isDirectory(dir)) {
 						continue;
 					}
-					try(DirectoryStream<Path> ds = Files.newDirectoryStream(dir, "*.class"))
-					{
-						for(Path p : ds)
-						{
-							try(InputStream in = Files.newInputStream(p))
-							{
+					try(DirectoryStream<Path> ds = Files.newDirectoryStream(dir, "*.class")) {
+						for(Path p : ds) {
+							try(InputStream in = Files.newInputStream(p)) {
 								addClass(list, ex.source(), p.getFileName().toString(), in, JDK);
-							}
-							catch(IOException e)
-							{
+							} catch(IOException e) {
 								// an unreadable source file is left out of the index
 							}
 						}
 					}
 				}
 			}
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			// a module that cannot be listed is left out of the index
 		}
 		jdk = list;
 		return list;
 	}
 
-	static void addClass(List<Entry> out, String pkg, String fileName, InputStream in, int origin) throws IOException
-	{
+	static void addClass(List<Entry> out, String pkg, String fileName, InputStream in, int origin) throws IOException {
 		String base = fileName.substring(0, fileName.length() - ".class".length());
-		if(base.equals("module-info") || base.equals("package-info") || base.matches(".*\\$\\d.*"))
-		{
+		if(base.equals("module-info") || base.equals("package-info") || base.matches(".*\\$\\d.*")) {
 			return;
 		}
 		int flags = ClassFlags.read(in);
-		if((flags & ClassFlags.PUBLIC) == 0 || (flags & ClassFlags.SYNTHETIC) != 0)
-		{
+		if((flags & ClassFlags.PUBLIC) == 0 || (flags & ClassFlags.SYNTHETIC) != 0) {
 			return;
 		}
 		int kind = (flags & ClassFlags.ANNOTATION) != 0 ? ANNOTATION : (flags & ClassFlags.ENUM) != 0 ? ENUM : (flags & ClassFlags.INTERFACE) != 0 ? INTERFACE : CLASS;
@@ -281,12 +227,10 @@ public class TypeIndex
 	}
 
 	// Jar contents rarely change, so scans are kept per file (path, size and date) across index rebuilds.
-	static synchronized List<Entry> jarEntries(File jar)
-	{
+	static synchronized List<Entry> jarEntries(File jar) {
 		String key = jar.getAbsolutePath() + "|" + jar.length() + "|" + jar.lastModified();
 		List<Entry> cached = jarCache.get(key);
-		if(cached == null)
-		{
+		if(cached == null) {
 			cached = new ArrayList<Entry>();
 			readJar(jar, cached);
 			jarCache.put(key, cached);
@@ -294,98 +238,69 @@ public class TypeIndex
 		return cached;
 	}
 
-	static void readJar(File jar, List<Entry> out)
-	{
-		try(ZipFile zip = new ZipFile(jar))
-		{
+	static void readJar(File jar, List<Entry> out) {
+		try(ZipFile zip = new ZipFile(jar)) {
 			Enumeration<? extends ZipEntry> entries = zip.entries();
-			while(entries.hasMoreElements())
-			{
+			while(entries.hasMoreElements()) {
 				ZipEntry e = entries.nextElement();
 				String name = e.getName();
-				if(e.isDirectory() || !name.endsWith(".class") || name.startsWith("META-INF/"))
-				{
+				if(e.isDirectory() || !name.endsWith(".class") || name.startsWith("META-INF/")) {
 					continue;
 				}
 				int slash = name.lastIndexOf('/');
 				String pkg = slash < 0 ? "" : name.substring(0, slash).replace('/', '.');
-				try(InputStream in = zip.getInputStream(e))
-				{
+				try(InputStream in = zip.getInputStream(e)) {
 					addClass(out, pkg, name.substring(slash + 1), in, LIBRARY);
-				}
-				catch(IOException ex)
-				{
+				} catch(IOException ex) {
 					// an unreadable class entry is left out of the index
 				}
 			}
-		}
-		catch(IOException e)
-		{
+		} catch(IOException e) {
 			// a jar that cannot be read is left out of the index
 		}
 	}
 
-	static void readClassFolder(File root, File dir, List<Entry> out)
-	{
+	static void readClassFolder(File root, File dir, List<Entry> out) {
 		File[] children = dir.listFiles();
-		if(children == null)
-		{
+		if(children == null) {
 			return;
 		}
-		for(File f : children)
-		{
-			if(f.isDirectory())
-			{
+		for(File f : children) {
+			if(f.isDirectory()) {
 				readClassFolder(root, f, out);
-			}
-			else if(f.getName().endsWith(".class"))
-			{
+			} else if(f.getName().endsWith(".class")) {
 				String rel = root.toPath().relativize(dir.toPath()).toString();
-				try(InputStream in = Files.newInputStream(f.toPath()))
-				{
+				try(InputStream in = Files.newInputStream(f.toPath())) {
 					addClass(out, rel.replace(File.separatorChar, '.'), f.getName(), in, LIBRARY);
-				}
-				catch(IOException e)
-				{
+				} catch(IOException e) {
 					// an unreadable class file is left out of the index
 				}
 			}
 		}
 	}
 
-	static void readSources(File root, File dir, List<Entry> out)
-	{
+	static void readSources(File root, File dir, List<Entry> out) {
 		File[] children = dir.listFiles();
-		if(children == null)
-		{
+		if(children == null) {
 			return;
 		}
-		for(File f : children)
-		{
-			if(f.isDirectory())
-			{
-				if(!f.getName().startsWith("."))
-				{
+		for(File f : children) {
+			if(f.isDirectory()) {
+				if(!f.getName().startsWith(".")) {
 					readSources(root, f, out);
 				}
-			}
-			else if(f.getName().endsWith(".java") && f.length() < 2000000)
-			{
+			} else if(f.getName().endsWith(".java") && f.length() < 2000000) {
 				String base = f.getName().substring(0, f.getName().length() - 5);
 				String pkg = root.toPath().relativize(dir.toPath()).toString().replace(File.separatorChar, '.');
-				try
-				{
+				try {
 					String text = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
 					Matcher m = Pattern.compile("(?m)^\\s*public\\s+(?:(?:abstract|final|sealed|non-sealed|strictfp)\\s+)*(class|interface|enum|@interface|record)\\s+" + Pattern.quote(base) + "\\b").matcher(text);
-					if(m.find())
-					{
+					if(m.find()) {
 						String kw = m.group(1);
 						int kind = kw.equals("interface") ? INTERFACE : kw.equals("enum") ? ENUM : kw.equals("@interface") ? ANNOTATION : CLASS;
 						out.add(new Entry(pkg, base, pkg.isEmpty() ? base : pkg + "." + base, kind, PROJECT));
 					}
-				}
-				catch(IOException e)
-				{
+				} catch(IOException e) {
 					// an unreadable source file is left out of the index
 				}
 			}

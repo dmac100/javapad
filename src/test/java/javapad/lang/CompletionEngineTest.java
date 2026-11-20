@@ -13,16 +13,14 @@ import javapad.model.EclipseProject;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class CompletionEngineTest
-{
+public class CompletionEngineTest {
 	static File dir;
 	static EclipseProject project;
 	static CompletionEngine engine;
 	static File file;
 
 	@BeforeClass
-	public static void setUp() throws Exception
-	{
+	public static void setUp() throws Exception {
 		dir = Files.createTempDirectory("ce").toFile();
 		new File(dir, "src/p").mkdirs();
 		Files.write(new File(dir, "src/p/Base.java").toPath(), ("package p;\npublic class Base {\n\tprotected int baseField;\n\tpublic void baseMethod(String s) {}\n\tpublic static int util() { return 1; }\n}\n").getBytes());
@@ -34,28 +32,24 @@ public class CompletionEngineTest
 	}
 
 	// source with | marking the caret
-	static List<String> names(String source)
-	{
+	static List<String> names(String source) {
 		int caret = source.indexOf('|');
 		String text = source.substring(0, caret) + source.substring(caret + 1);
 		CompletionEngine.Completions c = engine.propose(file, text, caret);
 		assertNotNull(c);
 		List<String> names = new ArrayList<String>();
-		for(Proposal p : c.proposals)
-		{
+		for(Proposal p : c.proposals) {
 			names.add(p.name);
 		}
 		return names;
 	}
 
-	static String wrap(String body)
-	{
+	static String wrap(String body) {
 		return "package p;\nimport java.util.List;\npublic class A extends Base {\n\tint own;\n\tvoid run(String param, List<String> list) {\n\t\tOther other = new Other();\n\t\t" + body + "\n\t}\n}\n";
 	}
 
 	@Test
-	public void membersOfJdkTypeAfterDot()
-	{
+	public void membersOfJdkTypeAfterDot() {
 		List<String> n = names(wrap("param.|"));
 		assertTrue(n.contains("length"));
 		assertTrue(n.contains("substring"));
@@ -64,8 +58,7 @@ public class CompletionEngineTest
 	}
 
 	@Test
-	public void membersFilteredByPrefix()
-	{
+	public void membersFilteredByPrefix() {
 		List<String> n = names(wrap("param.sub|"));
 		assertTrue(n.contains("substring"));
 		assertTrue(n.contains("subSequence"));
@@ -73,16 +66,14 @@ public class CompletionEngineTest
 	}
 
 	@Test
-	public void genericTypeMembers()
-	{
+	public void genericTypeMembers() {
 		List<String> n = names(wrap("list.|"));
 		assertTrue(n.contains("add"));
 		assertTrue(n.contains("stream"));
 	}
 
 	@Test
-	public void projectTypeMembersInstanceVersusStatic()
-	{
+	public void projectTypeMembersInstanceVersusStatic() {
 		List<String> instance = names(wrap("other.|"));
 		assertTrue(instance.contains("name"));
 		assertTrue(instance.contains("count"));
@@ -93,16 +84,13 @@ public class CompletionEngineTest
 	}
 
 	@Test
-	public void methodLabelsShowSignatures()
-	{
+	public void methodLabelsShowSignatures() {
 		int caret = wrap("other.cou|").indexOf('|');
 		String src = wrap("other.cou|");
 		CompletionEngine.Completions c = engine.propose(file, src.replace("|", ""), caret);
 		Proposal count = null;
-		for(Proposal p : c.proposals)
-		{
-			if(p.name.equals("count"))
-			{
+		for(Proposal p : c.proposals) {
+			if(p.name.equals("count")) {
 				count = p;
 			}
 		}
@@ -112,8 +100,7 @@ public class CompletionEngineTest
 	}
 
 	@Test
-	public void localsParametersAndInheritedMembers()
-	{
+	public void localsParametersAndInheritedMembers() {
 		List<String> n = names(wrap("par|"));
 		assertTrue(n.contains("param"));
 		List<String> all = names(wrap("b|"));
@@ -128,15 +115,12 @@ public class CompletionEngineTest
 	}
 
 	@Test
-	public void typesComeFromTheIndexWithImportInfo()
-	{
+	public void typesComeFromTheIndexWithImportInfo() {
 		String src = wrap("ArrayLi|");
 		CompletionEngine.Completions c = engine.propose(file, src.replace("|", ""), src.indexOf('|'));
 		Proposal list = null;
-		for(Proposal p : c.proposals)
-		{
-			if(p.name.equals("ArrayList"))
-			{
+		for(Proposal p : c.proposals) {
+			if(p.name.equals("ArrayList")) {
 				list = p;
 			}
 		}
@@ -144,10 +128,8 @@ public class CompletionEngineTest
 		assertEquals("java.util.ArrayList", list.importType);
 		String visible = wrap("Lis|");
 		c = engine.propose(file, visible.replace("|", ""), visible.indexOf('|'));
-		for(Proposal p : c.proposals)
-		{
-			if(p.name.equals("List") && p.importType == null)
-			{
+		for(Proposal p : c.proposals) {
+			if(p.name.equals("List") && p.importType == null) {
 				return;
 			}
 		}
@@ -155,29 +137,25 @@ public class CompletionEngineTest
 	}
 
 	@Test
-	public void importLinesCompletePackagesAndClasses()
-	{
+	public void importLinesCompletePackagesAndClasses() {
 		String src = "package p;\nimport java.ut|\n";
 		CompletionEngine.Completions c = engine.propose(file, src.replace("|", ""), src.indexOf('|'));
 		boolean util = false;
-		for(Proposal p : c.proposals)
-		{
+		for(Proposal p : c.proposals) {
 			util |= p.name.equals("util") && p.kind == Proposal.PACKAGE;
 		}
 		assertTrue(util);
 		src = "package p;\nimport java.util.Arr|\n";
 		c = engine.propose(file, src.replace("|", ""), src.indexOf('|'));
 		boolean arrays = false;
-		for(Proposal p : c.proposals)
-		{
+		for(Proposal p : c.proposals) {
 			arrays |= p.name.equals("Arrays") && p.kind == Proposal.TYPE;
 		}
 		assertTrue(arrays);
 	}
 
 	@Test
-	public void afterNewOnlyTypesAndAnnotationsOnlyAnnotations()
-	{
+	public void afterNewOnlyTypesAndAnnotationsOnlyAnnotations() {
 		List<String> n = names(wrap("Object o = new Arr|"));
 		assertTrue(n.contains("ArrayList"));
 		assertFalse(n.contains("param"));
@@ -187,8 +165,7 @@ public class CompletionEngineTest
 	}
 
 	@Test
-	public void qualifiedPackageCompletion()
-	{
+	public void qualifiedPackageCompletion() {
 		List<String> n = names(wrap("java.util.Arr|"));
 		assertTrue(n.contains("ArrayList"));
 		List<String> pk = names(wrap("java.ut|"));
@@ -196,16 +173,14 @@ public class CompletionEngineTest
 	}
 
 	@Test
-	public void arrayMembers()
-	{
+	public void arrayMembers() {
 		List<String> n = names(wrap("String[] arr = null;\n\t\tarr.|"));
 		assertTrue(n.contains("length"));
 		assertTrue(n.contains("clone") || n.contains("getClass"));
 	}
 
 	@Test
-	public void incompleteCodeAfterCaretStillWorks()
-	{
+	public void incompleteCodeAfterCaretStillWorks() {
 		List<String> n = names(wrap("param.|\n\t\tint x = 1;"));
 		assertTrue(n.contains("length"));
 	}

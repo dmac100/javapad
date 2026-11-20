@@ -7,16 +7,13 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import org.junit.Test;
 
-public class ClasspathParserTest
-{
+public class ClasspathParserTest {
 	static final File CLAUDE = new File(System.getProperty("user.home"), "claude");
 
 	@Test
-	public void parsesDoom() throws Exception
-	{
+	public void parsesDoom() throws Exception {
 		File dir = new File(CLAUDE, "doom");
-		if(!dir.exists())
-		{
+		if(!dir.exists()) {
 			return;
 		}
 		EclipseProject p = ClasspathParser.parse(dir);
@@ -30,11 +27,9 @@ public class ClasspathParserTest
 	}
 
 	@Test
-	public void parsesDarkbasic() throws Exception
-	{
+	public void parsesDarkbasic() throws Exception {
 		File dir = new File(CLAUDE, "darkbasic");
-		if(!dir.exists())
-		{
+		if(!dir.exists()) {
 			return;
 		}
 		EclipseProject p = ClasspathParser.parse(dir);
@@ -45,10 +40,8 @@ public class ClasspathParserTest
 	}
 
 	@Test
-	public void acceptsJunitContainers() throws Exception
-	{
-		for(String version : new String[] {"5", "6"})
-		{
+	public void acceptsJunitContainers() throws Exception {
+		for(String version : new String[] {"5", "6"}) {
 			EclipseProject p = new EclipseProject(new File("."));
 			ClasspathParser.addContainer(p, "org.eclipse.jdt.junit.JUNIT_CONTAINER/" + version);
 			assertTrue(p.junit5);

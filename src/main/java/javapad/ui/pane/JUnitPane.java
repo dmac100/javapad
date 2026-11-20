@@ -40,8 +40,7 @@ import org.eclipse.swt.widgets.ToolItem;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeItem;
 
-public class JUnitPane
-{
+public class JUnitPane {
 	static final Pattern FRAME = Pattern.compile("at ([\\w.$]+)\\.[\\w$<>]+\\((\\w+\\.java):(\\d+)\\)");
 
 	private SashForm sash;
@@ -73,8 +72,7 @@ public class JUnitPane
 	// per test class during a run: tests known, tests finished, tests that failed
 	private final Map<String, int[]> liveCounts = new HashMap<String, int[]>();
 
-	public JUnitPane(Composite parent, Theme theme)
-	{
+	public JUnitPane(Composite parent, Theme theme) {
 		this.theme = theme;
 		composite = new Composite(parent, SWT.NONE);
 		GridLayout layout = new GridLayout(1, false);
@@ -104,15 +102,11 @@ public class JUnitPane
 		tree.addListener(SWT.Selection, e -> showDetail());
 		detail.addListener(SWT.MouseUp, e -> clicked(e.x, e.y));
 		detail.addListener(SWT.MouseMove, e -> hover(e.x, e.y));
-		tree.addListener(SWT.DefaultSelection, e ->
-		{
+		tree.addListener(SWT.DefaultSelection, e -> {
 			TreeItem[] sel = tree.getSelection();
-			if(sel.length > 0 && sel[0].getItemCount() > 0)
-			{
+			if(sel.length > 0 && sel[0].getItemCount() > 0) {
 				sel[0].setExpanded(!sel[0].getExpanded());
-			}
-			else
-			{
+			} else {
 				openSelected();
 			}
 		});
@@ -123,8 +117,7 @@ public class JUnitPane
 		MenuItem runFailed = new MenuItem(menu, SWT.PUSH);
 		runFailed.setText("Re-run Failed Tests");
 		runFailed.addListener(SWT.Selection, e -> run(rerunFailedHandler));
-		menu.addListener(SWT.Show, e ->
-		{
+		menu.addListener(SWT.Show, e -> {
 			runSelected.setEnabled(!selectedSpecs().isEmpty());
 			runFailed.setEnabled(!failedSpecs().isEmpty() && !running.getAsBoolean());
 		});
@@ -132,8 +125,7 @@ public class JUnitPane
 		clear();
 	}
 
-	ToolItem tool(String tip, int icon, Runnable action)
-	{
+	ToolItem tool(String tip, int icon, Runnable action) {
 		ToolItem item = new ToolItem(toolbar, SWT.PUSH);
 		Image image = Icons.create(toolbar.getDisplay(), icon);
 		item.setImage(image);
@@ -143,17 +135,14 @@ public class JUnitPane
 		return item;
 	}
 
-	void run(Runnable handler)
-	{
-		if(handler != null)
-		{
+	void run(Runnable handler) {
+		if(handler != null) {
 			handler.run();
 		}
 	}
 
 	// The toolbar's actions, and what tells whether tests are running and whether there is a run to repeat.
-	public void setToolbar(Runnable rerunAll, Runnable rerunFailed, Runnable stop, BooleanSupplier running, BooleanSupplier hasRun)
-	{
+	public void setToolbar(Runnable rerunAll, Runnable rerunFailed, Runnable stop, BooleanSupplier running, BooleanSupplier hasRun) {
 		this.rerunAllHandler = rerunAll;
 		this.rerunFailedHandler = rerunFailed;
 		this.stopHandler = stop;
@@ -163,10 +152,8 @@ public class JUnitPane
 	}
 
 	// Enables the buttons that make sense now: stop while tests run, the reruns when they do not.
-	public void updateToolbar()
-	{
-		if(toolbar.isDisposed())
-		{
+	public void updateToolbar() {
+		if(toolbar.isDisposed()) {
 			return;
 		}
 		boolean busy = running.getAsBoolean();
@@ -175,53 +162,40 @@ public class JUnitPane
 		stop.setEnabled(busy);
 	}
 
-	public void setRunner(Consumer<List<String>> runner)
-	{
+	public void setRunner(Consumer<List<String>> runner) {
 		this.runner = runner;
 	}
 
-	void run(List<String> specs)
-	{
-		if(runner != null && !specs.isEmpty())
-		{
+	void run(List<String> specs) {
+		if(runner != null && !specs.isEmpty()) {
 			runner.accept(specs);
 		}
 	}
 
-	static String spec(String className, String name)
-	{
+	static String spec(String className, String name) {
 		String method = TestFinder.selectableMethod(name);
 		return method == null ? className : className + "#" + method;
 	}
 
 	// class or class#method for each selected tree row (a class row means the whole class)
-	public List<String> selectedSpecs()
-	{
+	public List<String> selectedSpecs() {
 		LinkedHashSet<String> specs = new LinkedHashSet<String>();
-		for(TreeItem item : tree.getSelection())
-		{
-			if(item.getData() instanceof TestResult)
-			{
+		for(TreeItem item : tree.getSelection()) {
+			if(item.getData() instanceof TestResult) {
 				TestResult r = (TestResult)item.getData();
 				specs.add(spec(r.className, r.name));
-			}
-			else if(item.getData("class") != null)
-			{
+			} else if(item.getData("class") != null) {
 				specs.add((String)item.getData("class"));
 			}
 		}
 		return new ArrayList<String>(specs);
 	}
 
-	public List<String> failedSpecs()
-	{
+	public List<String> failedSpecs() {
 		LinkedHashSet<String> specs = new LinkedHashSet<String>();
-		if(results != null)
-		{
-			for(TestResult r : results)
-			{
-				if(r.bad())
-				{
+		if(results != null) {
+			for(TestResult r : results) {
+				if(r.bad()) {
 					specs.add(spec(r.className, r.name));
 				}
 			}
@@ -230,8 +204,7 @@ public class JUnitPane
 	}
 
 	// Called at the start of a run: results then arrive one at a time through liveEvent.
-	public void beginLive()
-	{
+	public void beginLive() {
 		clear();
 		liveClasses.clear();
 		liveTests.clear();
@@ -240,13 +213,11 @@ public class JUnitPane
 		summary.setText("Running tests...");
 	}
 
-	void paintBar(GC gc)
-	{
+	void paintBar(GC gc) {
 		Rectangle r = bar.getClientArea();
 		gc.setBackground(theme.background);
 		gc.fillRectangle(r);
-		if(progressTotal > 0)
-		{
+		if(progressTotal > 0) {
 			gc.setBackground(progressFailed > 0 ? theme.error : theme.pass);
 			gc.fillRectangle(0, 0, (int)((long)r.width * Math.min(progressDone, progressTotal) / progressTotal), r.height);
 		}
@@ -254,8 +225,7 @@ public class JUnitPane
 		gc.drawRectangle(0, 0, r.width - 1, r.height - 1);
 	}
 
-	void setProgress(int done, int total, int failed)
-	{
+	void setProgress(int done, int total, int failed) {
 		progressDone = done;
 		progressTotal = total;
 		progressFailed = failed;
@@ -263,11 +233,9 @@ public class JUnitPane
 	}
 
 	// the row of a test class in the tree, made when it is first seen
-	TreeItem classItem(String cls)
-	{
+	TreeItem classItem(String cls) {
 		TreeItem classItem = liveClasses.get(cls);
-		if(classItem == null)
-		{
+		if(classItem == null) {
 			classItem = new TreeItem(tree, SWT.NONE);
 			classItem.setData("class", cls);
 			liveClasses.put(cls, classItem);
@@ -276,8 +244,7 @@ public class JUnitPane
 		return classItem;
 	}
 
-	void updateClass(String cls)
-	{
+	void updateClass(String cls) {
 		TreeItem classItem = liveClasses.get(cls);
 		int[] n = liveCounts.get(cls);
 		boolean finished = n[1] == n[0];
@@ -286,16 +253,13 @@ public class JUnitPane
 	}
 
 	// PLAN class name (a test that will run) | RUN class name | END class name status seconds message   (status P, F, E or K)
-	public void liveEvent(String[] f)
-	{
-		if(f.length < 3)
-		{
+	public void liveEvent(String[] f) {
+		if(f.length < 3) {
 			return;
 		}
 		boolean end = f[0].equals("END");
 		boolean plan = f[0].equals("PLAN");
-		if(!end && !plan && !f[0].equals("RUN"))
-		{
+		if(!end && !plan && !f[0].equals("RUN")) {
 			return;
 		}
 		String cls = f[1].isEmpty() ? "(tests)" : f[1];
@@ -303,8 +267,7 @@ public class JUnitPane
 		int[] counts = liveCounts.get(cls);
 		String key = cls + "#" + f[2];
 		TreeItem item = liveTests.get(key);
-		if(item == null)
-		{
+		if(item == null) {
 			item = new TreeItem(classItem, SWT.NONE);
 			liveTests.put(key, item);
 			classItem.setExpanded(true);
@@ -313,18 +276,15 @@ public class JUnitPane
 			item.setForeground(theme.gutter);
 			updateClass(cls);
 		}
-		if(plan)
-		{
+		if(plan) {
 			setProgress(liveResults.size(), liveTests.size(), failures(liveResults));
 			summary.setText("Running...  Tests: " + liveTests.size());
 			return;
 		}
-		if(!end)
-		{
+		if(!end) {
 			item.setText("▶ " + f[2]);
 			item.setForeground(theme.foreground);
-			if(tree.getSelectionCount() == 0)
-			{
+			if(tree.getSelectionCount() == 0) {
 				tree.showItem(item);
 			}
 			return;
@@ -332,17 +292,13 @@ public class JUnitPane
 		int status = f.length < 4 ? TestResult.PASSED : f[3].equals("F") ? TestResult.FAILED : f[3].equals("E") ? TestResult.ERROR
 			: f[3].equals("K") ? TestResult.SKIPPED : TestResult.PASSED;
 		double seconds = 0;
-		try
-		{
+		try {
 			seconds = f.length > 4 ? Double.parseDouble(f[4]) : 0;
-		}
-		catch(NumberFormatException e)
-		{
+		} catch(NumberFormatException e) {
 			// a malformed time stays 0
 		}
 		TestResult r = new TestResult(cls, f[2], seconds, status, f.length > 5 ? f[5] : "", "");
-		if(item.getData() instanceof TestResult)
-		{
+		if(item.getData() instanceof TestResult) {
 			// a second end for the same name (a parameterized test, say) is counted as one more test
 			counts[0]++;
 		}
@@ -358,40 +314,33 @@ public class JUnitPane
 		int total = Math.max(liveTests.size(), liveResults.size());
 		summary.setText("Running...  Run: " + liveResults.size() + "/" + total + "    Failures: " + failed);
 		setProgress(liveResults.size(), total, failed);
-		if(r.bad() && tree.getSelectionCount() == 0)
-		{
+		if(r.bad() && tree.getSelectionCount() == 0) {
 			tree.setSelection(item);
 			showDetail();
 		}
 	}
 
-	static int failures(List<TestResult> list)
-	{
+	static int failures(List<TestResult> list) {
 		int n = 0;
-		for(TestResult t : list)
-		{
+		for(TestResult t : list) {
 			n += t.bad() ? 1 : 0;
 		}
 		return n;
 	}
 
-	public Composite getControl()
-	{
+	public Composite getControl() {
 		return composite;
 	}
 
-	public void setProject(EclipseProject project)
-	{
+	public void setProject(EclipseProject project) {
 		this.project = project;
 	}
 
-	public void setOpener(Consumer<Location> opener)
-	{
+	public void setOpener(Consumer<Location> opener) {
 		this.opener = opener;
 	}
 
-	public void restyle()
-	{
+	public void restyle() {
 		detail.setFont(theme.font);
 		composite.setBackground(theme.chrome);
 		sash.setBackground(theme.chrome);
@@ -402,18 +351,14 @@ public class JUnitPane
 		tree.setForeground(theme.foreground);
 		detail.setBackground(theme.background);
 		detail.setForeground(theme.foreground);
-		if(results != null)
-		{
+		if(results != null) {
 			setResults(results);
-		}
-		else
-		{
+		} else {
 			bar.redraw();
 		}
 	}
 
-	public void clear()
-	{
+	public void clear() {
 		results = null;
 		tree.removeAll();
 		detail.setText("");
@@ -422,15 +367,11 @@ public class JUnitPane
 		updateToolbar();
 	}
 
-	public int failures()
-	{
+	public int failures() {
 		int n = 0;
-		if(results != null)
-		{
-			for(TestResult r : results)
-			{
-				if(r.bad())
-				{
+		if(results != null) {
+			for(TestResult r : results) {
+				if(r.bad()) {
 					n++;
 				}
 			}
@@ -438,13 +379,11 @@ public class JUnitPane
 		return n;
 	}
 
-	public int total()
-	{
+	public int total() {
 		return results == null ? 0 : results.size();
 	}
 
-	public void setResults(List<TestResult> list)
-	{
+	public void setResults(List<TestResult> list) {
 		results = list;
 		tree.removeAll();
 		detail.setText("");
@@ -452,8 +391,7 @@ public class JUnitPane
 		int failed = 0;
 		int skipped = 0;
 		double seconds = 0;
-		for(TestResult r : list)
-		{
+		for(TestResult r : list) {
 			byClass.computeIfAbsent(r.className, k -> new ArrayList<TestResult>()).add(r);
 			failed += r.bad() ? 1 : 0;
 			skipped += r.status == TestResult.SKIPPED ? 1 : 0;
@@ -461,25 +399,21 @@ public class JUnitPane
 		}
 		boolean expandAll = list.size() <= 40;
 		TreeItem firstBad = null;
-		for(Map.Entry<String, List<TestResult>> entry : byClass.entrySet())
-		{
+		for(Map.Entry<String, List<TestResult>> entry : byClass.entrySet()) {
 			int bad = 0;
-			for(TestResult r : entry.getValue())
-			{
+			for(TestResult r : entry.getValue()) {
 				bad += r.bad() ? 1 : 0;
 			}
 			TreeItem cls = new TreeItem(tree, SWT.NONE);
 			cls.setText((bad > 0 ? "✘ " : "✔ ") + entry.getKey() + "  (" + entry.getValue().size() + ")");
 			cls.setForeground(bad > 0 ? theme.errorText : theme.pass);
 			cls.setData("class", entry.getKey());
-			for(TestResult r : entry.getValue())
-			{
+			for(TestResult r : entry.getValue()) {
 				TreeItem item = new TreeItem(cls, SWT.NONE);
 				item.setData(r);
 				item.setText(marker(r) + r.name + "  " + String.format("%.3f s", r.seconds));
 				item.setForeground(r.bad() ? theme.errorText : r.status == TestResult.SKIPPED ? theme.gutter : theme.pass);
-				if(r.bad() && firstBad == null)
-				{
+				if(r.bad() && firstBad == null) {
 					firstBad = item;
 				}
 			}
@@ -488,72 +422,58 @@ public class JUnitPane
 		summary.setText("Runs: " + (list.size() - skipped) + "/" + list.size() + "    Failures: " + failed + "    Skipped: " + skipped
 			+ "    Time: " + String.format("%.2f s", seconds));
 		setProgress(list.size(), list.size(), failed);
-		if(firstBad != null)
-		{
+		if(firstBad != null) {
 			tree.setSelection(firstBad);
 			showDetail();
 		}
 		composite.layout(true, true);
 	}
 
-	static String marker(TestResult r)
-	{
-		if(r.status == TestResult.PASSED)
-		{
+	static String marker(TestResult r) {
+		if(r.status == TestResult.PASSED) {
 			return "✔ ";
 		}
-		if(r.status == TestResult.SKIPPED)
-		{
+		if(r.status == TestResult.SKIPPED) {
 			return "– ";
 		}
 		return "✘ ";
 	}
 
-	TestResult selected()
-	{
+	TestResult selected() {
 		TreeItem[] sel = tree.getSelection();
-		if(sel.length == 0 || !(sel[0].getData() instanceof TestResult))
-		{
+		if(sel.length == 0 || !(sel[0].getData() instanceof TestResult)) {
 			return null;
 		}
 		return (TestResult)sel[0].getData();
 	}
 
-	void showDetail()
-	{
+	void showDetail() {
 		TestResult r = selected();
-		if(r == null)
-		{
+		if(r == null) {
 			detail.setText("");
 			return;
 		}
 		StringBuilder sb = new StringBuilder();
 		sb.append(r.className).append('.').append(r.name).append('\n');
-		if(!r.message.isEmpty())
-		{
+		if(!r.message.isEmpty()) {
 			sb.append('\n').append(r.message).append('\n');
 		}
-		if(!r.trace.isEmpty())
-		{
+		if(!r.trace.isEmpty()) {
 			sb.append('\n').append(r.trace).append('\n');
 		}
 		detail.setText(sb.toString());
 		linkify();
 	}
 
-	void linkify()
-	{
-		if(project == null)
-		{
+	void linkify() {
+		if(project == null) {
 			return;
 		}
 		String text = detail.getText();
 		Matcher m = FRAME.matcher(text);
-		while(m.find())
-		{
+		while(m.find()) {
 			File f = project.findSource(m.group(1), m.group(2));
-			if(f == null)
-			{
+			if(f == null) {
 				continue;
 			}
 			StyleRange link = new StyleRange();
@@ -567,53 +487,41 @@ public class JUnitPane
 		}
 	}
 
-	Location linkAt(int x, int y)
-	{
-		try
-		{
+	Location linkAt(int x, int y) {
+		try {
 			int offset = detail.getOffsetAtPoint(new Point(x, y));
 			StyleRange r = detail.getStyleRangeAtOffset(offset);
-			if(r != null && r.data instanceof Location)
-			{
+			if(r != null && r.data instanceof Location) {
 				return (Location)r.data;
 			}
-		}
-		catch(IllegalArgumentException e)
-		{
+		} catch(IllegalArgumentException e) {
 			// the click was not over any row
 		}
 		return null;
 	}
 
-	void clicked(int x, int y)
-	{
+	void clicked(int x, int y) {
 		Location l = linkAt(x, y);
-		if(l != null && opener != null && detail.getSelectionCount() == 0)
-		{
+		if(l != null && opener != null && detail.getSelectionCount() == 0) {
 			opener.accept(l);
 		}
 	}
 
-	void hover(int x, int y)
-	{
+	void hover(int x, int y) {
 		int cursor = linkAt(x, y) != null ? SWT.CURSOR_HAND : SWT.CURSOR_IBEAM;
 		detail.setCursor(detail.getDisplay().getSystemCursor(cursor));
 	}
 
-	void openSelected()
-	{
+	void openSelected() {
 		TestResult r = selected();
-		if(r == null || project == null || opener == null)
-		{
+		if(r == null || project == null || opener == null) {
 			return;
 		}
 		String method = TestFinder.selectableMethod(r.name);
 		File declaring = method == null ? null : project.sourceFor(r.className);
-		if(declaring != null)
-		{
+		if(declaring != null) {
 			int line = TestFinder.methodLine(FileUtil.contentOf(declaring), method);
-			if(line > 0)
-			{
+			if(line > 0) {
 				opener.accept(new Location(declaring, line, 1));
 				return;
 			}
@@ -621,35 +529,29 @@ public class JUnitPane
 		File first = null;
 		int firstLine = 1;
 		Matcher m = FRAME.matcher(r.trace);
-		while(m.find())
-		{
+		while(m.find()) {
 			File f = project.findSource(m.group(1), m.group(2));
-			if(f == null)
-			{
+			if(f == null) {
 				continue;
 			}
 			int line = Integer.parseInt(m.group(3));
 			String cls = m.group(1);
 			int inner = cls.indexOf('$');
-			if((inner < 0 ? cls : cls.substring(0, inner)).equals(r.className))
-			{
+			if((inner < 0 ? cls : cls.substring(0, inner)).equals(r.className)) {
 				opener.accept(new Location(f, line, 1));
 				return;
 			}
-			if(first == null)
-			{
+			if(first == null) {
 				first = f;
 				firstLine = line;
 			}
 		}
-		if(first != null)
-		{
+		if(first != null) {
 			opener.accept(new Location(first, firstLine, 1));
 			return;
 		}
 		File src = project.sourceFor(r.className);
-		if(src != null)
-		{
+		if(src != null) {
 			opener.accept(new Location(src, 1, 1));
 		}
 	}

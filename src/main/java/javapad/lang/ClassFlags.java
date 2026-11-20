@@ -4,8 +4,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class ClassFlags
-{
+public class ClassFlags {
 	public static final int PUBLIC = 0x0001;
 	public static final int INTERFACE = 0x0200;
 	public static final int SYNTHETIC = 0x1000;
@@ -13,21 +12,17 @@ public class ClassFlags
 	public static final int ENUM = 0x4000;
 
 	// Reads just far enough into a class file to return its access flags.
-	public static int read(InputStream in) throws IOException
-	{
+	public static int read(InputStream in) throws IOException {
 		DataInputStream d = new DataInputStream(in);
-		if(d.readInt() != 0xCAFEBABE)
-		{
+		if(d.readInt() != 0xCAFEBABE) {
 			throw new IOException("not a class file");
 		}
 		d.readUnsignedShort();
 		d.readUnsignedShort();
 		int count = d.readUnsignedShort();
-		for(int i = 1; i < count; i++)
-		{
+		for(int i = 1; i < count; i++) {
 			int tag = d.readUnsignedByte();
-			switch(tag)
-			{
+			switch(tag) {
 			case 1:
 				d.skipNBytes(d.readUnsignedShort());
 				break;

@@ -23,29 +23,24 @@ import javax.tools.SimpleJavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 
-public class ProjectCompiler
-{
+public class ProjectCompiler {
 	private static int lowest;
 
-	public static List<Problem> compile(EclipseProject project)
-	{
+	public static List<Problem> compile(EclipseProject project) {
 		List<Problem> problems = new ArrayList<Problem>();
 		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-		if(compiler == null)
-		{
+		if(compiler == null) {
 			problems.add(new Problem("", 0, 0, true, "No Java compiler available; run JavaPad with a JDK"));
 			return problems;
 		}
 		List<File> sources = new ArrayList<File>();
-		for(File src : project.sourceFolders)
-		{
+		for(File src : project.sourceFolders) {
 			collect(src, ".java", sources);
 		}
 		project.outputFolder.mkdirs();
 		DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
 		StandardJavaFileManager fm = compiler.getStandardFileManager(diagnostics, null, null);
-		try
-		{
+		try {
 			List<String> options = new ArrayList<String>();
 			options.add("-d");
 			options.add(project.outputFolder.getAbsolutePath());
@@ -60,22 +55,18 @@ public class ProjectCompiler
 			project.preview = feature >= 21 && feature < 25 && MainFinder.needsPreview(MainFinder.inProject(project.sourceFolders, null));
 			int release = project.release;
 			int lowest = lowestRelease(compiler);
-			if(project.preview)
-			{
+			if(project.preview) {
 				// instance and no-argument mains are preview features here; they need the JDK's own language level
 				options.add("--enable-preview");
 				options.add("-source");
 				options.add(String.valueOf(feature));
 				problems.add(new Problem("", 0, 0, false, "Compiling with Java " + feature + " preview features for the newer main method style"));
 				release = 0;
-			}
-			else if(release > 0 && release < lowest)
-			{
+			} else if(release > 0 && release < lowest) {
 				problems.add(new Problem("", 0, 0, false, "Java " + release + " is no longer supported by this JDK; compiling for Java " + lowest + " instead"));
 				release = lowest;
 			}
-			if(release > 0)
-			{
+			if(release > 0) {
 				// like Eclipse: language level and class version from the project, but the running JDK's
 				// libraries, so modules outside the Java SE API (jdk.jshell etc.) still resolve
 				options.add("-source");
@@ -85,30 +76,22 @@ public class ProjectCompiler
 			}
 			Iterable<? extends JavaFileObject> units = fm.getJavaFileObjectsFromFiles(sources);
 			compiler.getTask(null, fm, diagnostics, options, null, units).call();
-		}
-		finally
-		{
-			try
-			{
+		} finally {
+			try {
 				fm.close();
-			}
-			catch(IOException e)
-			{
+			} catch(IOException e) {
 				// closing is best effort
 			}
 		}
-		for(Diagnostic<? extends JavaFileObject> d : diagnostics.getDiagnostics())
-		{
-			if(d.getKind() == Diagnostic.Kind.NOTE)
-			{
+		for(Diagnostic<? extends JavaFileObject> d : diagnostics.getDiagnostics()) {
+			if(d.getKind() == Diagnostic.Kind.NOTE) {
 				continue;
 			}
 			String file = d.getSource() == null ? "" : new File(d.getSource().toUri()).getAbsolutePath();
 			boolean error = d.getKind() == Diagnostic.Kind.ERROR;
 			String message = d.getMessage(Locale.ENGLISH);
 			int nl = message.indexOf('\n');
-			if(nl > 0)
-			{
+			if(nl > 0) {
 				message = message.substring(0, nl);
 			}
 			problems.add(new Problem(file, (int)d.getLineNumber(), column(d), error, message));
@@ -117,66 +100,50 @@ public class ProjectCompiler
 		return problems;
 	}
 
-	static int column(Diagnostic<? extends JavaFileObject> d)
-	{
+	static int column(Diagnostic<? extends JavaFileObject> d) {
 		int fallback = (int)d.getColumnNumber();
-		if(d.getSource() == null || d.getPosition() < 0)
-		{
+		if(d.getSource() == null || d.getPosition() < 0) {
 			return fallback;
 		}
-		try
-		{
+		try {
 			CharSequence content = d.getSource().getCharContent(true);
 			int pos = (int)d.getPosition();
 			int start = pos;
-			while(start > 0 && content.charAt(start - 1) != '\n')
-			{
+			while(start > 0 && content.charAt(start - 1) != '\n') {
 				start--;
 			}
 			return pos - start + 1;
-		}
-		catch(IOException e)
-		{
+		} catch(IOException e) {
 			return fallback;
 		}
 	}
 
 	// The project's language level, raised to the lowest one this JDK still accepts; 0 when the project sets none.
-	public static int effectiveRelease(int release, JavaCompiler compiler)
-	{
+	public static int effectiveRelease(int release, JavaCompiler compiler) {
 		return release > 0 ? Math.max(release, lowestRelease(compiler)) : 0;
 	}
 
 	// Asks the compiler itself which language levels it accepts (JDK 21 dropped 7 and below).
-	static synchronized int lowestRelease(JavaCompiler compiler)
-	{
-		if(lowest == 0)
-		{
+	static synchronized int lowestRelease(JavaCompiler compiler) {
+		if(lowest == 0) {
 			lowest = Runtime.version().feature();
-			for(int n = 5; n < Runtime.version().feature(); n++)
-			{
+			for(int n = 5; n < Runtime.version().feature(); n++) {
 				StringWriter sink = new StringWriter();
-				JavaFileObject probe = new SimpleJavaFileObject(URI.create("string:///Probe.java"), JavaFileObject.Kind.SOURCE)
-				{
-					public CharSequence getCharContent(boolean ignoreEncodingErrors)
-					{
+				JavaFileObject probe = new SimpleJavaFileObject(URI.create("string:///Probe.java"), JavaFileObject.Kind.SOURCE) {
+					public CharSequence getCharContent(boolean ignoreEncodingErrors) {
 						return "class Probe {}";
 					}
 				};
 				List<String> flags = Arrays.asList("-source", String.valueOf(n), "-target", String.valueOf(n), "-proc:none", "-Xlint:-options", "-d", System.getProperty("java.io.tmpdir"));
 				boolean ok;
-				try
-				{
+				try {
 					ok = compiler.getTask(sink, null, null, flags, null, Arrays.asList(probe)).call();
-				}
-				catch(RuntimeException e)
-				{
+				} catch(RuntimeException e) {
 					ok = false;
 				}
 				File made = new File(System.getProperty("java.io.tmpdir"), "Probe.class");
 				made.delete();
-				if(ok)
-				{
+				if(ok) {
 					lowest = n;
 					break;
 				}
@@ -185,59 +152,42 @@ public class ProjectCompiler
 		return lowest;
 	}
 
-	static void collect(File dir, String suffix, List<File> out)
-	{
+	static void collect(File dir, String suffix, List<File> out) {
 		File[] children = dir.listFiles();
-		if(children == null)
-		{
+		if(children == null) {
 			return;
 		}
 		Arrays.sort(children);
-		for(File f : children)
-		{
-			if(f.isDirectory())
-			{
+		for(File f : children) {
+			if(f.isDirectory()) {
 				collect(f, suffix, out);
-			}
-			else if(f.getName().endsWith(suffix))
-			{
+			} else if(f.getName().endsWith(suffix)) {
 				out.add(f);
 			}
 		}
 	}
 
-	static void copyResources(EclipseProject project)
-	{
-		for(File src : project.sourceFolders)
-		{
-			if(src.equals(project.root))
-			{
+	static void copyResources(EclipseProject project) {
+		for(File src : project.sourceFolders) {
+			if(src.equals(project.root)) {
 				continue;
 			}
 			Path base = src.toPath();
-			try(Stream<Path> walk = Files.walk(base))
-			{
-				walk.filter(Files::isRegularFile).forEach(p ->
-				{
+			try(Stream<Path> walk = Files.walk(base)) {
+				walk.filter(Files::isRegularFile).forEach(p -> {
 					String name = p.getFileName().toString();
-					if(name.endsWith(".java") || name.endsWith(".class"))
-					{
+					if(name.endsWith(".java") || name.endsWith(".class")) {
 						return;
 					}
 					Path target = project.outputFolder.toPath().resolve(base.relativize(p));
-					try
-					{
+					try {
 						Files.createDirectories(target.getParent());
 						Files.copy(p, target, StandardCopyOption.REPLACE_EXISTING);
-					}
-					catch(IOException e)
-					{
+					} catch(IOException e) {
 						// a resource that cannot be copied is left out of the output folder; compile errors are reported separately
 					}
 				});
-			}
-			catch(IOException e)
-			{
+			} catch(IOException e) {
 				// an unreadable resource folder is skipped
 			}
 		}

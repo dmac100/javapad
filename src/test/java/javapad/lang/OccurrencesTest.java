@@ -11,8 +11,7 @@ import javapad.model.EclipseProject;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class OccurrencesTest
-{
+public class OccurrencesTest {
 	static JavaAnalyzer analyzer;
 	static File file;
 
@@ -38,8 +37,7 @@ public class OccurrencesTest
 		+ "}\n";
 
 	@BeforeClass
-	public static void setUp() throws Exception
-	{
+	public static void setUp() throws Exception {
 		File dir = Files.createTempDirectory("occ").toFile();
 		file = new File(dir, "src/p/Main.java");
 		file.getParentFile().mkdirs();
@@ -48,29 +46,24 @@ public class OccurrencesTest
 	}
 
 	// the offset of the n-th (1-based) occurrence of a string
-	static int at(String s, int n)
-	{
+	static int at(String s, int n) {
 		int i = -1;
-		for(int k = 0; k < n; k++)
-		{
+		for(int k = 0; k < n; k++) {
 			i = SRC.indexOf(s, i + 1);
 		}
 		return i;
 	}
 
-	static List<Integer> starts(List<int[]> ranges)
-	{
+	static List<Integer> starts(List<int[]> ranges) {
 		List<Integer> list = new ArrayList<Integer>();
-		for(int[] r : ranges)
-		{
+		for(int[] r : ranges) {
 			list.add(r[0]);
 		}
 		return list;
 	}
 
 	@Test
-	public void aLocalVariableIsNotTheFieldWithTheSameName()
-	{
+	public void aLocalVariableIsNotTheFieldWithTheSameName() {
 		// the declaration "int count = 1" and its uses in a(), but not the field or the strings and comments
 		int decl = at("count = 1", 1);
 		List<Integer> starts = starts(Occurrences.find(analyzer, file, SRC, decl, 5));
@@ -83,8 +76,7 @@ public class OccurrencesTest
 	}
 
 	@Test
-	public void aFieldIsFoundThroughThisAndPlainUse()
-	{
+	public void aFieldIsFoundThroughThisAndPlainUse() {
 		int field = at("count;", 1);
 		List<Integer> starts = starts(Occurrences.find(analyzer, file, SRC, field, 5));
 		assertEquals(3, starts.size());
@@ -94,8 +86,7 @@ public class OccurrencesTest
 	}
 
 	@Test
-	public void aMethodIsFoundByCallsWithAndWithoutThis()
-	{
+	public void aMethodIsFoundByCallsWithAndWithoutThis() {
 		int decl = at("void a()", 1) + 5;
 		List<Integer> starts = starts(Occurrences.find(analyzer, file, SRC, decl, 1));
 		assertEquals(3, starts.size());
@@ -105,8 +96,7 @@ public class OccurrencesTest
 	}
 
 	@Test
-	public void aClassIncludesItsConstructorAndUses()
-	{
+	public void aClassIncludesItsConstructorAndUses() {
 		int decl = at("class Main", 1) + 6;
 		List<Integer> starts = starts(Occurrences.find(analyzer, file, SRC, decl, 4));
 		assertTrue(starts.toString(), starts.contains(decl));
@@ -116,8 +106,7 @@ public class OccurrencesTest
 	}
 
 	@Test
-	public void unresolvedNamesFallBackToWholeWordsInCode()
-	{
+	public void unresolvedNamesFallBackToWholeWordsInCode() {
 		String text = "class A {\n\tvoid f() {\n\t\tmissing(1);\n\t\tmissingly(2); // missing\n\t\tString s = \"missing\";\n\t\tmissing(3);\n\t}\n}\n";
 		int first = text.indexOf("missing");
 		List<int[]> ranges = Occurrences.find(analyzer, file, text, first, 7);

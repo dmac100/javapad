@@ -13,26 +13,22 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
 // Asks what to search the project for.
-public class FindInFilesDialog
-{
+public class FindInFilesDialog {
 	private final Shell parent;
 	private Request result;
 
-	public static class Request
-	{
+	public static class Request {
 		public String query;
 		public boolean caseSensitive;
 		public boolean regex;
 	}
 
-	public FindInFilesDialog(Shell parent)
-	{
+	public FindInFilesDialog(Shell parent) {
 		this.parent = parent;
 	}
 
 	// initial: the text to start with; null on cancel
-	public Request open(String initial, boolean caseSensitive, boolean regex)
-	{
+	public Request open(String initial, boolean caseSensitive, boolean regex) {
 		Shell dialog = new Shell(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL);
 		dialog.setText("Find in Files");
 		GridLayout layout = new GridLayout(1, false);
@@ -64,18 +60,13 @@ public class FindInFilesDialog
 		search.setText("Search");
 		Button cancel = new Button(buttons, SWT.PUSH);
 		cancel.setText("Cancel");
-		search.addListener(SWT.Selection, e ->
-		{
-			if(text.getText().isEmpty())
-			{
+		search.addListener(SWT.Selection, e -> {
+			if(text.getText().isEmpty()) {
 				return;
 			}
-			try
-			{
+			try {
 				FileSearch.pattern(text.getText(), caseBox.getSelection(), regexBox.getSelection());
-			}
-			catch(PatternSyntaxException ex)
-			{
+			} catch(PatternSyntaxException ex) {
 				error.setText("Not a valid regular expression: " + ex.getDescription());
 				dialog.pack();
 				return;
@@ -94,10 +85,8 @@ public class FindInFilesDialog
 		dialog.open();
 		text.setFocus();
 		Display display = parent.getDisplay();
-		while(!dialog.isDisposed())
-		{
-			if(!display.readAndDispatch())
-			{
+		while(!dialog.isDisposed()) {
+			if(!display.readAndDispatch()) {
 				display.sleep();
 			}
 		}

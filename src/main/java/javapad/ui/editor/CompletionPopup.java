@@ -18,8 +18,7 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 
 // The proposal list under the caret. It never takes focus: the editor keeps it and forwards keys here while the list is open.
-public class CompletionPopup
-{
+public class CompletionPopup {
 	static final int ROWS = 10;
 
 	private final StyledText text;
@@ -30,51 +29,42 @@ public class CompletionPopup
 	private List<Proposal> shown = new ArrayList<Proposal>();
 	private int wordStart;
 
-	public CompletionPopup(StyledText text, Theme theme, Consumer<Proposal> acceptor)
-	{
+	public CompletionPopup(StyledText text, Theme theme, Consumer<Proposal> acceptor) {
 		this.text = text;
 		this.theme = theme;
 		this.acceptor = acceptor;
 	}
 
-	public boolean isOpen()
-	{
+	public boolean isOpen() {
 		return table != null && !table.isDisposed() && table.isVisible();
 	}
 
-	public int wordStart()
-	{
+	public int wordStart() {
 		return wordStart;
 	}
 
-	public List<Proposal> proposals()
-	{
+	public List<Proposal> proposals() {
 		return shown;
 	}
 
-	public Table getControl()
-	{
+	public Table getControl() {
 		return table;
 	}
 
-	public void show(CompletionEngine.Completions completions, boolean manual)
-	{
+	public void show(CompletionEngine.Completions completions, boolean manual) {
 		all = completions.proposals;
 		wordStart = completions.start;
-		if(!filter())
-		{
+		if(!filter()) {
 			close();
 			return;
 		}
-		if(manual && shown.size() == 1)
-		{
+		if(manual && shown.size() == 1) {
 			Proposal only = shown.get(0);
 			close();
 			acceptor.accept(only);
 			return;
 		}
-		if(table == null || table.isDisposed())
-		{
+		if(table == null || table.isDisposed()) {
 			build();
 		}
 		// the editor font may have changed since the list was made
@@ -85,48 +75,38 @@ public class CompletionPopup
 		table.moveAbove(null);
 	}
 
-	String prefix()
-	{
+	String prefix() {
 		int caret = text.getCaretOffset();
-		if(caret < wordStart)
-		{
+		if(caret < wordStart) {
 			return null;
 		}
-		if(caret == wordStart)
-		{
+		if(caret == wordStart) {
 			return "";
 		}
 		String word = text.getText(wordStart, caret - 1);
-		for(int i = 0; i < word.length(); i++)
-		{
-			if(!Character.isJavaIdentifierPart(word.charAt(i)))
-			{
+		for(int i = 0; i < word.length(); i++) {
+			if(!Character.isJavaIdentifierPart(word.charAt(i))) {
 				return null;
 			}
 		}
 		return word;
 	}
 
-	boolean filter()
-	{
+	boolean filter() {
 		String prefix = prefix();
-		if(prefix == null)
-		{
+		if(prefix == null) {
 			return false;
 		}
 		shown = new ArrayList<Proposal>();
-		for(Proposal p : all)
-		{
-			if(Names.matches(prefix, p.name))
-			{
+		for(Proposal p : all) {
+			if(Names.matches(prefix, p.name)) {
 				shown.add(p);
 			}
 		}
 		return !shown.isEmpty();
 	}
 
-	void build()
-	{
+	void build() {
 		// a child of the editor rather than a window of its own, so it can never take the keyboard focus
 		table = new Table(text, SWT.SINGLE | SWT.FULL_SELECTION | SWT.V_SCROLL | SWT.BORDER);
 		table.setVisible(false);
@@ -139,27 +119,20 @@ public class CompletionPopup
 		table.addListener(SWT.MouseUp, e -> text.setFocus());
 	}
 
-	void fill()
-	{
+	void fill() {
 		table.setBackground(theme.background);
 		table.setForeground(theme.foreground);
 		table.setRedraw(false);
 		table.removeAll();
-		for(Proposal p : shown)
-		{
+		for(Proposal p : shown) {
 			TableItem item = new TableItem(table, SWT.NONE);
 			item.setText(new String[] {p.kindLetter() + "  " + p.label, p.detail});
 			item.setForeground(1, theme.gutter);
-			if(p.kind == Proposal.LOCAL)
-			{
+			if(p.kind == Proposal.LOCAL) {
 				item.setForeground(0, theme.pass);
-			}
-			else if(p.kind == Proposal.KEYWORD)
-			{
+			} else if(p.kind == Proposal.KEYWORD) {
 				item.setForeground(0, theme.keyword);
-			}
-			else if(p.kind == Proposal.TYPE)
-			{
+			} else if(p.kind == Proposal.TYPE) {
 				item.setForeground(0, theme.type);
 			}
 		}
@@ -169,8 +142,7 @@ public class CompletionPopup
 		table.setRedraw(true);
 	}
 
-	void place()
-	{
+	void place() {
 		int caret = Math.max(wordStart, 0);
 		Point location = text.getLocationAtOffset(caret);
 		int lineHeight = text.getLineHeight(caret);
@@ -181,38 +153,30 @@ public class CompletionPopup
 		int height = rows * rowHeight + 6;
 		int x = Math.max(0, Math.min(location.x, area.width - width));
 		int y = location.y + lineHeight;
-		if(y + height > area.height && location.y - height >= 0)
-		{
+		if(y + height > area.height && location.y - height >= 0) {
 			y = location.y - height;
 		}
 		table.setBounds(x, y, width, height);
 	}
 
-	public void close()
-	{
-		if(table != null && !table.isDisposed())
-		{
+	public void close() {
+		if(table != null && !table.isDisposed()) {
 			table.setVisible(false);
 		}
 	}
 
-	public void dispose()
-	{
-		if(table != null && !table.isDisposed())
-		{
+	public void dispose() {
+		if(table != null && !table.isDisposed()) {
 			table.dispose();
 		}
 	}
 
 	// Called after every edit and caret move while the list is open.
-	public void refresh()
-	{
-		if(!isOpen())
-		{
+	public void refresh() {
+		if(!isOpen()) {
 			return;
 		}
-		if(!filter())
-		{
+		if(!filter()) {
 			close();
 			return;
 		}
@@ -220,92 +184,74 @@ public class CompletionPopup
 		place();
 	}
 
-	void move(int delta)
-	{
+	void move(int delta) {
 		int count = table.getItemCount();
-		if(count == 0)
-		{
+		if(count == 0) {
 			return;
 		}
 		int next = table.getSelectionIndex() + delta;
-		if(delta == 1 || delta == -1)
-		{
+		if(delta == 1 || delta == -1) {
 			next = (next + count) % count;
-		}
-		else
-		{
+		} else {
 			next = Math.max(0, Math.min(count - 1, next));
 		}
 		table.setSelection(next);
 	}
 
-	public Proposal selected()
-	{
+	public Proposal selected() {
 		int i = table == null || table.isDisposed() ? -1 : table.getSelectionIndex();
 		return i < 0 || i >= shown.size() ? null : shown.get(i);
 	}
 
-	void acceptSelected()
-	{
+	void acceptSelected() {
 		Proposal p = selected();
 		close();
-		if(p != null)
-		{
+		if(p != null) {
 			acceptor.accept(p);
 		}
 	}
 
 	// Returns true when the key was used by the list.
-	public boolean handleKey(VerifyEvent e)
-	{
-		if(!isOpen())
-		{
+	public boolean handleKey(VerifyEvent e) {
+		if(!isOpen()) {
 			return false;
 		}
 		boolean modified = (e.stateMask & (SWT.MOD1 | SWT.ALT)) != 0;
-		if(e.keyCode == SWT.ARROW_DOWN && !modified)
-		{
+		if(e.keyCode == SWT.ARROW_DOWN && !modified) {
 			e.doit = false;
 			move(1);
 			return true;
 		}
-		if(e.keyCode == SWT.ARROW_UP && !modified)
-		{
+		if(e.keyCode == SWT.ARROW_UP && !modified) {
 			e.doit = false;
 			move(-1);
 			return true;
 		}
-		if(e.keyCode == SWT.PAGE_DOWN)
-		{
+		if(e.keyCode == SWT.PAGE_DOWN) {
 			e.doit = false;
 			move(ROWS);
 			return true;
 		}
-		if(e.keyCode == SWT.PAGE_UP)
-		{
+		if(e.keyCode == SWT.PAGE_UP) {
 			e.doit = false;
 			move(-ROWS);
 			return true;
 		}
-		if(e.keyCode == SWT.ESC)
-		{
+		if(e.keyCode == SWT.ESC) {
 			e.doit = false;
 			close();
 			return true;
 		}
-		if(e.character == '\r' || e.character == '\n' || e.character == '\t' || e.keyCode == SWT.KEYPAD_CR)
-		{
+		if(e.character == '\r' || e.character == '\n' || e.character == '\t' || e.keyCode == SWT.KEYPAD_CR) {
 			e.doit = false;
 			acceptSelected();
 			return true;
 		}
-		if(e.keyCode == SWT.ARROW_LEFT || e.keyCode == SWT.ARROW_RIGHT || e.keyCode == SWT.HOME || e.keyCode == SWT.END)
-		{
+		if(e.keyCode == SWT.ARROW_LEFT || e.keyCode == SWT.ARROW_RIGHT || e.keyCode == SWT.HOME || e.keyCode == SWT.END) {
 			close();
 			return false;
 		}
-		if(e.character != 0 && !Character.isJavaIdentifierPart(e.character) && e.character != SWT.BS && !modified)
-		{
+		if(e.character != 0 && !Character.isJavaIdentifierPart(e.character) && e.character != SWT.BS && !modified) {
 			close();
 		}
 		return false;

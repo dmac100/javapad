@@ -22,8 +22,7 @@ import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 
 // The commit dialog: message, author, committer, amend, and the files to include.
-public class CommitDialog
-{
+public class CommitDialog {
 	private final Shell parent;
 	private final GitRepo repo;
 	private final GitStatus status;
@@ -34,8 +33,7 @@ public class CommitDialog
 	private final List<FileChange> listed = new ArrayList<FileChange>();
 	private final List<String> checked = new ArrayList<String>();
 
-	static class Request
-	{
+	static class Request {
 		String message;
 		String author;
 		String committer;
@@ -45,16 +43,14 @@ public class CommitDialog
 	}
 
 	// comparer: shows a file next to its last committed version (double-click in the list)
-	CommitDialog(Shell parent, GitRepo repo, GitStatus status, BiConsumer<Shell, FileChange> comparer)
-	{
+	CommitDialog(Shell parent, GitRepo repo, GitStatus status, BiConsumer<Shell, FileChange> comparer) {
 		this.comparer = comparer;
 		this.parent = parent;
 		this.repo = repo;
 		this.status = status;
 	}
 
-	Request open()
-	{
+	Request open() {
 		Shell dialog = new Shell(parent, SWT.DIALOG_TRIM | SWT.APPLICATION_MODAL | SWT.RESIZE);
 		dialog.setText("Commit");
 		GridLayout layout = new GridLayout(2, false);
@@ -81,8 +77,7 @@ public class CommitDialog
 		table.setHeaderVisible(true);
 		String[] titles = {"File", "State"};
 		int[] widths = {620, 160};
-		for(int i = 0; i < titles.length; i++)
-		{
+		for(int i = 0; i < titles.length; i++) {
 			TableColumn c = new TableColumn(table, SWT.NONE);
 			c.setText(titles[i]);
 			c.setWidth(widths[i]);
@@ -119,33 +114,26 @@ public class CommitDialog
 		commit.setText("Commit");
 		Button cancel = new Button(buttons, SWT.PUSH);
 		cancel.setText("Cancel");
-		for(FileChange c : status.changes)
-		{
-			if(!c.untracked())
-			{
+		for(FileChange c : status.changes) {
+			if(!c.untracked()) {
 				checked.add(c.path);
 			}
 		}
 		fill();
-		untrackedBox.addListener(SWT.Selection, e ->
-		{
+		untrackedBox.addListener(SWT.Selection, e -> {
 			remember();
 			fill();
 		});
-		table.addListener(SWT.DefaultSelection, e ->
-		{
+		table.addListener(SWT.DefaultSelection, e -> {
 			int i = table.getSelectionIndex();
-			if(i >= 0 && i < listed.size())
-			{
+			if(i >= 0 && i < listed.size()) {
 				comparer.accept(dialog, listed.get(i));
 			}
 		});
 		all.addListener(SWT.Selection, e -> setAll(true));
 		none.addListener(SWT.Selection, e -> setAll(false));
-		amend.addListener(SWT.Selection, e ->
-		{
-			if(amend.getSelection() && message.getText().trim().isEmpty() && repo.hasCommits())
-			{
+		amend.addListener(SWT.Selection, e -> {
+			if(amend.getSelection() && message.getText().trim().isEmpty() && repo.hasCommits()) {
 				message.setText(repo.lastMessage());
 				author.setText(repo.lastAuthor());
 			}
@@ -158,25 +146,21 @@ public class CommitDialog
 		dialog.open();
 		message.setFocus();
 		Display display = parent.getDisplay();
-		while(!dialog.isDisposed())
-		{
-			if(!display.readAndDispatch())
-			{
+		while(!dialog.isDisposed()) {
+			if(!display.readAndDispatch()) {
 				display.sleep();
 			}
 		}
 		return result;
 	}
 
-	static void label(Composite parent, String text)
-	{
+	static void label(Composite parent, String text) {
 		Label l = new Label(parent, SWT.NONE);
 		l.setText(text);
 		l.setLayoutData(new GridData(SWT.BEGINNING, SWT.BEGINNING, false, false));
 	}
 
-	static Text field(Composite parent, String text)
-	{
+	static Text field(Composite parent, String text) {
 		Text t = new Text(parent, SWT.BORDER);
 		t.setText(text);
 		t.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
@@ -184,27 +168,21 @@ public class CommitDialog
 	}
 
 	// remembers which listed files are ticked, so toggling "show untracked" keeps the choice
-	void remember()
-	{
-		for(int i = 0; i < listed.size(); i++)
-		{
+	void remember() {
+		for(int i = 0; i < listed.size(); i++) {
 			String path = listed.get(i).path;
 			checked.remove(path);
-			if(table.getItem(i).getChecked())
-			{
+			if(table.getItem(i).getChecked()) {
 				checked.add(path);
 			}
 		}
 	}
 
-	void fill()
-	{
+	void fill() {
 		table.removeAll();
 		listed.clear();
-		for(FileChange c : status.changes)
-		{
-			if(c.untracked() && !untrackedBox.getSelection())
-			{
+		for(FileChange c : status.changes) {
+			if(c.untracked() && !untrackedBox.getSelection()) {
 				continue;
 			}
 			listed.add(c);
@@ -214,21 +192,17 @@ public class CommitDialog
 		}
 	}
 
-	void setAll(boolean on)
-	{
-		for(TableItem item : table.getItems())
-		{
+	void setAll(boolean on) {
+		for(TableItem item : table.getItems()) {
 			item.setChecked(on);
 		}
 	}
 
-	void accept(Shell dialog, Text message, Text author, Text committer, Button amend, boolean push)
-	{
+	void accept(Shell dialog, Text message, Text author, Text committer, Button amend, boolean push) {
 		remember();
 		Request r = new Request();
 		r.message = message.getText().trim();
-		if(r.message.isEmpty())
-		{
+		if(r.message.isEmpty()) {
 			ConfirmDialog.message(dialog, "Commit", "Enter a commit message.", SWT.ICON_WARNING);
 			return;
 		}
@@ -236,20 +210,16 @@ public class CommitDialog
 		r.committer = committer.getText();
 		r.amend = amend.getSelection();
 		r.push = push;
-		for(FileChange c : status.changes)
-		{
-			if(checked.contains(c.path))
-			{
+		for(FileChange c : status.changes) {
+			if(checked.contains(c.path)) {
 				r.paths.add(c.path);
-				if(c.oldPath != null)
-				{
+				if(c.oldPath != null) {
 					// the other half of a rename, or the old file would stay in the tree of the commit
 					r.paths.add(c.oldPath);
 				}
 			}
 		}
-		if(r.paths.isEmpty() && !r.amend)
-		{
+		if(r.paths.isEmpty() && !r.amend) {
 			ConfirmDialog.message(dialog, "Commit", "Select at least one file.", SWT.ICON_WARNING);
 			return;
 		}

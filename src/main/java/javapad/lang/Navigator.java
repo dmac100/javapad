@@ -22,36 +22,25 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 
-public class Navigator
-{
+public class Navigator {
 	// The declaration the code at the offset refers to (or declares).
-	public static Element elementAt(JavaAnalyzer.Result r, int offset)
-	{
-		for(TreePath p = r.pathAt(offset); p != null; p = p.getParentPath())
-		{
+	public static Element elementAt(JavaAnalyzer.Result r, int offset) {
+		for(TreePath p = r.pathAt(offset); p != null; p = p.getParentPath()) {
 			Tree leaf = p.getLeaf();
-			try
-			{
-				if(leaf instanceof MethodInvocationTree)
-				{
+			try {
+				if(leaf instanceof MethodInvocationTree) {
 					Element e = r.trees.getElement(new TreePath(p, ((MethodInvocationTree)leaf).getMethodSelect()));
-					if(e != null)
-					{
+					if(e != null) {
 						return e;
 					}
-				}
-				else if(leaf instanceof IdentifierTree || leaf instanceof MemberSelectTree || leaf instanceof MethodTree || leaf instanceof ClassTree
-					|| leaf instanceof VariableTree || leaf instanceof NewClassTree || leaf instanceof MemberReferenceTree)
-				{
+				} else if(leaf instanceof IdentifierTree || leaf instanceof MemberSelectTree || leaf instanceof MethodTree || leaf instanceof ClassTree
+					|| leaf instanceof VariableTree || leaf instanceof NewClassTree || leaf instanceof MemberReferenceTree) {
 					Element e = r.trees.getElement(p);
-					if(e != null)
-					{
+					if(e != null) {
 						return e;
 					}
 				}
-			}
-			catch(Exception ex)
-			{
+			} catch(Exception ex) {
 				// javac could not resolve this node; fall through to the next candidate
 			}
 		}
@@ -59,83 +48,63 @@ public class Navigator
 	}
 
 	// For a variable, the class of its type; otherwise the element itself.
-	public static Element typeOrMethod(Element e)
-	{
-		if(e instanceof VariableElement && e.asType().getKind() == TypeKind.DECLARED)
-		{
+	public static Element typeOrMethod(Element e) {
+		if(e instanceof VariableElement && e.asType().getKind() == TypeKind.DECLARED) {
 			return ((DeclaredType)e.asType()).asElement();
 		}
 		return e;
 	}
 
-	public static String keyOf(Element e, JavaAnalyzer.Result r)
-	{
-		if(e instanceof ExecutableElement)
-		{
+	public static String keyOf(Element e, JavaAnalyzer.Result r) {
+		if(e instanceof ExecutableElement) {
 			return CodeModel.methodKey((ExecutableElement)e, r.elements, r.types);
 		}
-		if(e instanceof TypeElement)
-		{
+		if(e instanceof TypeElement) {
 			return CodeModel.ownerName((TypeElement)e, r.elements);
 		}
 		return null;
 	}
 
-	public static String describe(Element e, JavaAnalyzer.Result r)
-	{
-		if(e instanceof ExecutableElement)
-		{
+	public static String describe(Element e, JavaAnalyzer.Result r) {
+		if(e instanceof ExecutableElement) {
 			return CodeModel.methodDisplay((ExecutableElement)e, r.elements, r.types);
 		}
-		if(e instanceof TypeElement)
-		{
+		if(e instanceof TypeElement) {
 			return ((TypeElement)e).getQualifiedName().toString();
 		}
 		return e.getSimpleName().toString();
 	}
 
 	// Where the element is declared in source, or null when it comes from a library.
-	public static CodeModel.Place declaration(JavaAnalyzer.Result r, Element e)
-	{
+	public static CodeModel.Place declaration(JavaAnalyzer.Result r, Element e) {
 		TreePath path;
-		try
-		{
+		try {
 			path = r.trees.getPath(e);
-		}
-		catch(Exception ex)
-		{
+		} catch(Exception ex) {
 			return null;
 		}
-		if(path == null)
-		{
+		if(path == null) {
 			return null;
 		}
 		CompilationUnitTree unit = path.getCompilationUnit();
 		String name = e.getKind() == ElementKind.CONSTRUCTOR ? e.getEnclosingElement().getSimpleName().toString() : e.getSimpleName().toString();
 		long start = r.trees.getSourcePositions().getStartPosition(unit, path.getLeaf());
-		if(start < 0)
-		{
+		if(start < 0) {
 			return null;
 		}
 		String source;
-		try
-		{
+		try {
 			source = unit.getSourceFile().getCharContent(true).toString();
-		}
-		catch(Exception ex)
-		{
+		} catch(Exception ex) {
 			return null;
 		}
 		long offset = start;
-		if(!name.isEmpty())
-		{
+		if(!name.isEmpty()) {
 			int idx = source.indexOf(name, (int)start);
-			while(idx >= 0)
-			{
+			while(idx >= 0) {
 				boolean before = idx == 0 || !Character.isJavaIdentifierPart(source.charAt(idx - 1));
 				boolean after = idx + name.length() >= source.length() || !Character.isJavaIdentifierPart(source.charAt(idx + name.length()));
-				if(before && after)
-				{
+				if(before && after) {
 					offset = idx;
 					break;
 				}

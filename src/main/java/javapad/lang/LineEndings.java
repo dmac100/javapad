@@ -1,32 +1,23 @@
 package javapad.lang;
 
 // Line ending conversion: every "\r\n", "\r" and "\n" in a text becomes the same ending.
-public class LineEndings
-{
+public class LineEndings {
 	public static final String UNIX = "\n";
 	public static final String WINDOWS = "\r\n";
 
-	public static String convert(String text, String ending)
-	{
+	public static String convert(String text, String ending) {
 		StringBuilder sb = new StringBuilder(text.length() + 16);
 		int i = 0;
-		while(i < text.length())
-		{
+		while(i < text.length()) {
 			char c = text.charAt(i);
-			if(c == '\r')
-			{
+			if(c == '\r') {
 				sb.append(ending);
-				if(i + 1 < text.length() && text.charAt(i + 1) == '\n')
-				{
+				if(i + 1 < text.length() && text.charAt(i + 1) == '\n') {
 					i++;
 				}
-			}
-			else if(c == '\n')
-			{
+			} else if(c == '\n') {
 				sb.append(ending);
-			}
-			else
-			{
+			} else {
 				sb.append(c);
 			}
 			i++;

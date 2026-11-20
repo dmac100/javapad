@@ -5,11 +5,9 @@ import static org.junit.Assert.assertEquals;
 import java.util.Arrays;
 import org.junit.Test;
 
-public class CommandListTest
-{
+public class CommandListTest {
 	@Test
-	public void matchesAllTokensAndRanksNamesFirst()
-	{
+	public void matchesAllTokensAndRanksNamesFirst() {
 		CommandList list = new CommandList();
 		list.add("File > Save", () -> {});
 		list.add("Run > Build and Run", () -> {});
@@ -22,8 +20,7 @@ public class CommandListTest
 	}
 
 	@Test
-	public void starIsAWildcard()
-	{
+	public void starIsAWildcard() {
 		CommandList list = new CommandList();
 		list.add("src/app/FooTest.java", () -> {});
 		list.add("src/app/Foo.java", () -> {});
@@ -35,8 +32,7 @@ public class CommandListTest
 	}
 
 	@Test
-	public void runsTheChosenCommand()
-	{
+	public void runsTheChosenCommand() {
 		CommandList list = new CommandList();
 		int[] count = {0};
 		list.add("A > B", () -> count[0]++);
@@ -46,8 +42,7 @@ public class CommandListTest
 	}
 
 	@Test
-	public void filesShowTheirNameFirst()
-	{
+	public void filesShowTheirNameFirst() {
 		CommandList list = new CommandList();
 		list.add("Bar.java - src/foo", () -> {});
 		list.add("Foo.java - src/bar", () -> {});

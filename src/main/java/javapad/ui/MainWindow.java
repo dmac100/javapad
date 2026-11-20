@@ -67,8 +67,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.ToolBar;
 
-public class MainWindow
-{
+public class MainWindow {
 	public final Display display;
 	public final Shell shell;
 	public final Theme theme;
@@ -120,8 +119,7 @@ public class MainWindow
 		"class", "jar", "zip", "gz", "png", "jpg", "jpeg", "gif", "bmp", "ico", "so", "dll", "exe", "pdf", "wav", "mp3",
 		"ogg", "iso", "grp", "wad", "dylib", "o", "a", "tar", "7z"));
 
-	public MainWindow(Display display)
-	{
+	public MainWindow(Display display) {
 		this.display = display;
 		theme = new Theme(display);
 		assist = new CodeAssist(display);
@@ -171,21 +169,17 @@ public class MainWindow
 		claude = new ClaudePane(bottom, theme);
 		claudeTab = bottomTabs.add("claude", "Claude", claude.getControl(), true);
 		claude.setWaitingHook(waiting -> bottomTabs.setText(claudeTab, waiting ? "Claude (waiting)" : "Claude"));
-		bottom.addListener(SWT.Selection, e ->
-		{
-			if(bottomTabs.selected() == terminalTab)
-			{
+		bottom.addListener(SWT.Selection, e -> {
+			if(bottomTabs.selected() == terminalTab) {
 				terminal.ensureStarted();
 			}
-			if(bottomTabs.selected() == historyTab)
-			{
+			if(bottomTabs.selected() == historyTab) {
 				history.refresh();
 			}
 		});
 		callPane.setModelSupplier(() -> assist.model());
 		callPane.setOpener(l -> openLine(l));
-		navigation.setHierarchy(t ->
-		{
+		navigation.setHierarchy(t -> {
 			callPane.show(t.key, t.description, t.declaration);
 			bottomTabs.show(callTab);
 		});
@@ -206,19 +200,16 @@ public class MainWindow
 		editors.setProblemsHook(list -> markErrorFiles(list));
 		console.setOpener(l -> openLine(l));
 		problemsPane.setOpener(l -> open(l));
-		problemsPane.setPreviewer(l ->
-		{
+		problemsPane.setPreviewer(l -> {
 			EditorTab tab = editors.open(l.file);
-			if(tab != null)
-			{
+			if(tab != null) {
 				tab.editor.highlightLine(l.line);
 			}
 		});
 		junitPane.setOpener(l -> openLine(l));
 		junitPane.setRunner(specs -> run.runSpecs(specs));
 		junitPane.setToolbar(() -> run.rerunAll(), () -> run.rerunFailed(), () -> run.stop(), () -> run.testsRunning(), () -> run.hasTestRun());
-		console.setInputSink(s ->
-		{
+		console.setInputSink(s -> {
 			run.sendInput(s);
 		});
 		shell.addListener(SWT.Close, e -> e.doit = confirmExit());
@@ -227,17 +218,14 @@ public class MainWindow
 		applyTheme();
 	}
 
-	public Shell getShell()
-	{
+	public Shell getShell() {
 		return shell;
 	}
 
-	void applyTheme()
-	{
+	void applyTheme() {
 		editors.restyle();
 		CTabFolder[] folders = {bottom, left};
-		for(CTabFolder f : folders)
-		{
+		for(CTabFolder f : folders) {
 			f.setBackground(theme.chrome);
 			f.setForeground(theme.foreground);
 			f.setSelectionBackground(f == left ? theme.sidebar : theme.background);
@@ -255,19 +243,16 @@ public class MainWindow
 		history.restyle();
 		claude.restyle();
 		searchPane.restyle();
-		for(EditorTab tab : editors.tabs())
-		{
+		for(EditorTab tab : editors.tabs()) {
 			tab.editor.restyle();
 		}
 	}
 
-	public boolean toolbarShown()
-	{
+	public boolean toolbarShown() {
 		return !((GridData)toolbar.getLayoutData()).exclude;
 	}
 
-	public void showToolbar(boolean shown)
-	{
+	public void showToolbar(boolean shown) {
 		toolbar.setVisible(shown);
 		((GridData)toolbar.getLayoutData()).exclude = !shown;
 		shell.layout(true, true);
@@ -275,29 +260,24 @@ public class MainWindow
 	}
 
 	// a new editor tab: its menu, and the committed text its changed lines are marked against
-	void tabOpened(EditorTab tab)
-	{
+	void tabOpened(EditorTab tab) {
 		new EditorMenu(this).attach(tab);
 		git.loadBaseline(tab);
 	}
 
-	public void showWhitespace(boolean shown)
-	{
+	public void showWhitespace(boolean shown) {
 		theme.showWhitespace = shown;
 		Theme.saveWhitespace(shown);
-		for(EditorTab tab : editors.tabs())
-		{
+		for(EditorTab tab : editors.tabs()) {
 			tab.editor.redrawWhitespace();
 		}
 	}
 
-	public void chooseFont()
-	{
+	public void chooseFont() {
 		FontDialog dialog = new FontDialog(shell);
 		dialog.setFontList(theme.font.getFontData());
 		FontData chosen = dialog.open();
-		if(chosen == null)
-		{
+		if(chosen == null) {
 			return;
 		}
 		Font old = theme.changeFont(chosen);
@@ -305,50 +285,41 @@ public class MainWindow
 		old.dispose();
 	}
 
-	public void updateBranch(GitStatus status)
-	{
+	public void updateBranch(GitStatus status) {
 		projectTree.setBranch(status);
 		sourceTree.setBranch(status);
 	}
 
-	public void setDark(boolean dark)
-	{
+	public void setDark(boolean dark) {
 		theme.use(dark);
 		theme.savePreference();
 		applyTheme();
 	}
 
-	public ProjectTree activeTree()
-	{
+	public ProjectTree activeTree() {
 		return sourceTab.selected() ? sourceTree : projectTree;
 	}
 
 	// One-off: select the file of the active editor in the sidebar, switching tab if this one does not list it.
-	public void showInSidebar()
-	{
+	public void showInSidebar() {
 		EditorTab tab = editors.active();
-		if(tab == null || project == null)
-		{
+		if(tab == null || project == null) {
 			return;
 		}
 		boolean sources = sourceTab.selected();
 		ProjectTree first = sources ? sourceTree : projectTree;
 		ProjectTree second = sources ? projectTree : sourceTree;
-		if(first.reveal(tab.file))
-		{
+		if(first.reveal(tab.file)) {
 			return;
 		}
-		if(second.reveal(tab.file))
-		{
+		if(second.reveal(tab.file)) {
 			(sources ? projectTab : sourceTab).select();
 		}
 	}
 
 	// Picks up what changed outside the IDE: open files, the trees, the code analysis, and the git branch, status and history.
-	public void refreshAll()
-	{
-		if(project == null)
-		{
+	public void refreshAll() {
+		if(project == null) {
 			return;
 		}
 		editors.reloadClean();
@@ -357,39 +328,30 @@ public class MainWindow
 		git.projectChanged();
 	}
 
-	public void refreshTrees()
-	{
+	public void refreshTrees() {
 		projectTree.refresh();
 		sourceTree.refresh();
 	}
 
-	public void chooseProject()
-	{
+	public void chooseProject() {
 		DirectoryDialog dd = new DirectoryDialog(shell);
 		dd.setMessage("Select an Eclipse Java project folder");
-		if(project != null)
-		{
+		if(project != null) {
 			dd.setFilterPath(project.root.getParent());
 		}
 		String dir = dd.open();
-		if(dir != null)
-		{
+		if(dir != null) {
 			openProject(new File(dir));
 		}
 	}
 
-	public boolean openProject(File dir)
-	{
-		if(!confirmExit())
-		{
+	public boolean openProject(File dir) {
+		if(!confirmExit()) {
 			return false;
 		}
-		try
-		{
+		try {
 			project = EclipseProject.open(dir);
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			e.printStackTrace();
 			error("Cannot open project " + dir + ": " + e);
 			return false;
@@ -398,8 +360,7 @@ public class MainWindow
 		return true;
 	}
 
-	void loadProject()
-	{
+	void loadProject() {
 		editors.closeAll();
 		assist.setProject(project);
 		settings = new LaunchSettings(project.root);
@@ -419,35 +380,27 @@ public class MainWindow
 		shell.setText("JavaPad - " + project.name);
 		git.projectChanged();
 		searchPane.setProject(project);
-		for(String w : project.warnings)
-		{
+		for(String w : project.warnings) {
 			console.append("warning: " + w + "\n", true);
 		}
-		for(String n : project.notes)
-		{
+		for(String n : project.notes) {
 			console.append(n + "\n", false);
 		}
 		console.append("Opened " + project.name + ": " + project.sourceFolders.size() + " source folder(s), "
 			+ project.libraries.size() + " classpath entries, output " + project.relative(project.outputFolder) + "\n", false);
 	}
 
-	public void regenerateProject()
-	{
-		if(project == null)
-		{
+	public void regenerateProject() {
+		if(project == null) {
 			return;
 		}
 		String question = "Regenerate .project and .classpath for " + project.name + "?\nThe existing files will be overwritten.";
-		if(!ConfirmDialog.confirm(shell, "Regenerate Project File", question) || !confirmExit())
-		{
+		if(!ConfirmDialog.confirm(shell, "Regenerate Project File", question) || !confirmExit()) {
 			return;
 		}
-		try
-		{
+		try {
 			project = EclipseProject.regenerate(project.root);
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			e.printStackTrace();
 			error("Cannot regenerate project files: " + e);
 			return;
@@ -456,93 +409,73 @@ public class MainWindow
 	}
 
 	// Opens the file with the whole line selected.
-	public void openLine(Location loc)
-	{
+	public void openLine(Location loc) {
 		EditorTab tab = editors.open(loc.file);
-		if(tab != null)
-		{
+		if(tab != null) {
 			tab.editor.highlightLine(loc.line);
 			tab.editor.getControl().setFocus();
 		}
 	}
 
-	public void open(Location loc)
-	{
+	public void open(Location loc) {
 		EditorTab tab = editors.open(loc.file);
-		if(tab != null)
-		{
+		if(tab != null) {
 			tab.editor.goTo(loc.line, loc.column);
 		}
 	}
 
-	public void error(String message)
-	{
+	public void error(String message) {
 		ConfirmDialog.message(shell, "Error", message, SWT.ICON_ERROR);
 	}
 
-	boolean confirmExit()
-	{
-		if(!editors.anyDirty())
-		{
+	boolean confirmExit() {
+		if(!editors.anyDirty()) {
 			return true;
 		}
 		int answer = ConfirmDialog.ask(shell, "Save Modified Files", "Save modified files?");
-		if(answer == SWT.CANCEL)
-		{
+		if(answer == SWT.CANCEL) {
 			return false;
 		}
-		if(answer == SWT.YES)
-		{
+		if(answer == SWT.YES) {
 			return editors.saveAll();
 		}
 		return true;
 	}
 
-	public void saveActive()
-	{
+	public void saveActive() {
 		EditorTab tab = editors.active();
-		if(tab == null)
-		{
+		if(tab == null) {
 			return;
 		}
-		try
-		{
+		try {
 			tab.save();
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			e.printStackTrace();
 			error("Cannot save: " + e.getMessage());
 			return;
 		}
 		git.refresh();
-		if(project != null && project.isSource(tab.file))
-		{
+		if(project != null && project.isSource(tab.file)) {
 			run.build(null);
 		}
 	}
 
 	// Edit > Find in Files: asks what to look for, searches every project file (using unsaved editor text) and lists the lines in the Search tab.
-	public void findInFiles()
-	{
-		if(project == null)
-		{
+	public void findInFiles() {
+		if(project == null) {
 			error("Open a project first.");
 			return;
 		}
 		String initial = lastSearch;
 		EditorTab active = editors.active();
-		if(active != null)
-		{
+		if(active != null) {
 			String selected = active.editor.getControl().getSelectionText();
-			if(!selected.isEmpty() && selected.indexOf('\n') < 0 && selected.length() <= 200)
-			{
+			if(!selected.isEmpty() && selected.indexOf('\n') < 0 && selected.length() <= 200) {
 				initial = selected;
 			}
 		}
 		FindInFilesDialog.Request req = new FindInFilesDialog(shell).open(initial, searchCase, searchRegex);
-		if(req == null)
-		{
+		if(req == null) {
 			return;
 		}
 		lastSearch = req.query;
@@ -550,25 +483,20 @@ public class MainWindow
 		searchRegex = req.regex;
 		Pattern pattern = FileSearch.pattern(req.query, req.caseSensitive, req.regex);
 		Map<File, String> unsaved = new HashMap<File, String>();
-		for(EditorTab tab : editors.tabs())
-		{
-			if(tab.isDirty())
-			{
+		for(EditorTab tab : editors.tabs()) {
+			if(tab.isDirty()) {
 				unsaved.put(tab.file, tab.editor.getContent());
 			}
 		}
 		int mine = ++searchGeneration;
 		searchPane.searching(req.query);
 		showBottomTab("search");
-		Thread t = new Thread(() ->
-		{
+		Thread t = new Thread(() -> {
 			List<File> found = new ArrayList<File>();
 			listFiles(project.root, found, GitIgnore.of(project.root));
 			FileSearch.Result result = FileSearch.search(found, unsaved, pattern, 5000);
-			display.asyncExec(() ->
-			{
-				if(!shell.isDisposed() && mine == searchGeneration)
-				{
+			display.asyncExec(() -> {
+				if(!shell.isDisposed() && mine == searchGeneration) {
 					searchPane.show(req.query, result);
 				}
 			});
@@ -578,11 +506,9 @@ public class MainWindow
 	}
 
 	// opens a search result with the match selected
-	void openMatch(File file, int line, int column, int length)
-	{
+	void openMatch(File file, int line, int column, int length) {
 		EditorTab tab = editors.open(file);
-		if(tab != null)
-		{
+		if(tab != null) {
 			tab.editor.goTo(line, column);
 			StyledText t = tab.editor.getControl();
 			int caret = t.getCaretOffset();
@@ -591,16 +517,12 @@ public class MainWindow
 		}
 	}
 
-	public void find()
-	{
-		if(editors.active() == null)
-		{
+	public void find() {
+		if(editors.active() == null) {
 			return;
 		}
-		if(findDialog == null)
-		{
-			findDialog = new FindDialog(shell, () ->
-			{
+		if(findDialog == null) {
+			findDialog = new FindDialog(shell, () -> {
 				EditorTab tab = editors.active();
 				return tab == null ? null : tab.editor.getControl();
 			});
@@ -608,11 +530,9 @@ public class MainWindow
 		findDialog.open();
 	}
 
-	public CommandDialog commandDialog()
-	{
+	public CommandDialog commandDialog() {
 		CommandList all = new CommandList();
-		for(EditorTab tab : editors.tabs())
-		{
+		for(EditorTab tab : editors.tabs()) {
 			String path = project == null ? tab.file.getName() : project.relative(tab.file).replace(File.separatorChar, '/');
 			all.add("Tab: " + path + (tab.isDirty() ? " *" : ""), () -> editors.show(tab));
 		}
@@ -623,15 +543,12 @@ public class MainWindow
 	}
 
 	// Ctrl+Shift+R: every file in the project, by path.
-	CommandList fileList()
-	{
+	CommandList fileList() {
 		CommandList files = new CommandList();
-		if(project != null)
-		{
+		if(project != null) {
 			List<File> found = new ArrayList<File>();
 			listFiles(project.root, found, GitIgnore.of(project.root));
-			for(File f : found)
-			{
+			for(File f : found) {
 				files.add(fileLabel(project.relative(f).replace(File.separatorChar, '/')), () -> open(new Location(f, 1, 1)));
 			}
 		}
@@ -639,168 +556,131 @@ public class MainWindow
 	}
 
 	// "Name.java - src/pkg": the base name first, then the folder
-	static String fileLabel(String path)
-	{
+	static String fileLabel(String path) {
 		int slash = path.lastIndexOf('/');
 		return slash < 0 ? path : path.substring(slash + 1) + " - " + path.substring(0, slash);
 	}
 
-	CommandDialog fileDialog()
-	{
+	CommandDialog fileDialog() {
 		CommandList files = fileList();
 		lastFiles = files;
 		return new CommandDialog(shell, text -> files.find(text, 300), "Open File");
 	}
 
-	public void runFileDialog()
-	{
-		if(project == null)
-		{
+	public void runFileDialog() {
+		if(project == null) {
 			error("Open a project first.");
 			return;
 		}
 		String choice = fileDialog().open();
-		if(choice != null)
-		{
+		if(choice != null) {
 			lastFiles.run(choice);
 		}
 	}
 
-	public void runCommandDialog()
-	{
+	public void runCommandDialog() {
 		String choice = commandDialog().open();
-		if(choice != null)
-		{
+		if(choice != null) {
 			lastCommands.run(choice);
 		}
 	}
 
-	void listFiles(File dir, List<File> out, GitIgnore ignore)
-	{
+	void listFiles(File dir, List<File> out, GitIgnore ignore) {
 		File[] children = dir.listFiles();
-		if(children == null || out.size() > 50000)
-		{
+		if(children == null || out.size() > 50000) {
 			return;
 		}
 		Arrays.sort(children);
 		GitIgnore here = ignore.child(dir);
 		File output = project.outputFolder == null ? null : project.outputFolder.getAbsoluteFile();
-		for(File f : children)
-		{
-			if(f.isDirectory())
-			{
-				if(!f.getName().startsWith(".") && !f.getAbsoluteFile().equals(output) && !here.ignored(f, true))
-				{
+		for(File f : children) {
+			if(f.isDirectory()) {
+				if(!f.getName().startsWith(".") && !f.getAbsoluteFile().equals(output) && !here.ignored(f, true)) {
 					listFiles(f, out, here);
 				}
 				continue;
 			}
-			if(here.ignored(f, false))
-			{
+			if(here.ignored(f, false)) {
 				continue;
 			}
 			String name = f.getName();
 			int dot = name.lastIndexOf('.');
 			String ext = dot < 0 ? "" : name.substring(dot + 1).toLowerCase();
-			if(!BINARY.contains(ext) && f.length() < 5000000)
-			{
+			if(!BINARY.contains(ext) && f.length() < 5000000) {
 				out.add(f);
 			}
 		}
 	}
 
-	public void gotoLine()
-	{
+	public void gotoLine() {
 		EditorTab tab = editors.active();
-		if(tab == null)
-		{
+		if(tab == null) {
 			return;
 		}
 		String s = Prompt.ask(shell, "Go to Line", "Line number:", "");
-		if(s == null)
-		{
+		if(s == null) {
 			return;
 		}
-		try
-		{
+		try {
 			tab.editor.goTo(Integer.parseInt(s.trim()), 1);
-		}
-		catch(NumberFormatException e)
-		{
+		} catch(NumberFormatException e) {
 			// not a line number: stay where we are
 		}
 	}
 
-	File currentFile()
-	{
+	File currentFile() {
 		EditorTab tab = editors.active();
-		if(tab != null)
-		{
+		if(tab != null) {
 			return tab.file;
 		}
 		return activeTree().selected();
 	}
 
-	public void runSelected()
-	{
+	public void runSelected() {
 		run.runFrom(activeTree().selected());
 	}
 
 	// Selection if there is one, else the whole file; only Java files have a formatter.
-	public void format(EditorTab tab)
-	{
-		if(tab.file.getName().endsWith(".java"))
-		{
+	public void format(EditorTab tab) {
+		if(tab.file.getName().endsWith(".java")) {
 			tab.editor.format();
 		}
 	}
 
-	void refreshSources()
-	{
-		try
-		{
-			if(project.refreshSources())
-			{
+	void refreshSources() {
+		try {
+			if(project.refreshSources()) {
 				projectTree.setProject(project);
 				sourceTree.setProject(project);
 				assist.setProject(project);
 				console.append("Found source folder(s): " + project.sourceFolders.size() + "\n", false);
 			}
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			e.printStackTrace();
 			error("Cannot update .classpath: " + e);
 		}
 	}
 
-	public void withEditor(Consumer<EditorTab> action)
-	{
+	public void withEditor(Consumer<EditorTab> action) {
 		EditorTab tab = editors.active();
-		if(tab != null)
-		{
+		if(tab != null) {
 			action.accept(tab);
 		}
 	}
 
-	public void contentAssist()
-	{
+	public void contentAssist() {
 		EditorTab tab = editors.active();
-		if(tab != null)
-		{
+		if(tab != null) {
 			tab.editor.getControl().setFocus();
 			tab.editor.triggerCompletion(true);
 		}
 	}
 
 	// the files with errors get a mark in both sidebar trees
-	void markErrorFiles(List<Problem> problems)
-	{
+	void markErrorFiles(List<Problem> problems) {
 		Set<File> files = new HashSet<File>();
-		for(Problem p : problems)
-		{
-			if(p.error && !p.file.isEmpty())
-			{
+		for(Problem p : problems) {
+			if(p.error && !p.file.isEmpty()) {
 				files.add(new File(p.file));
 			}
 		}
@@ -808,38 +688,31 @@ public class MainWindow
 		sourceTree.setErrorFiles(files);
 	}
 
-	public void goToMatchingBracket()
-	{
+	public void goToMatchingBracket() {
 		EditorTab tab = editors.active();
-		if(tab != null)
-		{
+		if(tab != null) {
 			tab.editor.goToMatchingBracket();
 		}
 	}
 
-	public void editArguments()
-	{
+	public void editArguments() {
 		File f = currentFile();
 		String cls = project == null || f == null ? null : project.classNameOf(f);
-		if(cls == null)
-		{
+		if(cls == null) {
 			return;
 		}
 		String args = Prompt.ask(shell, "Program Arguments", cls + " arguments:", settings.getArgs(cls));
-		if(args == null)
-		{
+		if(args == null) {
 			return;
 		}
 		String vm = Prompt.ask(shell, "VM Arguments", cls + " VM arguments:", settings.getVmArgs(cls));
-		if(vm == null)
-		{
+		if(vm == null) {
 			return;
 		}
 		settings.set(cls, args, vm);
 	}
 
-	public void screenshot(String path)
-	{
+	public void screenshot(String path) {
 		shell.forceActive();
 		display.update();
 		Rectangle b = shell.getBounds();
@@ -853,62 +726,50 @@ public class MainWindow
 		image.dispose();
 	}
 
-	public void automate()
-	{
+	public void automate() {
 		new Automation(this).run();
 	}
 
 	// Used by Automation: shows one of the tabs by name (problems, console, call, history, search at the bottom; junit in the sidebar); a closed one is reopened.
-	public void showBottomTab(String name)
-	{
-		if(name.equals("junit"))
-		{
+	public void showBottomTab(String name) {
+		if(name.equals("junit")) {
 			junitTab.select();
 			return;
 		}
 		BottomTabs.Tab tab = bottomTabs.named(name);
-		if(tab != null)
-		{
+		if(tab != null) {
 			bottomTabs.show(tab);
 		}
-		if(tab == terminalTab)
-		{
+		if(tab == terminalTab) {
 			terminal.ensureStarted();
 		}
 	}
 
-	public void showSourcesTree()
-	{
+	public void showSourcesTree() {
 		sourceTab.select();
 	}
 
-	public void selectProjectRoot()
-	{
+	public void selectProjectRoot() {
 		projectTree.selectRoot();
 	}
 
-	public void runCommand(String choice)
-	{
+	public void runCommand(String choice) {
 		lastCommands.run(choice);
 	}
 
-	public EclipseProject project()
-	{
+	public EclipseProject project() {
 		return project;
 	}
 
-	public RunController runner()
-	{
+	public RunController runner() {
 		return run;
 	}
 
-	public JUnitPane junit()
-	{
+	public JUnitPane junit() {
 		return junitPane;
 	}
 
-	public Display display()
-	{
+	public Display display() {
 		return display;
 	}
 }

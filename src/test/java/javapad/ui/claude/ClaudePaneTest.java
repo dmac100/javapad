@@ -7,11 +7,9 @@ import static org.junit.Assert.assertTrue;
 import java.util.List;
 import org.junit.Test;
 
-public class ClaudePaneTest
-{
+public class ClaudePaneTest {
 	@Test
-	public void theCommandRunsClaudeInAutoModeInTheMachineWithThePath()
-	{
+	public void theCommandRunsClaudeInAutoModeInTheMachineWithThePath() {
 		List<String> c = ClaudePane.command("/home/me/proj", "abc", false);
 		assertEquals("multipass", c.get(0));
 		assertEquals("exec", c.get(1));
@@ -23,8 +21,7 @@ public class ClaudePaneTest
 	}
 
 	@Test
-	public void theFirstPromptCreatesTheSessionAndLaterOnesResumeIt()
-	{
+	public void theFirstPromptCreatesTheSessionAndLaterOnesResumeIt() {
 		List<String> first = ClaudePane.command("/p", "abc", false);
 		assertEquals("abc", first.get(first.indexOf("--session-id") + 1));
 		assertFalse(first.contains("--resume"));
@@ -34,14 +31,12 @@ public class ClaudePaneTest
 	}
 
 	@Test
-	public void theMessageStartsWithTheProjectPath()
-	{
+	public void theMessageStartsWithTheProjectPath() {
 		assertEquals("The project is at /p\n\nhello", ClaudePane.message("/p", "hello"));
 	}
 
 	@Test
-	public void blankPromptsAreEmpty()
-	{
+	public void blankPromptsAreEmpty() {
 		assertEquals("", ClaudePane.promptOf(""));
 		assertEquals("", ClaudePane.promptOf("   \t\n  "));
 		assertEquals("", ClaudePane.promptOf("\u00a0\u2003\r\n"));

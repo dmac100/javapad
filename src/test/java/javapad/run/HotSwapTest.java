@@ -15,8 +15,7 @@ import javax.tools.ToolProvider;
 import org.junit.After;
 import org.junit.Test;
 
-public class HotSwapTest
-{
+public class HotSwapTest {
 	static final String LOOP = "package p;\n"
 		+ "public class Loop {\n"
 		+ "\tpublic static void main(String[] a) throws Exception {\n"
@@ -36,20 +35,16 @@ public class HotSwapTest
 	final List<String> messages = Collections.synchronizedList(new ArrayList<String>());
 
 	@After
-	public void tearDown()
-	{
-		if(swap != null)
-		{
+	public void tearDown() {
+		if(swap != null) {
 			swap.close();
 		}
-		if(process != null)
-		{
+		if(process != null) {
 			process.destroyForcibly();
 		}
 	}
 
-	static void compile(File src, File out, String value, String extra) throws Exception
-	{
+	static void compile(File src, File out, String value, String extra) throws Exception {
 		File f = new File(src, "p/Loop.java");
 		f.getParentFile().mkdirs();
 		Files.write(f.toPath(), String.format(LOOP, value, extra).getBytes());
@@ -57,8 +52,7 @@ public class HotSwapTest
 		assertEquals(0, code);
 	}
 
-	BufferedReader start(File dir) throws Exception
-	{
+	BufferedReader start(File dir) throws Exception {
 		File src = new File(dir, "src");
 		File out = new File(dir, "bin");
 		compile(src, out, "old", "");
@@ -69,39 +63,34 @@ public class HotSwapTest
 		assertEquals("old", in.readLine());
 		swap.attach();
 		long until = System.currentTimeMillis() + 10000;
-		while(System.currentTimeMillis() < until && !connected())
-		{
+		while(System.currentTimeMillis() < until && !connected()) {
 			Thread.sleep(50);
 		}
 		return in;
 	}
 
-	boolean connected()
-	{
+	boolean connected() {
 		messages.clear();
 		swap.swapNow();
 		return messages.isEmpty();
 	}
 
 	@Test
-	public void replacesAMethodBodyInTheRunningProgram() throws Exception
-	{
+	public void replacesAMethodBodyInTheRunningProgram() throws Exception {
 		File dir = Files.createTempDirectory("hotswap").toFile();
 		BufferedReader in = start(dir);
 		compile(new File(dir, "src"), new File(dir, "bin"), "new", "");
 		swap.swapNow();
 		assertEquals(Arrays.asList("Hot-swapped 1 class: Loop\n"), messages);
 		String line = in.readLine();
-		for(int i = 0; i < 20 && line.equals("old"); i++)
-		{
+		for(int i = 0; i < 20 && line.equals("old"); i++) {
 			line = in.readLine();
 		}
 		assertEquals("new", line);
 	}
 
 	@Test
-	public void reportsChangesTheJvmRefuses() throws Exception
-	{
+	public void reportsChangesTheJvmRefuses() throws Exception {
 		File dir = Files.createTempDirectory("hotswap").toFile();
 		start(dir);
 		compile(new File(dir, "src"), new File(dir, "bin"), "old", "\tstatic void added() {}\n");

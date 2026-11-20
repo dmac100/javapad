@@ -28,8 +28,7 @@ import org.eclipse.swt.widgets.MenuItem;
 
 // A chat with Claude Code running in the multipass virtual machine "claude". One text holds the whole conversation: your prompts (typed on the last line, sent with Enter) and the answers, in different colours.
 // Each prompt is sent, with the path of the project, to "claude -p" in the machine.
-public class ClaudePane
-{
+public class ClaudePane {
 	static final String MACHINE = "claude";
 	static final String COMMAND = "multipass";
 	static final String PROMPT = "> ";
@@ -77,8 +76,7 @@ public class ClaudePane
 	private boolean answered;
 	private boolean errorShown;
 
-	public ClaudePane(Composite parent, Theme theme)
-	{
+	public ClaudePane(Composite parent, Theme theme) {
 		this.theme = theme;
 		this.display = parent.getDisplay();
 		text = new StyledText(parent, SWT.V_SCROLL | SWT.WRAP);
@@ -92,16 +90,14 @@ public class ClaudePane
 		newPrompt();
 	}
 
-	Menu menu()
-	{
+	Menu menu() {
 		Menu menu = new Menu(text);
 		MenuItem copy = item(menu, "Copy", () -> text.copy());
 		MenuItem paste = item(menu, "Paste", () -> text.paste());
 		new MenuItem(menu, SWT.SEPARATOR);
 		MenuItem stop = item(menu, "Stop", () -> cancel());
 		item(menu, "Clear", () -> clear());
-		menu.addListener(SWT.Show, e ->
-		{
+		menu.addListener(SWT.Show, e -> {
 			copy.setEnabled(text.getSelectionCount() > 0);
 			paste.setEnabled(!waiting);
 			stop.setEnabled(waiting);
@@ -109,41 +105,34 @@ public class ClaudePane
 		return menu;
 	}
 
-	public static MenuItem item(Menu menu, String label, Runnable action)
-	{
+	public static MenuItem item(Menu menu, String label, Runnable action) {
 		MenuItem item = new MenuItem(menu, SWT.PUSH);
 		item.setText(label);
 		item.addListener(SWT.Selection, e -> action.run());
 		return item;
 	}
 
-	public Composite getControl()
-	{
+	public Composite getControl() {
 		return text;
 	}
 
-	public void setProject(EclipseProject project)
-	{
+	public void setProject(EclipseProject project) {
 		this.project = project;
 		newSession();
 	}
 
 	// called with true when a request starts and with false when it is answered or stopped
-	public void setWaitingHook(Consumer<Boolean> hook)
-	{
+	public void setWaitingHook(Consumer<Boolean> hook) {
 		waitingHook = hook;
 	}
 
 	// Only the prompt at the end can be edited; text typed or pasted anywhere else goes to the end of it.
-	void verify(VerifyEvent e)
-	{
-		if(internal || (!waiting && e.start >= inputStart))
-		{
+	void verify(VerifyEvent e) {
+		if(internal || (!waiting && e.start >= inputStart)) {
 			return;
 		}
 		e.doit = false;
-		if(!waiting && !e.text.isEmpty())
-		{
+		if(!waiting && !e.text.isEmpty()) {
 			int end = text.getCharCount();
 			internal = true;
 			text.replaceTextRange(end, 0, e.text);
@@ -153,62 +142,51 @@ public class ClaudePane
 	}
 
 	// Enter sends the prompt (and is not typed); Shift+Enter is a line break in it
-	void key(VerifyEvent e)
-	{
-		if(e.keyCode == SWT.HOME && (e.stateMask & (SWT.MOD1 | SWT.ALT)) == 0 && promptStart >= 0 && !waiting)
-		{
+	void key(VerifyEvent e) {
+		if(e.keyCode == SWT.HOME && (e.stateMask & (SWT.MOD1 | SWT.ALT)) == 0 && promptStart >= 0 && !waiting) {
 			int caret = text.getCaretOffset();
 			int line = text.getLineAtOffset(caret);
-			if(text.getOffsetAtLine(line) == promptStart && caret >= promptStart)
-			{
+			if(text.getOffsetAtLine(line) == promptStart && caret >= promptStart) {
 				// Home goes to where the typing starts, after the "> "
 				e.doit = false;
 				int target = promptStart + PROMPT.length();
-				if((e.stateMask & SWT.SHIFT) != 0)
-				{
+				if((e.stateMask & SWT.SHIFT) != 0) {
 					Point sel = text.getSelection();
 					int anchor = sel.x == caret ? sel.y : sel.x;
 					text.setSelectionRange(anchor, target - anchor);
-				}
-				else
-				{
+				} else {
 					text.setSelection(target);
 				}
 				return;
 			}
 		}
 		boolean enter = e.keyCode == SWT.CR || e.keyCode == SWT.KEYPAD_CR;
-		if(enter && (e.stateMask & SWT.SHIFT) == 0)
-		{
+		if(enter && (e.stateMask & SWT.SHIFT) == 0) {
 			e.doit = false;
 			send();
 		}
 	}
 
-	public void focusInput()
-	{
+	public void focusInput() {
 		text.setFocus();
 		text.setCaretOffset(text.getCharCount());
 		text.showSelection();
 	}
 
 	// the text sent to Claude: the path of the project, then what was typed
-	static String message(String path, String prompt)
-	{
+	static String message(String path, String prompt) {
 		return "The project is at " + path + "\n\n" + prompt;
 	}
 
 	// a new conversation: the next prompt starts a session with a new id
-	void newSession()
-	{
+	void newSession() {
 		sessionId = UUID.randomUUID().toString();
 		continuing = false;
 	}
 
 	// what runs in the machine: it goes to the project folder if the machine has it at the same path, then starts claude in auto mode with the arguments after the path; the prompt is read from stdin
 	// The first prompt creates the session with the given id and the later ones resume it, so that they all go to the same session.
-	static List<String> command(String path, String sessionId, boolean resume)
-	{
+	static List<String> command(String path, String sessionId, boolean resume) {
 		List<String> c = new ArrayList<String>();
 		c.add(COMMAND);
 		c.add("exec");
@@ -232,41 +210,33 @@ public class ClaudePane
 	}
 
 	// the prompt to send for what was typed: without the white space around it (any space character counts, the no-break space too), so empty when there is nothing to send
-	static String promptOf(String typed)
-	{
+	static String promptOf(String typed) {
 		int start = 0;
 		int end = typed.length();
-		while(start < end && blank(typed.charAt(start)))
-		{
+		while(start < end && blank(typed.charAt(start))) {
 			start++;
 		}
-		while(end > start && blank(typed.charAt(end - 1)))
-		{
+		while(end > start && blank(typed.charAt(end - 1))) {
 			end--;
 		}
 		return typed.substring(start, end);
 	}
 
-	static boolean blank(char c)
-	{
+	static boolean blank(char c) {
 		return Character.isWhitespace(c) || Character.isSpaceChar(c);
 	}
 
 	// sends the prompt that was typed on the last line
-	void send()
-	{
-		if(waiting)
-		{
+	void send() {
+		if(waiting) {
 			return;
 		}
 		String prompt = promptOf(text.getText(inputStart, Math.max(inputStart, text.getCharCount() - 1)));
-		if(prompt.isEmpty())
-		{
+		if(prompt.isEmpty()) {
 			// nothing but spaces and line breaks was typed: nothing is sent
 			return;
 		}
-		if(project == null)
-		{
+		if(project == null) {
 			finishPrompt();
 			append("Open a project first.\n", KIND_ERROR);
 			newPrompt();
@@ -287,8 +257,7 @@ public class ClaudePane
 	}
 
 	// the prompt on the last line is done: it keeps its colour and the answer starts on the next line
-	void finishPrompt()
-	{
+	void finishPrompt() {
 		internal = true;
 		text.replaceTextRange(text.getCharCount(), 0, "\n");
 		internal = false;
@@ -298,8 +267,7 @@ public class ClaudePane
 	}
 
 	// a blank line and a new "> " to type after
-	void newPrompt()
-	{
+	void newPrompt() {
 		internal = true;
 		int count = text.getCharCount();
 		String gap = count == 0 || text.getText().endsWith("\n\n") ? "" : text.getText().endsWith("\n") ? "\n" : "\n\n";
@@ -312,17 +280,14 @@ public class ClaudePane
 		focusInputIfShowing();
 	}
 
-	void focusInputIfShowing()
-	{
+	void focusInputIfShowing() {
 		text.setCaretOffset(text.getCharCount());
 		text.showSelection();
 	}
 
 	// the prompt being typed has the prompt colour
-	void stylePrompt()
-	{
-		if(promptStart < 0 || text.isDisposed() || promptStart > text.getCharCount())
-		{
+	void stylePrompt() {
+		if(promptStart < 0 || text.isDisposed() || promptStart > text.getCharCount()) {
 			return;
 		}
 		StyleRange style = new StyleRange();
@@ -333,10 +298,8 @@ public class ClaudePane
 		text.setStyleRange(style);
 	}
 
-	Color color(int kind)
-	{
-		switch(kind)
-		{
+	Color color(int kind) {
+		switch(kind) {
 			case KIND_PROMPT:
 				return theme.keyword;
 			case KIND_ERROR:
@@ -350,10 +313,8 @@ public class ClaudePane
 	}
 
 	// adds finished text at the end, in the colour of its kind
-	void append(String chunk, int kind)
-	{
-		if(chunk.isEmpty())
-		{
+	void append(String chunk, int kind) {
+		if(chunk.isEmpty()) {
 			return;
 		}
 		internal = true;
@@ -367,26 +328,21 @@ public class ClaudePane
 	}
 
 	// Adds to the answer that is arriving: all of it is shown again, so that bullets and bold that were cut by the end of a chunk come out right.
-	void answer(String chunk)
-	{
-		if(answerStart < 0)
-		{
+	void answer(String chunk) {
+		if(answerStart < 0) {
 			answerStart = text.getCharCount();
 			answerRaw.setLength(0);
 		}
 		answerRaw.append(chunk);
 		ChatMarkdown.Result shown = ChatMarkdown.render(answerRaw.toString());
-		if(answerShown != null && answerShown.text.equals(shown.text) && sameRuns(answerShown.bold, shown.bold) && text.getCharCount() == answerStart + shown.text.length())
-		{
+		if(answerShown != null && answerShown.text.equals(shown.text) && sameRuns(answerShown.bold, shown.bold) && text.getCharCount() == answerStart + shown.text.length()) {
 			return;
 		}
 		// only the end that changed is replaced, so the text before it is not redrawn
 		int same = 0;
-		if(answerShown != null && text.getCharCount() >= answerStart + answerShown.text.length())
-		{
+		if(answerShown != null && text.getCharCount() >= answerStart + answerShown.text.length()) {
 			int most = Math.min(answerShown.text.length(), shown.text.length());
-			while(same < most && answerShown.text.charAt(same) == shown.text.charAt(same))
-			{
+			while(same < most && answerShown.text.charAt(same) == shown.text.charAt(same)) {
 				same++;
 			}
 		}
@@ -398,8 +354,7 @@ public class ClaudePane
 		segments.removeIf(seg -> seg[0] >= from);
 		segments.add(new int[] {from, shown.text.length(), KIND_ANSWER});
 		text.setStyleRange(style(from, shown.text.length(), KIND_ANSWER));
-		for(int[] run : shown.bold)
-		{
+		for(int[] run : shown.bold) {
 			segments.add(new int[] {from + run[0], run[1], KIND_BOLD});
 			text.setStyleRange(style(from + run[0], run[1], KIND_BOLD));
 		}
@@ -407,20 +362,17 @@ public class ClaudePane
 		focusInputIfShowing();
 	}
 
-	static boolean sameRuns(List<int[]> a, List<int[]> b)
-	{
+	static boolean sameRuns(List<int[]> a, List<int[]> b) {
 		return Arrays.deepEquals(a.toArray(), b.toArray());
 	}
 
-	void endAnswer()
-	{
+	void endAnswer() {
 		answerShown = null;
 		answerStart = -1;
 		answerRaw.setLength(0);
 	}
 
-	StyleRange style(int start, int length, int kind)
-	{
+	StyleRange style(int start, int length, int kind) {
 		StyleRange style = new StyleRange();
 		style.start = start;
 		style.length = length;
@@ -430,18 +382,14 @@ public class ClaudePane
 	}
 
 	// runs on a thread: starts the process, hands it the prompt and shows what it prints
-	void talk(int id, String path, String session, String message, boolean resume)
-	{
+	void talk(int id, String path, String session, String message, boolean resume) {
 		StringBuilder errors = new StringBuilder();
 		int exit = -1;
-		try
-		{
+		try {
 			ProcessBuilder pb = new ProcessBuilder(command(path, session, resume));
 			Process p = pb.start();
-			synchronized(this)
-			{
-				if(id != request)
-				{
+			synchronized(this) {
+				if(id != request) {
 					p.destroy();
 					return;
 				}
@@ -450,73 +398,52 @@ public class ClaudePane
 			Thread err = new Thread(() -> read(p.getErrorStream(), errors), "claude-pane-err");
 			err.setDaemon(true);
 			err.start();
-			try(OutputStream out = p.getOutputStream())
-			{
+			try(OutputStream out = p.getOutputStream()) {
 				out.write(message.getBytes(StandardCharsets.UTF_8));
-			}
-			catch(IOException e)
-			{
+			} catch(IOException e) {
 				// the process ended before it read everything; its output says why
 			}
 			BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
 			String line;
-			while((line = in.readLine()) != null)
-			{
-				for(ClaudeStream.Event event : ClaudeStream.parse(line))
-				{
+			while((line = in.readLine()) != null) {
+				for(ClaudeStream.Event event : ClaudeStream.parse(line)) {
 					show(id, event);
 				}
 			}
 			exit = p.waitFor();
 			err.join(2000);
-		}
-		catch(IOException e)
-		{
+		} catch(IOException e) {
 			errors.append(COMMAND + " could not be started: " + e.getMessage());
-		}
-		catch(InterruptedException e)
-		{
+		} catch(InterruptedException e) {
 			Thread.currentThread().interrupt();
 		}
 		finish(id, exit, errors.toString().trim());
 	}
 
-	static void read(InputStream in, StringBuilder into)
-	{
-		try
-		{
+	static void read(InputStream in, StringBuilder into) {
+		try {
 			byte[] buffer = new byte[2048];
 			int n;
-			while((n = in.read(buffer)) > 0)
-			{
-				synchronized(into)
-				{
+			while((n = in.read(buffer)) > 0) {
+				synchronized(into) {
 					into.append(new String(buffer, 0, n, StandardCharsets.UTF_8));
 				}
 			}
-		}
-		catch(IOException e)
-		{
+		} catch(IOException e) {
 			// the process ended
 		}
 	}
 
-	void show(int id, ClaudeStream.Event event)
-	{
-		display.asyncExec(() ->
-		{
-			if(!text.isDisposed() && id == request)
-			{
+	void show(int id, ClaudeStream.Event event) {
+		display.asyncExec(() -> {
+			if(!text.isDisposed() && id == request) {
 				// no redraw in between, so that the indicator going and coming back is not seen
 				text.setRedraw(false);
-				try
-				{
+				try {
 					hideIndicator();
 					display(event);
 					showIndicator();
-				}
-				finally
-				{
+				} finally {
 					text.setRedraw(true);
 				}
 			}
@@ -524,10 +451,8 @@ public class ClaudePane
 	}
 
 	// shows one thing Claude did: a thought (dim, italic), a tool it uses (dim), or text of the answer
-	void display(ClaudeStream.Event event)
-	{
-		switch(event.kind)
-		{
+	void display(ClaudeStream.Event event) {
+		switch(event.kind) {
 			case ClaudeStream.THOUGHT:
 				block(event.text.strip(), KIND_THOUGHT, event.kind);
 				break;
@@ -539,8 +464,7 @@ public class ClaudePane
 				block(event.text.strip(), KIND_ERROR, event.kind);
 				break;
 			case ClaudeStream.PLAIN:
-				if(answerStart < 0)
-				{
+				if(answerStart < 0) {
 					separate(event.kind);
 				}
 				answer(event.text + "\n");
@@ -548,8 +472,7 @@ public class ClaudePane
 				lastKind = ClaudeStream.ANSWER;
 				break;
 			case ClaudeStream.RESULT:
-				if(answered)
-				{
+				if(answered) {
 					break;
 				}
 				// no break: with no text before it, the result is the answer
@@ -565,8 +488,7 @@ public class ClaudePane
 	}
 
 	// a paragraph of its own
-	void block(String content, int kind, int eventKind)
-	{
+	void block(String content, int kind, int eventKind) {
 		endAnswer();
 		separate(eventKind);
 		append(content, kind);
@@ -574,50 +496,38 @@ public class ClaudePane
 	}
 
 	// line breaks before the next thing: a blank line between paragraphs, but tool lines under each other
-	void separate(int eventKind)
-	{
+	void separate(int eventKind) {
 		int wanted = lastKind < 0 || (eventKind == ClaudeStream.TOOL && lastKind == ClaudeStream.TOOL) ? 1 : 2;
 		String all = text.getText();
 		int have = 0;
-		while(have < wanted && have < all.length() && all.charAt(all.length() - 1 - have) == '\n')
-		{
+		while(have < wanted && have < all.length() && all.charAt(all.length() - 1 - have) == '\n') {
 			have++;
 		}
-		if(have < wanted)
-		{
+		if(have < wanted) {
 			append("\n".repeat(wanted - have), KIND_NOTE);
 		}
 	}
 
-	void finish(int id, int exit, String errors)
-	{
-		display.asyncExec(() ->
-		{
-			if(text.isDisposed() || id != request)
-			{
+	void finish(int id, int exit, String errors) {
+		display.asyncExec(() -> {
+			if(text.isDisposed() || id != request) {
 				return;
 			}
 			hideIndicator();
 			endAnswer();
-			if(exit == 0)
-			{
+			if(exit == 0) {
 				continuing = true;
-			}
-			else if(exit >= 0 || !errors.isEmpty() || errorShown)
-			{
-				if(!continuing)
-				{
+			} else if(exit >= 0 || !errors.isEmpty() || errorShown) {
+				if(!continuing) {
 					// the session may or may not have been created: the next try uses a new id
 					newSession();
 				}
-				if(!errorShown || !errors.isEmpty())
-				{
+				if(!errorShown || !errors.isEmpty()) {
 					String message = errors.isEmpty() ? COMMAND + " exited with code " + exit : errors;
 					block(message, KIND_ERROR, ClaudeStream.ERROR);
 				}
 			}
-			synchronized(this)
-			{
+			synchronized(this) {
 				process = null;
 			}
 			setWaiting(false);
@@ -626,51 +536,41 @@ public class ClaudePane
 	}
 
 	// Stops the waiting for an answer; whatever arrived stays.
-	void cancel()
-	{
+	void cancel() {
 		Process p;
-		synchronized(this)
-		{
+		synchronized(this) {
 			p = process;
 			process = null;
 		}
-		if(waiting)
-		{
+		if(waiting) {
 			request++;
-			if(!text.isDisposed())
-			{
+			if(!text.isDisposed()) {
 				hideIndicator();
 				endAnswer();
 				append("\n(stopped)\n", KIND_NOTE);
 			}
 			setWaiting(false);
-			if(!text.isDisposed())
-			{
+			if(!text.isDisposed()) {
 				newPrompt();
 			}
 		}
-		if(p != null)
-		{
+		if(p != null) {
 			p.destroy();
 		}
 	}
 
 	// Empties the tab and starts a new conversation with the next prompt.
-	public void clear()
-	{
+	public void clear() {
 		Process p;
-		synchronized(this)
-		{
+		synchronized(this) {
 			p = process;
 			process = null;
 		}
 		request++;
-		if(p != null)
-		{
+		if(p != null) {
 			p.destroy();
 		}
-		if(waiting)
-		{
+		if(waiting) {
 			setWaiting(false);
 		}
 		newSession();
@@ -686,30 +586,23 @@ public class ClaudePane
 		text.setFocus();
 	}
 
-	void setWaiting(boolean on)
-	{
+	void setWaiting(boolean on) {
 		waiting = on;
 		dots = 0;
-		if(waitingHook != null)
-		{
+		if(waitingHook != null) {
 			waitingHook.accept(on);
 		}
-		if(on)
-		{
+		if(on) {
 			showIndicator();
 			tick(request);
-		}
-		else
-		{
+		} else {
 			hideIndicator();
 		}
 	}
 
 	// the "Waiting for Claude..." line at the end of the text, with dots that come and go so that it is seen to be alive
-	void showIndicator()
-	{
-		if(!waiting || text.isDisposed())
-		{
+	void showIndicator() {
+		if(!waiting || text.isDisposed()) {
 			return;
 		}
 		hideIndicator();
@@ -717,8 +610,7 @@ public class ClaudePane
 		int wanted = text.getCharCount() == 0 ? 0 : lastKind < 0 || lastKind == ClaudeStream.TOOL ? 1 : 2;
 		String all = text.getText();
 		int have = 0;
-		while(have < wanted && have < all.length() && all.charAt(all.length() - 1 - have) == '\n')
-		{
+		while(have < wanted && have < all.length() && all.charAt(all.length() - 1 - have) == '\n') {
 			have++;
 		}
 		indicatorPrefix = wanted - have;
@@ -732,10 +624,8 @@ public class ClaudePane
 		focusInputIfShowing();
 	}
 
-	void hideIndicator()
-	{
-		if(indicatorStart >= 0 && !text.isDisposed())
-		{
+	void hideIndicator() {
+		if(indicatorStart >= 0 && !text.isDisposed()) {
 			internal = true;
 			text.replaceTextRange(indicatorStart, text.getCharCount() - indicatorStart, "");
 			internal = false;
@@ -744,46 +634,37 @@ public class ClaudePane
 		indicatorStart = -1;
 	}
 
-	void tick(int id)
-	{
-		if(text.isDisposed() || !waiting || id != request)
-		{
+	void tick(int id) {
+		if(text.isDisposed() || !waiting || id != request) {
 			return;
 		}
 		dots = (dots + 1) % 4;
-		if(indicatorStart >= 0)
-		{
+		if(indicatorStart >= 0) {
 			// only the dots change; the rest of the text is left alone
 			int from = indicatorStart + indicatorPrefix + INDICATOR.length();
 			text.setRedraw(false);
-			try
-			{
+			try {
 				internal = true;
 				text.replaceTextRange(from, text.getCharCount() - from, ".".repeat(dots));
 				internal = false;
 				text.setStyleRange(style(indicatorStart, text.getCharCount() - indicatorStart, KIND_NOTE));
 				inputStart = text.getCharCount();
-			}
-			finally
-			{
+			} finally {
 				text.setRedraw(true);
 			}
 		}
 		display.timerExec(DOT_MILLIS, () -> tick(id));
 	}
 
-	public void restyle()
-	{
+	public void restyle() {
 		text.setFont(theme.font);
 		text.setBackground(theme.background);
 		text.setForeground(theme.foreground);
-		for(int[] seg : segments)
-		{
+		for(int[] seg : segments) {
 			text.setStyleRange(style(seg[0], seg[1], seg[2]));
 		}
 		stylePrompt();
-		if(indicatorStart >= 0)
-		{
+		if(indicatorStart >= 0) {
 			text.setStyleRange(style(indicatorStart, text.getCharCount() - indicatorStart, KIND_NOTE));
 		}
 	}

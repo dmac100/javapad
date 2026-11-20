@@ -27,14 +27,12 @@ import javax.tools.ToolProvider;
 
 // Parses and attributes one buffer (plus whatever it references on the source path and classpath) with javac,
 // tolerating errors, and exposes the Tree API objects needed to look things up.
-public class JavaAnalyzer
-{
+public class JavaAnalyzer {
 	private final EclipseProject project;
 	private final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 	private StandardJavaFileManager fileManager;
 
-	public static class Result
-	{
+	public static class Result {
 		public JavacTask task;
 		public CompilationUnitTree unit;
 		public Trees trees;
@@ -43,20 +41,15 @@ public class JavaAnalyzer
 		public String text;
 		public List<Diagnostic<? extends JavaFileObject>> diagnostics;
 
-		public TreePath pathAt(int position)
-		{
+		public TreePath pathAt(int position) {
 			SourcePositions sp = trees.getSourcePositions();
 			TreePath[] best = {new TreePath(unit)};
-			new TreePathScanner<Void, Void>()
-			{
-				public Void scan(Tree tree, Void p)
-				{
-					if(tree != null)
-					{
+			new TreePathScanner<Void, Void>() {
+				public Void scan(Tree tree, Void p) {
+					if(tree != null) {
 						long start = sp.getStartPosition(unit, tree);
 						long end = sp.getEndPosition(unit, tree);
-						if(start >= 0 && start <= position && position <= end)
-						{
+						if(start >= 0 && start <= position && position <= end) {
 							best[0] = new TreePath(getCurrentPath(), tree);
 						}
 					}
@@ -67,41 +60,31 @@ public class JavaAnalyzer
 		}
 	}
 
-	public JavaAnalyzer(EclipseProject project)
-	{
+	public JavaAnalyzer(EclipseProject project) {
 		this.project = project;
 	}
 
-	public EclipseProject project()
-	{
+	public EclipseProject project() {
 		return project;
 	}
 
 	// Forget cached directory and jar listings, e.g. after files changed on disk.
-	public synchronized void invalidate()
-	{
-		if(fileManager != null)
-		{
-			try
-			{
+	public synchronized void invalidate() {
+		if(fileManager != null) {
+			try {
 				fileManager.close();
-			}
-			catch(IOException e)
-			{
+			} catch(IOException e) {
 				// closing is best effort
 			}
 			fileManager = null;
 		}
 	}
 
-	public synchronized Result analyze(File file, String text)
-	{
-		if(compiler == null)
-		{
+	public synchronized Result analyze(File file, String text) {
+		if(compiler == null) {
 			return null;
 		}
-		if(fileManager == null)
-		{
+		if(fileManager == null) {
 			fileManager = compiler.getStandardFileManager(null, null, null);
 		}
 		DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
@@ -113,37 +96,30 @@ public class JavaAnalyzer
 		options.add("-cp");
 		options.add(project.classpathString());
 		StringBuilder sourcePath = new StringBuilder();
-		for(File src : project.sourceFolders)
-		{
-			if(sourcePath.length() > 0)
-			{
+		for(File src : project.sourceFolders) {
+			if(sourcePath.length() > 0) {
 				sourcePath.append(File.pathSeparator);
 			}
 			sourcePath.append(src.getAbsolutePath());
 		}
-		if(sourcePath.length() > 0)
-		{
+		if(sourcePath.length() > 0) {
 			options.add("-sourcepath");
 			options.add(sourcePath.toString());
 		}
 		int release = ProjectCompiler.effectiveRelease(project.release, compiler);
-		if(release > 0)
-		{
+		if(release > 0) {
 			options.add("-source");
 			options.add(String.valueOf(release));
 			options.add("-target");
 			options.add(String.valueOf(release));
 		}
 		URI uri = file != null ? file.toURI() : URI.create("file:///Untitled.java");
-		JavaFileObject source = new SimpleJavaFileObject(uri, JavaFileObject.Kind.SOURCE)
-		{
-			public CharSequence getCharContent(boolean ignoreEncodingErrors)
-			{
+		JavaFileObject source = new SimpleJavaFileObject(uri, JavaFileObject.Kind.SOURCE) {
+			public CharSequence getCharContent(boolean ignoreEncodingErrors) {
 				return text;
 			}
 		};
-		try
-		{
+		try {
 			JavacTask task = (JavacTask)compiler.getTask(null, fileManager, diagnostics, options, null, Arrays.asList(source));
 			Iterable<? extends CompilationUnitTree> units = task.parse();
 			CompilationUnitTree unit = units.iterator().next();
@@ -157,9 +133,7 @@ public class JavaAnalyzer
 			r.text = text;
 			r.diagnostics = diagnostics.getDiagnostics();
 			return r;
-		}
-		catch(Exception | StackOverflowError e)
-		{
+		} catch(Exception | StackOverflowError e) {
 			return null;
 		}
 	}

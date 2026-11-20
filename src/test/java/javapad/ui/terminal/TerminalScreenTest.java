@@ -6,16 +6,13 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-public class TerminalScreenTest
-{
-	static String row(TerminalScreen s, int r)
-	{
+public class TerminalScreenTest {
+	static String row(TerminalScreen s, int r) {
 		return s.text(s.scrollbackSize() + r, 0, s.cols());
 	}
 
 	@Test
-	public void writesTextAndMovesTheCursor()
-	{
+	public void writesTextAndMovesTheCursor() {
 		TerminalScreen s = new TerminalScreen(10, 3);
 		s.feed("ab\r\ncd");
 		assertEquals("ab", row(s, 0));
@@ -25,8 +22,7 @@ public class TerminalScreenTest
 	}
 
 	@Test
-	public void wrapsAtTheEndOfTheLine()
-	{
+	public void wrapsAtTheEndOfTheLine() {
 		TerminalScreen s = new TerminalScreen(4, 3);
 		s.feed("abcdef");
 		assertEquals("abcd", row(s, 0));
@@ -34,8 +30,7 @@ public class TerminalScreenTest
 	}
 
 	@Test
-	public void scrollsIntoTheScrollback()
-	{
+	public void scrollsIntoTheScrollback() {
 		TerminalScreen s = new TerminalScreen(5, 2);
 		s.feed("one\r\ntwo\r\nthree");
 		assertEquals(1, s.scrollbackSize());
@@ -45,8 +40,7 @@ public class TerminalScreenTest
 	}
 
 	@Test
-	public void positionsAndErases()
-	{
+	public void positionsAndErases() {
 		TerminalScreen s = new TerminalScreen(10, 3);
 		s.feed("hello\u001b[2;3Hxy\u001b[1;3H\u001b[K");
 		assertEquals("he", row(s, 0));
@@ -56,8 +50,7 @@ public class TerminalScreenTest
 	}
 
 	@Test
-	public void setsColoursAndAttributes()
-	{
+	public void setsColoursAndAttributes() {
 		TerminalScreen s = new TerminalScreen(10, 2);
 		s.feed("\u001b[1;31ma\u001b[0mb\u001b[38;5;200mc\u001b[48;2;1;2;3md");
 		TerminalScreen.Line l = s.line(0);
@@ -70,8 +63,7 @@ public class TerminalScreenTest
 	}
 
 	@Test
-	public void alternateScreenLeavesTheMainOneAlone()
-	{
+	public void alternateScreenLeavesTheMainOneAlone() {
 		TerminalScreen s = new TerminalScreen(10, 3);
 		s.feed("main\u001b[?1049h\u001b[Halt");
 		assertTrue(s.alternate());
@@ -82,8 +74,7 @@ public class TerminalScreenTest
 	}
 
 	@Test
-	public void insertsAndDeletesCharacters()
-	{
+	public void insertsAndDeletesCharacters() {
 		TerminalScreen s = new TerminalScreen(10, 2);
 		s.feed("abcdef\u001b[1;3H\u001b[2P");
 		assertEquals("abef", row(s, 0));
@@ -92,8 +83,7 @@ public class TerminalScreenTest
 	}
 
 	@Test
-	public void answersCursorPositionRequests()
-	{
+	public void answersCursorPositionRequests() {
 		TerminalScreen s = new TerminalScreen(10, 5);
 		StringBuilder got = new StringBuilder();
 		s.setReply(r -> got.append(r));
@@ -102,8 +92,7 @@ public class TerminalScreenTest
 	}
 
 	@Test
-	public void ignoresTitlesAndKeepsTheText()
-	{
+	public void ignoresTitlesAndKeepsTheText() {
 		TerminalScreen s = new TerminalScreen(20, 2);
 		s.feed("\u001b]0;my title\u0007hi\u001b]2;other\u001b\\ there");
 		assertEquals("hi there", row(s, 0));
@@ -111,8 +100,7 @@ public class TerminalScreenTest
 	}
 
 	@Test
-	public void respectsTheScrollRegion()
-	{
+	public void respectsTheScrollRegion() {
 		TerminalScreen s = new TerminalScreen(5, 4);
 		s.feed("1\r\n2\r\n3\r\n4\u001b[2;3r\u001b[3;1H\n");
 		assertEquals("1", row(s, 0));

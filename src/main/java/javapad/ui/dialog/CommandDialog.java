@@ -12,8 +12,7 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
-public class CommandDialog
-{
+public class CommandDialog {
 	private final Shell parent;
 	private final Function<String, List<String>> search;
 	private Shell shell;
@@ -22,25 +21,21 @@ public class CommandDialog
 	private final String title;
 	private String result;
 
-	public CommandDialog(Shell parent, Function<String, List<String>> search)
-	{
+	public CommandDialog(Shell parent, Function<String, List<String>> search) {
 		this(parent, search, "Run Command");
 	}
 
-	public CommandDialog(Shell parent, Function<String, List<String>> search, String title)
-	{
+	public CommandDialog(Shell parent, Function<String, List<String>> search, String title) {
 		this.parent = parent;
 		this.search = search;
 		this.title = title;
 	}
 
-	public String open()
-	{
+	public String open() {
 		return open(null);
 	}
 
-	public String open(Runnable shown)
-	{
+	public String open(Runnable shown) {
 		GridLayout layout = new GridLayout(1, false);
 		layout.verticalSpacing = 2;
 		layout.marginWidth = 2;
@@ -64,77 +59,56 @@ public class CommandDialog
 		refresh();
 		shell.open();
 		text.setFocus();
-		if(shown != null)
-		{
+		if(shown != null) {
 			parent.getDisplay().timerExec(400, shown);
 		}
 		Display display = parent.getDisplay();
-		while(!shell.isDisposed())
-		{
-			if(!display.readAndDispatch())
-			{
+		while(!shell.isDisposed()) {
+			if(!display.readAndDispatch()) {
 				display.sleep();
 			}
 		}
 		return result;
 	}
 
-	public void setText(String s)
-	{
-		if(text != null && !text.isDisposed())
-		{
+	public void setText(String s) {
+		if(text != null && !text.isDisposed()) {
 			text.setText(s);
 			text.setSelection(s.length());
 		}
 	}
 
-	public void close()
-	{
-		if(shell != null && !shell.isDisposed())
-		{
+	public void close() {
+		if(shell != null && !shell.isDisposed()) {
 			shell.dispose();
 		}
 	}
 
-	void key(Event e)
-	{
-		if(e.keyCode == SWT.ESC)
-		{
+	void key(Event e) {
+		if(e.keyCode == SWT.ESC) {
 			e.doit = false;
 			shell.dispose();
-		}
-		else if(e.keyCode == SWT.ARROW_UP)
-		{
+		} else if(e.keyCode == SWT.ARROW_UP) {
 			e.doit = false;
 			move(-1);
-		}
-		else if(e.keyCode == SWT.ARROW_DOWN)
-		{
+		} else if(e.keyCode == SWT.ARROW_DOWN) {
 			e.doit = false;
 			move(1);
-		}
-		else if(e.keyCode == SWT.PAGE_UP)
-		{
+		} else if(e.keyCode == SWT.PAGE_UP) {
 			e.doit = false;
 			move(-10);
-		}
-		else if(e.keyCode == SWT.PAGE_DOWN)
-		{
+		} else if(e.keyCode == SWT.PAGE_DOWN) {
 			e.doit = false;
 			move(10);
-		}
-		else if(e.keyCode == SWT.CR || e.keyCode == SWT.KEYPAD_CR || e.keyCode == SWT.LF)
-		{
+		} else if(e.keyCode == SWT.CR || e.keyCode == SWT.KEYPAD_CR || e.keyCode == SWT.LF) {
 			e.doit = false;
 			accept();
 		}
 	}
 
-	void move(int delta)
-	{
+	void move(int delta) {
 		int count = list.getItemCount();
-		if(count == 0)
-		{
+		if(count == 0) {
 			return;
 		}
 		int index = Math.max(0, Math.min(count - 1, list.getSelectionIndex() + delta));
@@ -142,10 +116,8 @@ public class CommandDialog
 		list.showSelection();
 	}
 
-	public void accept()
-	{
-		if(list.getItemCount() == 0)
-		{
+	public void accept() {
+		if(list.getItemCount() == 0) {
 			return;
 		}
 		int index = list.getSelectionIndex() >= 0 ? list.getSelectionIndex() : 0;
@@ -153,11 +125,9 @@ public class CommandDialog
 		shell.dispose();
 	}
 
-	void refresh()
-	{
+	void refresh() {
 		list.setItems(search.apply(text.getText()).toArray(new String[0]));
-		if(list.getItemCount() > 0)
-		{
+		if(list.getItemCount() > 0) {
 			list.select(0);
 		}
 	}

@@ -14,14 +14,12 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 
-public class GitRepoTest
-{
+public class GitRepoTest {
 	private File dir;
 	private GitRepo repo;
 
 	@Before
-	public void setUp() throws Exception
-	{
+	public void setUp() throws Exception {
 		dir = Files.createTempDirectory("gitrepo").toFile();
 		assertTrue(GitRepo.init(dir).ok());
 		GitRunner.run(dir, "config", "user.name", "Tester");
@@ -30,20 +28,17 @@ public class GitRepoTest
 		repo = GitRepo.find(dir);
 	}
 
-	void write(String name, String text) throws Exception
-	{
+	void write(String name, String text) throws Exception {
 		File f = new File(dir, name);
 		f.getParentFile().mkdirs();
 		Files.write(f.toPath(), text.getBytes(StandardCharsets.UTF_8));
 	}
 
-	String read(String name) throws Exception
-	{
+	String read(String name) throws Exception {
 		return new String(Files.readAllBytes(new File(dir, name).toPath()), StandardCharsets.UTF_8);
 	}
 
-	void commit(String name, String text, String message) throws Exception
-	{
+	void commit(String name, String text, String message) throws Exception {
 		write(name, text);
 		assertTrue(repo.add(Arrays.asList(name)).ok());
 		GitResult r = repo.commit(message, "", "", false, Arrays.asList());
@@ -51,15 +46,13 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void findReturnsNullOutsideARepository() throws Exception
-	{
+	public void findReturnsNullOutsideARepository() throws Exception {
 		assertNull(GitRepo.find(Files.createTempDirectory("plain").toFile()));
 		assertNotNull(repo);
 	}
 
 	@Test
-	public void statusShowsUntrackedStagedAndModified() throws Exception
-	{
+	public void statusShowsUntrackedStagedAndModified() throws Exception {
 		commit("a.txt", "one\n", "first");
 		write("a.txt", "two\n");
 		write("src/b.txt", "new\n");
@@ -76,8 +69,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void movingATrackedFileIsARenameAndCommitsWhole() throws Exception
-	{
+	public void movingATrackedFileIsARenameAndCommitsWhole() throws Exception {
 		commit("a.txt", "one\nline\nthree\n", "first");
 		commit("keep.txt", "k\n", "second");
 		assertTrue(repo.move(new File(dir, "a.txt"), new File(dir, "sub/b.txt")).ok());
@@ -91,8 +83,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void movingAnUntrackedFileJustMovesIt() throws Exception
-	{
+	public void movingAnUntrackedFileJustMovesIt() throws Exception {
 		commit("a.txt", "one\n", "first");
 		write("u.txt", "u\n");
 		assertTrue(repo.move(new File(dir, "u.txt"), new File(dir, "d/v.txt")).ok());
@@ -101,8 +92,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void discardingARenameRestoresTheOldName() throws Exception
-	{
+	public void discardingARenameRestoresTheOldName() throws Exception {
 		commit("a.txt", "one\n", "first");
 		repo.move(new File(dir, "a.txt"), new File(dir, "b.txt"));
 		assertTrue(repo.discard(repo.status(true).find("b.txt")).ok());
@@ -112,8 +102,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void untrackedFoldersCountForEverythingInThem() throws Exception
-	{
+	public void untrackedFoldersCountForEverythingInThem() throws Exception {
 		commit("a.txt", "one\n", "first");
 		commit("src/q.txt", "q\n", "second");
 		write("newdir/x/y.txt", "y\n");
@@ -127,8 +116,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void logCarriesParentsRefsAndDetails() throws Exception
-	{
+	public void logCarriesParentsRefsAndDetails() throws Exception {
 		commit("a.txt", "one\n", "first");
 		commit("a.txt", "two\n", "second | with bar\n\nbody text");
 		repo.createTag("v1", "HEAD");
@@ -149,8 +137,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void changedFilesAndDiffs() throws Exception
-	{
+	public void changedFilesAndDiffs() throws Exception {
 		commit("a.txt", "one\n", "first");
 		write("a.txt", "two\n");
 		write("b.txt", "b\n");
@@ -169,8 +156,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void parsesRenamesInNameStatus()
-	{
+	public void parsesRenamesInNameStatus() {
 		List<ChangedFile> list = GitRepo.parseNameStatus("R100\0old.txt\0new.txt\0D\0gone.txt\0");
 		assertEquals(2, list.size());
 		assertEquals('R', list.get(0).status);
@@ -180,8 +166,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void commitOnlyTheChosenFilesWithAuthorAndCommitter() throws Exception
-	{
+	public void commitOnlyTheChosenFilesWithAuthorAndCommitter() throws Exception {
 		commit("a.txt", "one\n", "first");
 		write("a.txt", "two\n");
 		write("b.txt", "b\n");
@@ -201,8 +186,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void ignoreUntrackAndRestore() throws Exception
-	{
+	public void ignoreUntrackAndRestore() throws Exception {
 		commit("a.txt", "one\n", "first");
 		write("a.txt", "changed\n");
 		assertTrue(repo.restore("HEAD", Arrays.asList("a.txt")).ok());
@@ -217,8 +201,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void branchesTagsResetAndMerge() throws Exception
-	{
+	public void branchesTagsResetAndMerge() throws Exception {
 		commit("a.txt", "one\n", "first");
 		assertTrue(repo.switchNew("feature", null).ok());
 		commit("f.txt", "f\n", "feature work");
@@ -235,8 +218,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void conflictedMergeCanBeAborted() throws Exception
-	{
+	public void conflictedMergeCanBeAborted() throws Exception {
 		commit("a.txt", "one\n", "first");
 		repo.switchNew("other", null);
 		commit("a.txt", "other\n", "other change");
@@ -250,8 +232,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void cherryPickAndRevert() throws Exception
-	{
+	public void cherryPickAndRevert() throws Exception {
 		commit("a.txt", "one\n", "first");
 		repo.switchNew("other", null);
 		commit("b.txt", "b\n", "add b");
@@ -264,8 +245,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void stashSaveListAndPop() throws Exception
-	{
+	public void stashSaveListAndPop() throws Exception {
 		commit("a.txt", "one\n", "first");
 		write("a.txt", "dirty\n");
 		write("n.txt", "new\n");
@@ -281,8 +261,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void splitsIdentities()
-	{
+	public void splitsIdentities() {
 		assertEquals("Ann Lee", GitRepo.split("Ann Lee <a@b.c>")[0]);
 		assertEquals("a@b.c", GitRepo.split("Ann Lee <a@b.c>")[1]);
 		assertNull(GitRepo.split("nobody"));
@@ -290,16 +269,14 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void parsesAheadAndBehind()
-	{
+	public void parsesAheadAndBehind() {
 		GitStatus s = GitStatus.parse("# branch.oid abc\0# branch.head dev\0# branch.upstream origin/dev\0# branch.ab +3 -2\0");
 		assertEquals(3, s.ahead);
 		assertEquals(2, s.behind);
 	}
 
 	@Test
-	public void parsesCannedStatus()
-	{
+	public void parsesCannedStatus() {
 		String text = "# branch.oid abc\0# branch.head dev\0" + "1 .M N... 100644 100644 100644 aaa bbb src/A.java\0" + "2 R. N... 100644 100644 100644 aaa bbb R100 new name.txt\0old name.txt\0"
 			+ "u UU N... 1 2 3 4 aaa bbb ccc c.txt\0? loose.txt\0";
 		GitStatus s = GitStatus.parse(text);
@@ -312,8 +289,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void parsesDecorations()
-	{
+	public void parsesDecorations() {
 		List<Commit.Ref> refs = Commit.parseRefs("HEAD -> refs/heads/feature/x, tag: refs/tags/v1, refs/remotes/origin/main, refs/remotes/origin/HEAD, refs/heads/main");
 		assertEquals(4, refs.size());
 		assertEquals("feature/x", refs.get(0).name);
@@ -328,8 +304,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void relativePathsIgnoreDotSegmentsAndSymbolicLinks() throws Exception
-	{
+	public void relativePathsIgnoreDotSegmentsAndSymbolicLinks() throws Exception {
 		write("src/a.txt", "a\n");
 		assertEquals("src/a.txt", repo.relative(new File(dir, "src/a.txt")));
 		assertEquals("src/a.txt", repo.relative(new File(dir, "./src/../src/./a.txt")));
@@ -344,8 +319,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void assumeUnchangedHidesLocalChangesAndCanBeUndone() throws Exception
-	{
+	public void assumeUnchangedHidesLocalChangesAndCanBeUndone() throws Exception {
 		commit("a.txt", "one\n", "first");
 		commit("sub/b.txt", "one\n", "second");
 		assertFalse(repo.assumedUnchanged("a.txt"));
@@ -363,8 +337,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void conflictsAreFoundForFilesAndFolders() throws Exception
-	{
+	public void conflictsAreFoundForFilesAndFolders() throws Exception {
 		GitStatus s = new GitStatus("main", Arrays.asList(new FileChange("src/a.txt", 'U', 'U'), new FileChange("b.txt", ' ', 'M')));
 		assertTrue(s.conflicted("src/a.txt"));
 		assertTrue(s.conflicted("src"));
@@ -374,8 +347,7 @@ public class GitRepoTest
 	}
 
 	@Test
-	public void foldersHoldingModifiedFilesAreModified()
-	{
+	public void foldersHoldingModifiedFilesAreModified() {
 		GitStatus s = new GitStatus("main", Arrays.asList(new FileChange("a/b/c.txt", ' ', 'M'), new FileChange("x/y.txt", '?', '?')));
 		assertTrue(s.modified("a/b/c.txt"));
 		assertTrue(s.modified("a/b"));

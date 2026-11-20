@@ -26,8 +26,7 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 
-public class ConsolePane
-{
+public class ConsolePane {
 	static final Pattern TRACE = Pattern.compile("at ([\\w.$]+)\\.[\\w$<>]+\\((\\w+\\.java):(\\d+)\\)");
 
 	private final Composite composite;
@@ -48,16 +47,14 @@ public class ConsolePane
 	static final int[][] XTERM = {{0, 0, 0}, {205, 0, 0}, {0, 160, 0}, {190, 150, 0}, {30, 60, 230}, {190, 0, 190}, {0, 170, 170}, {229, 229, 229},
 		{127, 127, 127}, {255, 60, 60}, {60, 220, 60}, {255, 235, 80}, {90, 120, 255}, {255, 90, 255}, {60, 230, 230}, {255, 255, 255}};
 
-	static class Seg
-	{
+	static class Seg {
 		int start;
 		int length;
 		boolean error;
 		AnsiParser.Style style;
 	}
 
-	public ConsolePane(Composite parent, Theme theme)
-	{
+	public ConsolePane(Composite parent, Theme theme) {
 		this.theme = theme;
 		composite = new Composite(parent, SWT.NONE);
 		GridLayout layout = new GridLayout(1, false);
@@ -70,13 +67,10 @@ public class ConsolePane
 		text.setFont(theme.font);
 		ReadOnlyText.installKeys(text);
 		// output and stdin share one text: everything before inputStart is output, everything after is the line being typed
-		text.addVerifyListener(e ->
-		{
-			if(!internal && e.start < inputStart)
-			{
+		text.addVerifyListener(e -> {
+			if(!internal && e.start < inputStart) {
 				e.doit = false;
-				if(!e.text.isEmpty())
-				{
+				if(!e.text.isEmpty()) {
 					// typed or pasted into old output: it belongs on the input line instead
 					int end = text.getCharCount();
 					internal = true;
@@ -89,17 +83,14 @@ public class ConsolePane
 		text.addListener(SWT.KeyDown, e -> key(e));
 		text.addListener(SWT.MouseUp, e -> clicked(e.x, e.y));
 		text.setMenu(menu());
-		text.addListener(SWT.Dispose, e ->
-		{
-			for(Color c : colors.values())
-			{
+		text.addListener(SWT.Dispose, e -> {
+			for(Color c : colors.values()) {
 				c.dispose();
 			}
 		});
 	}
 
-	Menu menu()
-	{
+	Menu menu() {
 		Menu menu = new Menu(text);
 		MenuItem copy = ClaudePane.item(menu, "Copy", () -> text.copy());
 		ClaudePane.item(menu, "Select All", () -> text.selectAll());
@@ -109,45 +100,37 @@ public class ConsolePane
 		return menu;
 	}
 
-	public Composite getControl()
-	{
+	public Composite getControl() {
 		return composite;
 	}
 
-	public void setProject(EclipseProject project)
-	{
+	public void setProject(EclipseProject project) {
 		this.project = project;
 	}
 
-	public void setOpener(Consumer<Location> opener)
-	{
+	public void setOpener(Consumer<Location> opener) {
 		this.opener = opener;
 	}
 
-	public void setInputSink(Consumer<String> sink)
-	{
+	public void setInputSink(Consumer<String> sink) {
 		inputSink = sink;
 	}
 
-	void key(Event e)
-	{
+	void key(Event e) {
 		boolean enter = e.keyCode == SWT.CR || e.keyCode == SWT.KEYPAD_CR;
-		if(enter && (e.stateMask & (SWT.MOD1 | SWT.SHIFT | SWT.ALT)) == 0)
-		{
+		if(enter && (e.stateMask & (SWT.MOD1 | SWT.SHIFT | SWT.ALT)) == 0) {
 			e.doit = false;
 			sendInput();
 			return;
 		}
 		boolean edit = e.character != 0 && e.character != SWT.ESC;
 		boolean copyOrAll = (e.stateMask & SWT.MOD1) != 0 && (e.keyCode == 'c' || e.keyCode == 'a');
-		if(edit && !copyOrAll && text.getSelectionCount() == 0 && text.getCaretOffset() < inputStart)
-		{
+		if(edit && !copyOrAll && text.getSelectionCount() == 0 && text.getCaretOffset() < inputStart) {
 			text.setCaretOffset(text.getCharCount());
 		}
 	}
 
-	void sendInput()
-	{
+	void sendInput() {
 		String line = text.getText(inputStart, text.getCharCount() - 1) + "\n";
 		Seg seg = new Seg();
 		seg.start = inputStart;
@@ -161,14 +144,12 @@ public class ConsolePane
 		inputStart = text.getCharCount();
 		text.setCaretOffset(inputStart);
 		text.setTopIndex(text.getLineCount() - 1);
-		if(inputSink != null)
-		{
+		if(inputSink != null) {
 			inputSink.accept(line);
 		}
 	}
 
-	public void clear()
-	{
+	public void clear() {
 		segments.clear();
 		ansi = new AnsiParser();
 		internal = true;
@@ -177,19 +158,16 @@ public class ConsolePane
 		inputStart = 0;
 	}
 
-	public String getText()
-	{
+	public String getText() {
 		return text.getText();
 	}
 
-	public void append(String s, boolean error)
-	{
+	public void append(String s, boolean error) {
 		int first = inputStart;
 		int caret = text.getCaretOffset();
 		boolean typing = caret >= inputStart;
 		internal = true;
-		for(AnsiParser.Span span : ansi.parse(s))
-		{
+		for(AnsiParser.Span span : ansi.parse(s)) {
 			Seg seg = new Seg();
 			seg.start = inputStart;
 			seg.length = span.text.length();
@@ -199,22 +177,19 @@ public class ConsolePane
 			inputStart += seg.length;
 			text.setStyleRange(styleFor(seg));
 			segments.add(seg);
-			if(typing)
-			{
+			if(typing) {
 				caret += seg.length;
 			}
 		}
 		internal = false;
-		if(inputStart > first)
-		{
+		if(inputStart > first) {
 			linkify(first);
 		}
 		text.setCaretOffset(caret);
 		text.setTopIndex(text.getLineCount() - 1);
 	}
 
-	StyleRange styleFor(Seg seg)
-	{
+	StyleRange styleFor(Seg seg) {
 		StyleRange range = new StyleRange();
 		range.start = seg.start;
 		range.length = seg.length;
@@ -224,22 +199,17 @@ public class ConsolePane
 		Color fg = st.fg == AnsiParser.DEFAULT ? null : colorOf(st.fg, literal);
 		Color bg = st.bg == AnsiParser.DEFAULT ? null : colorOf(st.bg, !theme.dark);
 		Color normal = seg.error ? theme.errorText : theme.foreground;
-		if(st.reverse)
-		{
+		if(st.reverse) {
 			range.foreground = bg != null ? bg : theme.background;
 			range.background = fg != null ? fg : normal;
-		}
-		else
-		{
+		} else {
 			range.foreground = fg != null ? fg : normal;
 			range.background = bg;
 		}
-		if(st.bold)
-		{
+		if(st.bold) {
 			range.fontStyle |= SWT.BOLD;
 		}
-		if(st.italic)
-		{
+		if(st.italic) {
 			range.fontStyle |= SWT.ITALIC;
 		}
 		range.underline = st.underline;
@@ -247,39 +217,30 @@ public class ConsolePane
 	}
 
 	// ANSI colour code to a colour: 0-15 follow the theme, 16-255 are the xterm cube/greys, RGB is literal
-	Color colorOf(int code, boolean literal)
-	{
+	Color colorOf(int code, boolean literal) {
 		int key = code < 16 ? code + (theme.dark ? 0 : literal ? 2000 : 1000) : code;
 		Color c = colors.get(key);
-		if(c != null)
-		{
+		if(c != null) {
 			return c;
 		}
 		int r;
 		int g;
 		int b;
-		if(code >= AnsiParser.RGB)
-		{
+		if(code >= AnsiParser.RGB) {
 			r = (code >> 16) & 255;
 			g = (code >> 8) & 255;
 			b = code & 255;
-		}
-		else if(code < 16)
-		{
+		} else if(code < 16) {
 			int[] rgb = (theme.dark ? DARK : literal ? XTERM : LIGHT)[code];
 			r = rgb[0];
 			g = rgb[1];
 			b = rgb[2];
-		}
-		else if(code < 232)
-		{
+		} else if(code < 232) {
 			int n = code - 16;
 			r = level(n / 36);
 			g = level((n / 6) % 6);
 			b = level(n % 6);
-		}
-		else
-		{
+		} else {
 			r = 8 + 10 * (code - 232);
 			g = r;
 			b = r;
@@ -289,38 +250,31 @@ public class ConsolePane
 		return c;
 	}
 
-	static int level(int v)
-	{
+	static int level(int v) {
 		return v == 0 ? 0 : 55 + 40 * v;
 	}
 
-	public void restyle()
-	{
+	public void restyle() {
 		text.setFont(theme.font);
 		text.setBackground(theme.background);
 		text.setForeground(theme.foreground);
-		for(Seg seg : segments)
-		{
+		for(Seg seg : segments) {
 			text.setStyleRange(styleFor(seg));
 		}
 		linkify(0);
 	}
 
-	void linkify(int start)
-	{
-		if(text.getCharCount() == 0)
-		{
+	void linkify(int start) {
+		if(text.getCharCount() == 0) {
 			return;
 		}
 		int firstLine = text.getLineAtOffset(start);
 		int from = text.getOffsetAtLine(firstLine);
 		String chunk = text.getText(from, text.getCharCount() - 1);
 		Matcher m = TRACE.matcher(chunk);
-		while(m.find())
-		{
+		while(m.find()) {
 			File file = resolve(m.group(1), m.group(2));
-			if(file == null)
-			{
+			if(file == null) {
 				continue;
 			}
 			StyleRange link = new StyleRange();
@@ -334,32 +288,24 @@ public class ConsolePane
 		}
 	}
 
-	File resolve(String qualifiedClass, String fileName)
-	{
-		if(project == null)
-		{
+	File resolve(String qualifiedClass, String fileName) {
+		if(project == null) {
 			return null;
 		}
 		return project.findSource(qualifiedClass, fileName);
 	}
 
-	void clicked(int x, int y)
-	{
-		if(opener == null)
-		{
+	void clicked(int x, int y) {
+		if(opener == null) {
 			return;
 		}
-		try
-		{
+		try {
 			int offset = text.getOffsetAtPoint(new Point(x, y));
 			StyleRange r = text.getStyleRangeAtOffset(offset);
-			if(r != null && r.data instanceof Location)
-			{
+			if(r != null && r.data instanceof Location) {
 				opener.accept((Location)r.data);
 			}
-		}
-		catch(IllegalArgumentException e)
-		{
+		} catch(IllegalArgumentException e) {
 			// the click was not over any text
 		}
 	}

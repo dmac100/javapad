@@ -13,11 +13,9 @@ import javapad.model.EclipseProject;
 import org.eclipse.swt.widgets.Display;
 
 // Owns the per-project type index and javac analyzer, and runs every request on one worker thread.
-public class CodeAssist
-{
+public class CodeAssist {
 	private final Display display;
-	private final ExecutorService worker = Executors.newSingleThreadExecutor(r ->
-	{
+	private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
 		Thread t = new Thread(r, "code-assist");
 		t.setDaemon(true);
 		return t;
@@ -30,17 +28,14 @@ public class CodeAssist
 	private int buildGeneration;
 	private int modelGeneration;
 
-	public CodeAssist(Display display)
-	{
+	public CodeAssist(Display display) {
 		this.display = display;
 	}
 
-	public void setProject(EclipseProject project)
-	{
+	public void setProject(EclipseProject project) {
 		this.project = project;
 		JavaAnalyzer old = analyzer;
-		if(old != null)
-		{
+		if(old != null) {
 			worker.execute(() -> old.invalidate());
 		}
 		analyzer = project == null ? null : new JavaAnalyzer(project);
@@ -51,40 +46,32 @@ public class CodeAssist
 	}
 
 	// The source and jar listings changed (a file was saved, or a build ran).
-	public void refresh()
-	{
+	public void refresh() {
 		JavaAnalyzer a = analyzer;
-		if(a != null)
-		{
+		if(a != null) {
 			worker.execute(() -> a.invalidate());
 			rebuildIndex();
 		}
 	}
 
-	void rebuildIndex()
-	{
+	void rebuildIndex() {
 		EclipseProject p = project;
-		if(p == null)
-		{
+		if(p == null) {
 			return;
 		}
 		int generation = ++buildGeneration;
-		Thread t = new Thread(() ->
-		{
+		Thread t = new Thread(() -> {
 			TypeIndex built = TypeIndex.build(p.sourceFolders, p.libraries);
-			if(generation == buildGeneration)
-			{
+			if(generation == buildGeneration) {
 				index = built;
 			}
 		}, "type-index");
 		t.setDaemon(true);
 		t.start();
 		int modelBuild = ++modelGeneration;
-		Thread m = new Thread(() ->
-		{
+		Thread m = new Thread(() -> {
 			CodeModel built = CodeModel.build(p);
-			if(modelBuild == modelGeneration)
-			{
+			if(modelBuild == modelGeneration) {
 				model = built;
 			}
 		}, "code-model");
@@ -93,49 +80,37 @@ public class CodeAssist
 	}
 
 	// Null until the first analysis of the whole project has finished.
-	public CodeModel model()
-	{
+	public CodeModel model() {
 		return model;
 	}
 
-	public TypeIndex index()
-	{
+	public TypeIndex index() {
 		return index;
 	}
 
-	public JavaAnalyzer analyzer()
-	{
+	public JavaAnalyzer analyzer() {
 		return analyzer;
 	}
 
-	public boolean available()
-	{
+	public boolean available() {
 		return engine != null;
 	}
 
-	public void complete(File file, String text, int offset, Consumer<CompletionEngine.Completions> done)
-	{
+	public void complete(File file, String text, int offset, Consumer<CompletionEngine.Completions> done) {
 		CompletionEngine e = engine;
-		if(e == null)
-		{
+		if(e == null) {
 			return;
 		}
-		worker.execute(() ->
-		{
+		worker.execute(() -> {
 			CompletionEngine.Completions result = null;
-			try
-			{
+			try {
 				result = e.propose(file, text, offset);
-			}
-			catch(Throwable ex)
-			{
+			} catch(Throwable ex) {
 				// a failed analysis yields no proposals
 			}
 			CompletionEngine.Completions finalResult = result;
-			display.asyncExec(() ->
-			{
-				if(finalResult != null)
-				{
+			display.asyncExec(() -> {
+				if(finalResult != null) {
 					done.accept(finalResult);
 				}
 			});
@@ -143,17 +118,12 @@ public class CodeAssist
 	}
 
 	// Runs arbitrary work against the analyzer off the UI thread and returns the result on it.
-	public <T> void submit(Supplier<T> work, Consumer<T> done)
-	{
-		worker.execute(() ->
-		{
+	public <T> void submit(Supplier<T> work, Consumer<T> done) {
+		worker.execute(() -> {
 			T result = null;
-			try
-			{
+			try {
 				result = work.get();
-			}
-			catch(Throwable ex)
-			{
+			} catch(Throwable ex) {
 				// a failed analysis yields no result
 			}
 			T finalResult = result;

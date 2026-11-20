@@ -11,25 +11,20 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 
-public class ConfirmDialog
-{
-	public static int ask(Shell parent, String title, String message)
-	{
+public class ConfirmDialog {
+	public static int ask(Shell parent, String title, String message) {
 		return show(parent, title, message, SWT.ICON_QUESTION, SWT.YES | SWT.NO | SWT.CANCEL, null);
 	}
 
-	public static boolean confirm(Shell parent, String title, String message)
-	{
+	public static boolean confirm(Shell parent, String title, String message) {
 		return show(parent, title, message, SWT.ICON_WARNING, SWT.YES | SWT.NO, null) == SWT.YES;
 	}
 
-	public static void message(Shell parent, String title, String message, int icon)
-	{
+	public static void message(Shell parent, String title, String message, int icon) {
 		show(parent, title, message, icon, SWT.OK, null);
 	}
 
-	static int show(Shell parent, String title, String message, int icon, int buttonFlags, Runnable shown)
-	{
+	static int show(Shell parent, String title, String message, int icon, int buttonFlags, Runnable shown) {
 		int closed = (buttonFlags & SWT.CANCEL) != 0 ? SWT.CANCEL : (buttonFlags & SWT.NO) != 0 ? SWT.NO : SWT.OK;
 		int[] result = {closed};
 		Display display = parent.getDisplay();
@@ -54,8 +49,7 @@ public class ConfirmDialog
 		int[] flags = {SWT.YES, SWT.NO, SWT.CANCEL, SWT.OK};
 		String[] labels = {"Yes", "No", "Cancel", "OK"};
 		int count = 0;
-		for(int flag : flags)
-		{
+		for(int flag : flags) {
 			count += (buttonFlags & flag) != 0 ? 1 : 0;
 		}
 		GridLayout bl = new GridLayout(count, true);
@@ -63,21 +57,17 @@ public class ConfirmDialog
 		bl.marginHeight = 0;
 		buttons.setLayout(bl);
 		Button first = null;
-		for(int i = 0; i < flags.length; i++)
-		{
-			if((buttonFlags & flags[i]) == 0)
-			{
+		for(int i = 0; i < flags.length; i++) {
+			if((buttonFlags & flags[i]) == 0) {
 				continue;
 			}
 			int flag = flags[i];
 			Button b = button(buttons, labels[i]);
-			b.addListener(SWT.Selection, e ->
-			{
+			b.addListener(SWT.Selection, e -> {
 				result[0] = flag;
 				dialog.dispose();
 			});
-			if(first == null)
-			{
+			if(first == null) {
 				first = b;
 			}
 		}
@@ -88,22 +78,18 @@ public class ConfirmDialog
 		dialog.setLocation(b.x + (b.width - size.x) / 2, b.y + (b.height - size.y) / 2);
 		dialog.open();
 		first.setFocus();
-		if(shown != null)
-		{
+		if(shown != null) {
 			display.timerExec(400, shown);
 		}
-		while(!dialog.isDisposed())
-		{
-			if(!display.readAndDispatch())
-			{
+		while(!dialog.isDisposed()) {
+			if(!display.readAndDispatch()) {
 				display.sleep();
 			}
 		}
 		return result[0];
 	}
 
-	static Button button(Composite parent, String label)
-	{
+	static Button button(Composite parent, String label) {
 		Button b = new Button(parent, SWT.PUSH);
 		b.setText(label);
 		b.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false));

@@ -11,8 +11,7 @@ import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.widgets.Display;
 
-public class Theme
-{
+public class Theme {
 	static final File PREFERENCE = new File(System.getProperty("user.home"), ".javapad/theme");
 	static final File FONT_PREFERENCE = new File(System.getProperty("user.home"), ".javapad/font");
 	static final File TOOLBAR_PREFERENCE = new File(System.getProperty("user.home"), ".javapad/toolbar");
@@ -53,133 +52,97 @@ public class Theme
 	public Color modified;
 	private final Display display;
 
-	public Theme(Display d)
-	{
+	public Theme(Display d) {
 		display = d;
 		font = loadFont();
 		use(loadPreference());
 	}
 
-	Font loadFont()
-	{
+	Font loadFont() {
 		String name = "Monospace";
 		int size = 11;
-		try
-		{
+		try {
 			String[] f = new String(Files.readAllBytes(FONT_PREFERENCE.toPath()), StandardCharsets.UTF_8).trim().split("\t");
 			name = f[0];
 			size = Integer.parseInt(f[1]);
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			// the font preference is optional
 		}
 		return new Font(display, new FontData(name, size, SWT.NORMAL));
 	}
 
 	// Replaces the editor font; the caller restyles the widgets and then calls disposeOld.
-	public Font changeFont(FontData data)
-	{
+	public Font changeFont(FontData data) {
 		Font old = font;
 		FontData d = new FontData(data.getName(), Math.max(6, Math.round(data.height)), SWT.NORMAL);
 		font = new Font(display, d);
-		try
-		{
+		try {
 			FONT_PREFERENCE.getParentFile().mkdirs();
 			Files.write(FONT_PREFERENCE.toPath(), (d.getName() + "\t" + d.getHeight()).getBytes(StandardCharsets.UTF_8));
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			// the font preference is optional
 		}
 		return old;
 	}
 
-	public static void saveWhitespace(boolean shown)
-	{
-		try
-		{
+	public static void saveWhitespace(boolean shown) {
+		try {
 			WHITESPACE_PREFERENCE.getParentFile().mkdirs();
 			Files.write(WHITESPACE_PREFERENCE.toPath(), (shown ? "shown" : "hidden").getBytes(StandardCharsets.UTF_8));
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			// the whitespace preference is optional
 		}
 	}
 
-	public static boolean loadWhitespace()
-	{
-		try
-		{
+	public static boolean loadWhitespace() {
+		try {
 			return new String(Files.readAllBytes(WHITESPACE_PREFERENCE.toPath()), StandardCharsets.UTF_8).trim().equals("shown");
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			return false;
 		}
 	}
 
-	public static boolean loadToolbar()
-	{
-		try
-		{
+	public static boolean loadToolbar() {
+		try {
 			return !new String(Files.readAllBytes(TOOLBAR_PREFERENCE.toPath()), StandardCharsets.UTF_8).trim().equals("hidden");
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			return true;
 		}
 	}
 
-	public static void saveToolbar(boolean shown)
-	{
-		try
-		{
+	public static void saveToolbar(boolean shown) {
+		try {
 			TOOLBAR_PREFERENCE.getParentFile().mkdirs();
 			Files.write(TOOLBAR_PREFERENCE.toPath(), (shown ? "shown" : "hidden").getBytes(StandardCharsets.UTF_8));
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			// the toolbar preference is optional
 		}
 	}
 
-	public static boolean loadPreference()
-	{
+	public static boolean loadPreference() {
 		String forced = System.getProperty("javapad.theme");
-		if(forced != null)
-		{
+		if(forced != null) {
 			return !forced.equals("light");
 		}
-		try
-		{
+		try {
 			return !new String(Files.readAllBytes(PREFERENCE.toPath()), StandardCharsets.UTF_8).trim().equals("light");
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			return true;
 		}
 	}
 
-	public void savePreference()
-	{
-		try
-		{
+	public void savePreference() {
+		try {
 			PREFERENCE.getParentFile().mkdirs();
 			Files.write(PREFERENCE.toPath(), (dark ? "dark" : "light").getBytes(StandardCharsets.UTF_8));
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			// the theme preference is optional
 		}
 	}
 
-	public void use(boolean dark)
-	{
+	public void use(boolean dark) {
 		this.dark = dark;
-		if(dark)
-		{
+		if(dark) {
 			// Monokai, with the colours ScratchPad uses
 			background = color(30, 30, 30);
 			foreground = color(0xff, 0xff, 0xff);
@@ -208,9 +171,7 @@ public class Theme
 			diffHunk = color(86, 156, 214);
 			branch = color(120, 170, 220);
 			modified = color(110, 200, 100);
-		}
-		else
-		{
+		} else {
 			background = color(255, 255, 255);
 			foreground = color(30, 30, 30);
 			sidebar = background;
@@ -240,15 +201,12 @@ public class Theme
 		}
 	}
 
-	Color color(int r, int g, int b)
-	{
+	Color color(int r, int g, int b) {
 		return new Color(display, r, g, b);
 	}
 
-	public Color colorFor(int style)
-	{
-		switch(style)
-		{
+	public Color colorFor(int style) {
+		switch(style) {
 		case JavaLexer.KEYWORD:
 			return keyword;
 		case JavaLexer.TYPE:

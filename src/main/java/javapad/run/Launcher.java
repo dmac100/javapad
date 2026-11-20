@@ -13,49 +13,38 @@ import javapad.model.ClasspathParser;
 import javapad.model.EclipseProject;
 import javapad.runner.JUnit4Runner;
 
-public class Launcher
-{
+public class Launcher {
 	private final EclipseProject project;
 	private final OutputListener listener;
 	private Process process;
 
-	public Launcher(EclipseProject project, OutputListener listener)
-	{
+	public Launcher(EclipseProject project, OutputListener listener) {
 		this.project = project;
 		this.listener = listener;
 	}
 
-	public static List<String> splitArgs(String text)
-	{
+	public static List<String> splitArgs(String text) {
 		List<String> result = new ArrayList<String>();
 		StringBuilder cur = new StringBuilder();
 		boolean quoted = false;
 		boolean any = false;
-		for(int i = 0; i < text.length(); i++)
-		{
+		for(int i = 0; i < text.length(); i++) {
 			char c = text.charAt(i);
-			if(c == '"')
-			{
+			if(c == '"') {
 				quoted = !quoted;
 				any = true;
-			}
-			else if(Character.isWhitespace(c) && !quoted)
-			{
-				if(any)
-				{
+			} else if(Character.isWhitespace(c) && !quoted) {
+				if(any) {
 					result.add(cur.toString());
 					cur.setLength(0);
 					any = false;
 				}
-			}
-			else
-			{
+			} else {
 				cur.append(c);
 				any = true;
 			}
 		}
-		if(any)
-		{
+		if(any) {
 			result.add(cur.toString());
 		}
 		return result;
@@ -63,22 +52,18 @@ public class Launcher
 
 	// Older libraries (Mockito 1/cglib, Guice, Spring, ...) reflect into the JDK internals, which JDK 16+
 	// blocks by default. Eclipse-era projects expect that to work, so open the common packages.
-	static void addOpens(List<String> cmd)
-	{
+	static void addOpens(List<String> cmd) {
 		String[] packages = {"java.lang", "java.lang.reflect", "java.util", "java.io", "java.net", "java.text", "java.nio"};
-		for(String p : packages)
-		{
+		for(String p : packages) {
 			cmd.add("--add-opens=java.base/" + p + "=ALL-UNNAMED");
 		}
 	}
 
-	public List<String> mainCommand(String className, String vmArgs, String args)
-	{
+	public List<String> mainCommand(String className, String vmArgs, String args) {
 		List<String> cmd = new ArrayList<String>();
 		cmd.add(javaExecutable());
 		addOpens(cmd);
-		if(project.preview)
-		{
+		if(project.preview) {
 			cmd.add("--enable-preview");
 		}
 		cmd.addAll(splitArgs(vmArgs));
@@ -89,37 +74,30 @@ public class Launcher
 		return cmd;
 	}
 
-	public static File liveLog(File reportDir)
-	{
+	public static File liveLog(File reportDir) {
 		return new File(reportDir, "live.log");
 	}
 
 	// specs are class names, or class#method to run a single test method
-	public List<String> junitCommand(List<String> specs, boolean jupiter, File reportDir)
-	{
+	public List<String> junitCommand(List<String> specs, boolean jupiter, File reportDir) {
 		List<String> cmd = new ArrayList<String>();
 		cmd.add(javaExecutable());
 		addOpens(cmd);
-		if(project.preview)
-		{
+		if(project.preview) {
 			cmd.add("--enable-preview");
 		}
 		cmd.add("-Djavapad.live=" + liveLog(reportDir).getAbsolutePath());
 		cmd.add("-cp");
 		cmd.add(junitClasspath(jupiter));
-		if(jupiter)
-		{
+		if(jupiter) {
 			cmd.add("org.junit.platform.console.ConsoleLauncher");
 			cmd.add("execute");
 			cmd.add("--details=tree");
 			cmd.add("--reports-dir=" + new File(reportDir, "jupiter").getAbsolutePath());
-			for(String spec : specs)
-			{
+			for(String spec : specs) {
 				cmd.add(spec.indexOf('#') < 0 ? "--select-class=" + spec : "--select-method=" + spec);
 			}
-		}
-		else
-		{
+		} else {
 			cmd.add("javapad.runner.JUnit4Runner");
 			cmd.add(new File(reportDir, "junit4.xml").getAbsolutePath());
 			cmd.addAll(specs);
@@ -127,63 +105,47 @@ public class Launcher
 		return cmd;
 	}
 
-	static File runnerLocation()
-	{
-		try
-		{
+	static File runnerLocation() {
+		try {
 			return new File(JUnit4Runner.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-		}
-		catch(Exception e)
-		{
+		} catch(Exception e) {
 			return new File("bin");
 		}
 	}
 
-	String junitClasspath(boolean jupiter)
-	{
+	String junitClasspath(boolean jupiter) {
 		List<File> extra = new ArrayList<File>();
 		boolean hasJunit4 = false;
-		for(File lib : project.libraries)
-		{
-			if(lib.getName().startsWith("junit-4"))
-			{
+		for(File lib : project.libraries) {
+			if(lib.getName().startsWith("junit-4")) {
 				hasJunit4 = true;
 			}
 		}
-		if(jupiter)
-		{
+		if(jupiter) {
 			extra.add(ClasspathParser.bundled("junit-platform-console-standalone-6.1.3.jar"));
-		}
-		else if(!hasJunit4)
-		{
+		} else if(!hasJunit4) {
 			extra.add(ClasspathParser.bundled("junit-4.13.2.jar"));
 			extra.add(ClasspathParser.bundled("hamcrest-core-1.3.jar"));
 		}
 		extra.add(runnerLocation());
 		StringBuilder sb = new StringBuilder(project.classpathString());
-		for(File f : extra)
-		{
+		for(File f : extra) {
 			sb.append(File.pathSeparator);
 			sb.append(f.getAbsolutePath());
 		}
 		return sb.toString();
 	}
 
-	public static String javaExecutable()
-	{
+	public static String javaExecutable() {
 		return new File(System.getProperty("java.home"), "bin/java").getPath();
 	}
 
-	public void start(List<String> command)
-	{
+	public void start(List<String> command) {
 		ProcessBuilder pb = new ProcessBuilder(command);
 		pb.directory(project.root);
-		try
-		{
+		try {
 			process = pb.start();
-		}
-		catch(IOException e)
-		{
+		} catch(IOException e) {
 			e.printStackTrace();
 			listener.output("Cannot start: " + e.getMessage() + "\n", true);
 			listener.finished(-1);
@@ -192,16 +154,12 @@ public class Launcher
 		listener.output("> " + String.join(" ", command) + "\n", false);
 		pump(process.getInputStream(), false);
 		Thread err = pump(process.getErrorStream(), true);
-		Thread waiter = new Thread(() ->
-		{
+		Thread waiter = new Thread(() -> {
 			int code = -1;
-			try
-			{
+			try {
 				code = process.waitFor();
 				err.join(2000);
-			}
-			catch(InterruptedException e)
-			{
+			} catch(InterruptedException e) {
 				// interrupted while shutting down; the process is stopped anyway
 			}
 			listener.finished(code);
@@ -210,43 +168,33 @@ public class Launcher
 		waiter.start();
 	}
 
-	Thread pump(InputStream in, boolean error)
-	{
-		Thread t = new Thread(() ->
-		{
-			try
-			{
+	Thread pump(InputStream in, boolean error) {
+		Thread t = new Thread(() -> {
+			try {
 				Reader r = new InputStreamReader(in, StandardCharsets.UTF_8);
 				char[] buf = new char[4096];
 				StringBuilder held = new StringBuilder();
 				int n = r.read(buf);
-				while(n >= 0)
-				{
+				while(n >= 0) {
 					held.append(buf, 0, n);
 					int nl = held.lastIndexOf("\n");
-					if(nl >= 0)
-					{
+					if(nl >= 0) {
 						listener.output(held.substring(0, nl + 1), error);
 						held.delete(0, nl + 1);
 					}
-					if(held.length() > 0 && !r.ready())
-					{
+					if(held.length() > 0 && !r.ready()) {
 						Thread.sleep(40);
-						if(!r.ready())
-						{
+						if(!r.ready()) {
 							listener.output(held.toString(), error);
 							held.setLength(0);
 						}
 					}
 					n = r.read(buf);
 				}
-				if(held.length() > 0)
-				{
+				if(held.length() > 0) {
 					listener.output(held.toString(), error);
 				}
-			}
-			catch(IOException | InterruptedException e)
-			{
+			} catch(IOException | InterruptedException e) {
 				// the output stream closed with the process
 			}
 		}, "launcher-pump");
@@ -255,33 +203,25 @@ public class Launcher
 		return t;
 	}
 
-	public void sendInput(String text)
-	{
-		if(process == null || !process.isAlive())
-		{
+	public void sendInput(String text) {
+		if(process == null || !process.isAlive()) {
 			return;
 		}
-		try
-		{
+		try {
 			OutputStream out = process.getOutputStream();
 			out.write(text.getBytes(StandardCharsets.UTF_8));
 			out.flush();
-		}
-		catch(IOException e)
-		{
+		} catch(IOException e) {
 			// the process has already ended, so there is nobody to read the input
 		}
 	}
 
-	public boolean isRunning()
-	{
+	public boolean isRunning() {
 		return process != null && process.isAlive();
 	}
 
-	public void stop()
-	{
-		if(process != null)
-		{
+	public void stop() {
+		if(process != null) {
 			process.descendants().forEach(ProcessHandle::destroyForcibly);
 			process.destroyForcibly();
 		}

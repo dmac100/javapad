@@ -9,16 +9,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import org.junit.Test;
 
-public class ProjectGeneratorTest
-{
-	static File temp() throws Exception
-	{
+public class ProjectGeneratorTest {
+	static File temp() throws Exception {
 		return Files.createTempDirectory("gen").toFile();
 	}
 
 	@Test
-	public void mavenLayoutWins() throws Exception
-	{
+	public void mavenLayoutWins() throws Exception {
 		File d = temp();
 		new File(d, "src/main/java").mkdirs();
 		new File(d, "src/test/java").mkdirs();
@@ -29,8 +26,7 @@ public class ProjectGeneratorTest
 	}
 
 	@Test
-	public void plainSrcAndTestOnlyIfTheyExist() throws Exception
-	{
+	public void plainSrcAndTestOnlyIfTheyExist() throws Exception {
 		File d = temp();
 		new File(d, "src").mkdirs();
 		assertEquals(Arrays.asList("src"), ProjectGenerator.sourceFolders(d));
@@ -39,8 +35,7 @@ public class ProjectGeneratorTest
 	}
 
 	@Test
-	public void createsAndParsesProject() throws Exception
-	{
+	public void createsAndParsesProject() throws Exception {
 		File d = temp();
 		new File(d, "src").mkdirs();
 		new File(d, "lib").mkdirs();
@@ -55,8 +50,7 @@ public class ProjectGeneratorTest
 	}
 
 	@Test
-	public void existingFilesAreKeptUnlessRegenerated() throws Exception
-	{
+	public void existingFilesAreKeptUnlessRegenerated() throws Exception {
 		File d = temp();
 		new File(d, "src").mkdirs();
 		Files.write(new File(d, ".classpath").toPath(), "<classpath><classpathentry kind=\"src\" path=\"other\"/></classpath>".getBytes());
@@ -67,8 +61,7 @@ public class ProjectGeneratorTest
 	}
 
 	@Test
-	public void usesProjectFolderWhenThereIsNoSrc() throws Exception
-	{
+	public void usesProjectFolderWhenThereIsNoSrc() throws Exception {
 		File d = temp();
 		assertEquals(Arrays.asList(), ProjectGenerator.sourceFolders(d));
 		Files.write(new File(d, "Hello.java").toPath(), "class Hello {}".getBytes());

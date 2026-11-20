@@ -6,8 +6,7 @@ import java.util.function.Consumer;
 
 // The text a terminal shows: a grid of cells with a cursor, scrollback, and the escape sequences programs use to move the cursor, colour text and clear parts of the screen.
 // Colours are -1 (the default), 0 to 255 (the xterm palette) or TRUE_COLOR | 0xRRGGBB. It has no SWT, so it can be tested.
-public class TerminalScreen
-{
+public class TerminalScreen {
 	static final int BOLD = 1;
 	static final int UNDERLINE = 2;
 	static final int REVERSE = 4;
@@ -22,29 +21,25 @@ public class TerminalScreen
 	static final int SKIP_ONE = 4;
 	static final int STRING = 5;
 
-	static class Line
-	{
+	static class Line {
 		char[] ch;
 		int[] fg;
 		int[] bg;
 		int[] attr;
 
-		Line(int cols, int bg)
-		{
+		Line(int cols, int bg) {
 			ch = new char[cols];
 			fg = new int[cols];
 			this.bg = new int[cols];
 			attr = new int[cols];
-			for(int i = 0; i < cols; i++)
-			{
+			for(int i = 0; i < cols; i++) {
 				ch[i] = ' ';
 				fg[i] = -1;
 				this.bg[i] = bg;
 			}
 		}
 
-		Line resized(int cols)
-		{
+		Line resized(int cols) {
 			Line n = new Line(cols, -1);
 			int keep = Math.min(cols, ch.length);
 			System.arraycopy(ch, 0, n.ch, 0, keep);
@@ -80,119 +75,96 @@ public class TerminalScreen
 	private char prefix;
 	private final StringBuilder oscText = new StringBuilder();
 	private String title = "";
-	private Consumer<String> reply = s ->
-	{
+	private Consumer<String> reply = s -> {
 	};
 
-	TerminalScreen(int cols, int rows)
-	{
+	TerminalScreen(int cols, int rows) {
 		this.cols = Math.max(1, cols);
 		this.rows = Math.max(1, rows);
-		for(int i = 0; i < this.rows; i++)
-		{
+		for(int i = 0; i < this.rows; i++) {
 			lines.add(new Line(this.cols, -1));
 		}
 		bottom = this.rows - 1;
 	}
 
 	// where the answers to the program's questions (cursor position and so on) go
-	void setReply(Consumer<String> reply)
-	{
+	void setReply(Consumer<String> reply) {
 		this.reply = reply;
 	}
 
-	synchronized int cols()
-	{
+	synchronized int cols() {
 		return cols;
 	}
 
-	synchronized int rows()
-	{
+	synchronized int rows() {
 		return rows;
 	}
 
-	synchronized int cursorX()
-	{
+	synchronized int cursorX() {
 		return cx;
 	}
 
-	synchronized int cursorY()
-	{
+	synchronized int cursorY() {
 		return cy;
 	}
 
-	synchronized boolean cursorVisible()
-	{
+	synchronized boolean cursorVisible() {
 		return cursorVisible;
 	}
 
-	synchronized boolean applicationCursor()
-	{
+	synchronized boolean applicationCursor() {
 		return applicationCursor;
 	}
 
-	synchronized boolean bracketedPaste()
-	{
+	synchronized boolean bracketedPaste() {
 		return bracketedPaste;
 	}
 
-	synchronized boolean alternate()
-	{
+	synchronized boolean alternate() {
 		return alternate;
 	}
 
-	synchronized String title()
-	{
+	synchronized String title() {
 		return title;
 	}
 
 	// scrollback and screen together: line 0 is the oldest
-	synchronized int totalLines()
-	{
+	synchronized int totalLines() {
 		return scrollback.size() + rows;
 	}
 
-	synchronized int scrollbackSize()
-	{
+	synchronized int scrollbackSize() {
 		return scrollback.size();
 	}
 
-	synchronized Line line(int index)
-	{
-		if(index < scrollback.size())
-		{
+	synchronized Line line(int index) {
+		if(index < scrollback.size()) {
 			return scrollback.get(index);
 		}
 		return lines.get(Math.min(rows - 1, index - scrollback.size()));
 	}
 
 	// the text of a line without its trailing spaces
-	synchronized String text(int index, int from, int to)
-	{
+	synchronized String text(int index, int from, int to) {
 		Line l = line(index);
 		int end = Math.min(to, l.ch.length);
-		while(end > from && l.ch[end - 1] == ' ')
-		{
+		while(end > from && l.ch[end - 1] == ' ') {
 			end--;
 		}
 		return from >= end ? "" : new String(l.ch, from, end - from);
 	}
 
-	synchronized void resize(int newCols, int newRows)
-	{
+	synchronized void resize(int newCols, int newRows) {
 		newCols = Math.max(1, newCols);
 		newRows = Math.max(1, newRows);
-		if(newCols == cols && newRows == rows)
-		{
+		if(newCols == cols && newRows == rows) {
 			return;
 		}
 		lines = resizeLines(lines, newCols, newRows);
-		if(mainLines != null)
-		{
+		if(mainLines != null) {
 			mainLines = resizeLines(mainLines, newCols, newRows);
 		}
-		for(int i = 0; i < scrollback.size(); i++)
-		{
+		for(int i = 0; i < scrollback.size(); i++) {
 			scrollback.set(i, scrollback.get(i).resized(newCols));
 		}
 		cols = newCols;
@@ -204,40 +176,30 @@ public class TerminalScreen
 		bottom = rows - 1;
 	}
 
-	List<Line> resizeLines(List<Line> old, int newCols, int newRows)
-	{
+	List<Line> resizeLines(List<Line> old, int newCols, int newRows) {
 		List<Line> result = new ArrayList<Line>();
-		for(Line l : old)
-		{
+		for(Line l : old) {
 			result.add(l.resized(newCols));
 		}
-		while(result.size() > newRows)
-		{
+		while(result.size() > newRows) {
 			// the lines at the top go to the scrollback, unless the cursor is above the ones that would be cut
-			if(old == lines && cy > 0 && !alternate)
-			{
+			if(old == lines && cy > 0 && !alternate) {
 				scrollback.add(result.remove(0));
 				cy--;
-			}
-			else
-			{
+			} else {
 				result.remove(result.size() - 1);
 			}
 		}
-		while(result.size() < newRows)
-		{
+		while(result.size() < newRows) {
 			result.add(new Line(newCols, -1));
 		}
 		return result;
 	}
 
-	synchronized void feed(String s)
-	{
-		for(int i = 0; i < s.length(); i++)
-		{
+	synchronized void feed(String s) {
+		for(int i = 0; i < s.length(); i++) {
 			char c = s.charAt(i);
-			switch(state)
-			{
+			switch(state) {
 			case GROUND:
 				ground(c);
 				break;
@@ -255,12 +217,9 @@ public class TerminalScreen
 				break;
 			default:
 				// device control and similar strings: ignored up to the terminator
-				if(c == 7)
-				{
+				if(c == 7) {
 					state = GROUND;
-				}
-				else if(c == 27)
-				{
+				} else if(c == 27) {
 					state = ESCAPE;
 				}
 				break;
@@ -268,26 +227,18 @@ public class TerminalScreen
 		}
 	}
 
-	void ground(char c)
-	{
-		if(c == 27)
-		{
+	void ground(char c) {
+		if(c == 27) {
 			state = ESCAPE;
-		}
-		else if(c < 32)
-		{
+		} else if(c < 32) {
 			control(c);
-		}
-		else if(c != 127)
-		{
+		} else if(c != 127) {
 			put(c);
 		}
 	}
 
-	void control(char c)
-	{
-		switch(c)
-		{
+	void control(char c) {
+		switch(c) {
 		case '\n':
 		case 11:
 		case 12:
@@ -298,8 +249,7 @@ public class TerminalScreen
 			pendingWrap = false;
 			break;
 		case '\b':
-			if(cx > 0)
-			{
+			if(cx > 0) {
 				cx--;
 			}
 			pendingWrap = false;
@@ -314,11 +264,9 @@ public class TerminalScreen
 		}
 	}
 
-	void escape(char c)
-	{
+	void escape(char c) {
 		state = GROUND;
-		switch(c)
-		{
+		switch(c) {
 		case '[':
 			state = CSI;
 			params.setLength(0);
@@ -372,100 +320,71 @@ public class TerminalScreen
 		}
 	}
 
-	void osc(char c)
-	{
-		if(c == 7 || c == 27)
-		{
+	void osc(char c) {
+		if(c == 7 || c == 27) {
 			String s = oscText.toString();
-			if(s.startsWith("0;") || s.startsWith("2;"))
-			{
+			if(s.startsWith("0;") || s.startsWith("2;")) {
 				title = s.substring(2);
 			}
 			state = c == 27 ? ESCAPE : GROUND;
-		}
-		else
-		{
+		} else {
 			oscText.append(c);
 		}
 	}
 
-	void csi(char c)
-	{
-		if(c >= '0' && c <= ';')
-		{
+	void csi(char c) {
+		if(c >= '0' && c <= ';') {
 			params.append(c);
-		}
-		else if(c == '?' || c == '>' || c == '<' || c == '=' || c == '!')
-		{
+		} else if(c == '?' || c == '>' || c == '<' || c == '=' || c == '!') {
 			prefix = c;
-		}
-		else if(c >= 0x20 && c <= 0x2f)
-		{
+		} else if(c >= 0x20 && c <= 0x2f) {
 			// intermediate characters (as in "CSI 1 SP q") are not used here
 			params.append(' ');
-		}
-		else if(c >= 0x40 && c <= 0x7e)
-		{
+		} else if(c >= 0x40 && c <= 0x7e) {
 			state = GROUND;
 			dispatch(c);
-		}
-		else if(c == 27)
-		{
+		} else if(c == 27) {
 			state = ESCAPE;
-		}
-		else if(c < 32)
-		{
+		} else if(c < 32) {
 			control(c);
 		}
 	}
 
-	int[] numbers()
-	{
+	int[] numbers() {
 		String[] parts = params.toString().split(";", -1);
 		int[] n = new int[parts.length];
-		for(int i = 0; i < parts.length; i++)
-		{
+		for(int i = 0; i < parts.length; i++) {
 			String p = parts[i].replace(" ", "");
 			int colon = p.indexOf(':');
-			if(colon >= 0)
-			{
+			if(colon >= 0) {
 				p = p.substring(0, colon);
 			}
-			try
-			{
+			try {
 				n[i] = p.isEmpty() ? 0 : Integer.parseInt(p);
-			}
-			catch(NumberFormatException e)
-			{
+			} catch(NumberFormatException e) {
 				n[i] = 0;
 			}
 		}
 		return n;
 	}
 
-	static int arg(int[] n, int i, int def)
-	{
+	static int arg(int[] n, int i, int def) {
 		return i < n.length && n[i] > 0 ? n[i] : def;
 	}
 
-	void dispatch(char c)
-	{
+	void dispatch(char c) {
 		int[] n = numbers();
 		int a = arg(n, 0, 1);
-		if(prefix == '?' && (c == 'h' || c == 'l'))
-		{
-			for(int mode : n)
-			{
+		if(prefix == '?' && (c == 'h' || c == 'l')) {
+			for(int mode : n) {
 				setMode(mode, c == 'h');
 			}
 			return;
 		}
-		if(prefix != 0 && prefix != '?')
-		{
+		if(prefix != 0 && prefix != '?') {
 			return;
 		}
-		switch(c)
-		{
+		switch(c) {
 		case 'A':
 			moveTo(cx, cy - a, true);
 			break;
@@ -537,12 +456,9 @@ public class TerminalScreen
 			pendingWrap = false;
 			break;
 		case 'n':
-			if(n[0] == 5)
-			{
+			if(n[0] == 5) {
 				reply.accept("\u001b[0n");
-			}
-			else if(n[0] == 6)
-			{
+			} else if(n[0] == 6) {
 				reply.accept("\u001b[" + (cy + 1) + ";" + (cx + 1) + "R");
 			}
 			break;
@@ -554,10 +470,8 @@ public class TerminalScreen
 		}
 	}
 
-	void setMode(int mode, boolean on)
-	{
-		switch(mode)
-		{
+	void setMode(int mode, boolean on) {
+		switch(mode) {
 		case 1:
 			applicationCursor = on;
 			break;
@@ -580,33 +494,25 @@ public class TerminalScreen
 		}
 	}
 
-	void setAlternate(boolean on, boolean saveCursor)
-	{
-		if(on == alternate)
-		{
+	void setAlternate(boolean on, boolean saveCursor) {
+		if(on == alternate) {
 			return;
 		}
 		alternate = on;
-		if(on)
-		{
-			if(saveCursor)
-			{
+		if(on) {
+			if(saveCursor) {
 				savedX = cx;
 				savedY = cy;
 			}
 			mainLines = lines;
 			lines = new ArrayList<Line>();
-			for(int i = 0; i < rows; i++)
-			{
+			for(int i = 0; i < rows; i++) {
 				lines.add(new Line(cols, -1));
 			}
-		}
-		else
-		{
+		} else {
 			lines = mainLines;
 			mainLines = null;
-			if(saveCursor)
-			{
+			if(saveCursor) {
 				cx = Math.min(savedX, cols - 1);
 				cy = Math.min(savedY, rows - 1);
 			}
@@ -616,8 +522,7 @@ public class TerminalScreen
 		bottom = rows - 1;
 	}
 
-	void reset()
-	{
+	void reset() {
 		fg = -1;
 		bg = -1;
 		attr = 0;
@@ -627,13 +532,11 @@ public class TerminalScreen
 		bracketedPaste = false;
 		cursorVisible = true;
 		autowrap = true;
-		if(alternate)
-		{
+		if(alternate) {
 			setAlternate(false, false);
 		}
 		lines.clear();
-		for(int i = 0; i < rows; i++)
-		{
+		for(int i = 0; i < rows; i++) {
 			lines.add(new Line(cols, -1));
 		}
 		cx = 0;
@@ -642,19 +545,15 @@ public class TerminalScreen
 	}
 
 	// Moves the cursor. vertical: the move is a relative one up or down, which stops at the scroll region.
-	void moveTo(int x, int y, boolean vertical)
-	{
+	void moveTo(int x, int y, boolean vertical) {
 		cx = Math.max(0, Math.min(cols - 1, x));
 		int low = 0;
 		int high = rows - 1;
-		if(vertical && y != cy)
-		{
-			if(y < cy && cy >= top)
-			{
+		if(vertical && y != cy) {
+			if(y < cy && cy >= top) {
 				low = top;
 			}
-			if(y > cy && cy <= bottom)
-			{
+			if(y > cy && cy <= bottom) {
 				high = bottom;
 			}
 		}
@@ -662,15 +561,11 @@ public class TerminalScreen
 		pendingWrap = false;
 	}
 
-	void setRegion(int t, int b)
-	{
-		if(t < 0 || b >= rows || t >= b)
-		{
+	void setRegion(int t, int b) {
+		if(t < 0 || b >= rows || t >= b) {
 			top = 0;
 			bottom = rows - 1;
-		}
-		else
-		{
+		} else {
 			top = t;
 			bottom = b;
 		}
@@ -679,10 +574,8 @@ public class TerminalScreen
 		pendingWrap = false;
 	}
 
-	void put(char c)
-	{
-		if(pendingWrap && autowrap)
-		{
+	void put(char c) {
+		if(pendingWrap && autowrap) {
 			cx = 0;
 			lineFeed();
 		}
@@ -692,74 +585,54 @@ public class TerminalScreen
 		l.fg[cx] = fg;
 		l.bg[cx] = bg;
 		l.attr[cx] = attr;
-		if(cx == cols - 1)
-		{
+		if(cx == cols - 1) {
 			pendingWrap = true;
-		}
-		else
-		{
+		} else {
 			cx++;
 		}
 	}
 
-	void lineFeed()
-	{
-		if(cy == bottom)
-		{
+	void lineFeed() {
+		if(cy == bottom) {
 			scrollUp(1);
-		}
-		else if(cy < rows - 1)
-		{
+		} else if(cy < rows - 1) {
 			cy++;
 		}
 	}
 
-	void reverseIndex()
-	{
-		if(cy == top)
-		{
+	void reverseIndex() {
+		if(cy == top) {
 			scrollDown(1);
-		}
-		else if(cy > 0)
-		{
+		} else if(cy > 0) {
 			cy--;
 		}
 	}
 
-	void scrollUp(int n)
-	{
-		for(int i = 0; i < n; i++)
-		{
+	void scrollUp(int n) {
+		for(int i = 0; i < n; i++) {
 			Line gone = lines.remove(top);
 			lines.add(bottom, new Line(cols, bg));
-			if(!alternate && top == 0)
-			{
+			if(!alternate && top == 0) {
 				scrollback.add(gone);
-				if(scrollback.size() > MAX_SCROLLBACK)
-				{
+				if(scrollback.size() > MAX_SCROLLBACK) {
 					scrollback.remove(0);
 				}
 			}
 		}
 	}
 
-	void scrollDown(int n)
-	{
-		for(int i = 0; i < n; i++)
-		{
+	void scrollDown(int n) {
+		for(int i = 0; i < n; i++) {
 			lines.remove(bottom);
 			lines.add(top, new Line(cols, bg));
 		}
 	}
 
-	void insertLines(int n)
-	{
-		if(cy < top || cy > bottom)
-		{
+	void insertLines(int n) {
+		if(cy < top || cy > bottom) {
 			return;
 		}
-		for(int i = 0; i < Math.min(n, bottom - cy + 1); i++)
-		{
+		for(int i = 0; i < Math.min(n, bottom - cy + 1); i++) {
 			lines.remove(bottom);
 			lines.add(cy, new Line(cols, bg));
 		}
@@ -767,14 +640,11 @@ public class TerminalScreen
 		pendingWrap = false;
 	}
 
-	void deleteLines(int n)
-	{
-		if(cy < top || cy > bottom)
-		{
+	void deleteLines(int n) {
+		if(cy < top || cy > bottom) {
 			return;
 		}
-		for(int i = 0; i < Math.min(n, bottom - cy + 1); i++)
-		{
+		for(int i = 0; i < Math.min(n, bottom - cy + 1); i++) {
 			lines.remove(cy);
 			lines.add(bottom, new Line(cols, bg));
 		}
@@ -782,35 +652,30 @@ public class TerminalScreen
 		pendingWrap = false;
 	}
 
-	void deleteChars(int n)
-	{
+	void deleteChars(int n) {
 		Line l = lines.get(cy);
 		int count = Math.min(n, cols - cx);
 		shift(l, cx + count, cx, cols - cx - count);
 		erase(cy, cols - count, cols);
 	}
 
-	void insertChars(int n)
-	{
+	void insertChars(int n) {
 		Line l = lines.get(cy);
 		int count = Math.min(n, cols - cx);
 		shift(l, cx, cx + count, cols - cx - count);
 		erase(cy, cx, cx + count);
 	}
 
-	void shift(Line l, int from, int to, int length)
-	{
+	void shift(Line l, int from, int to, int length) {
 		System.arraycopy(l.ch, from, l.ch, to, length);
 		System.arraycopy(l.fg, from, l.fg, to, length);
 		System.arraycopy(l.bg, from, l.bg, to, length);
 		System.arraycopy(l.attr, from, l.attr, to, length);
 	}
 
-	void erase(int row, int from, int to)
-	{
+	void erase(int row, int from, int to) {
 		Line l = lines.get(row);
-		for(int i = Math.max(0, from); i < Math.min(cols, to); i++)
-		{
+		for(int i = Math.max(0, from); i < Math.min(cols, to); i++) {
 			l.ch[i] = ' ';
 			l.fg[i] = -1;
 			l.bg[i] = bg;
@@ -818,143 +683,86 @@ public class TerminalScreen
 		}
 	}
 
-	void eraseLine(int mode)
-	{
-		if(mode == 0)
-		{
+	void eraseLine(int mode) {
+		if(mode == 0) {
 			erase(cy, cx, cols);
-		}
-		else if(mode == 1)
-		{
+		} else if(mode == 1) {
 			erase(cy, 0, cx + 1);
-		}
-		else
-		{
+		} else {
 			erase(cy, 0, cols);
 		}
 	}
 
-	void eraseDisplay(int mode)
-	{
-		if(mode == 0)
-		{
+	void eraseDisplay(int mode) {
+		if(mode == 0) {
 			erase(cy, cx, cols);
-			for(int r = cy + 1; r < rows; r++)
-			{
+			for(int r = cy + 1; r < rows; r++) {
 				erase(r, 0, cols);
 			}
-		}
-		else if(mode == 1)
-		{
-			for(int r = 0; r < cy; r++)
-			{
+		} else if(mode == 1) {
+			for(int r = 0; r < cy; r++) {
 				erase(r, 0, cols);
 			}
 			erase(cy, 0, cx + 1);
-		}
-		else
-		{
-			for(int r = 0; r < rows; r++)
-			{
+		} else {
+			for(int r = 0; r < rows; r++) {
 				erase(r, 0, cols);
 			}
-			if(mode == 3)
-			{
+			if(mode == 3) {
 				scrollback.clear();
 			}
 		}
 	}
 
-	void sgr(int[] n)
-	{
-		for(int i = 0; i < n.length; i++)
-		{
+	void sgr(int[] n) {
+		for(int i = 0; i < n.length; i++) {
 			int v = n[i];
-			if(v == 0)
-			{
+			if(v == 0) {
 				fg = -1;
 				bg = -1;
 				attr = 0;
-			}
-			else if(v == 1)
-			{
+			} else if(v == 1) {
 				attr |= BOLD;
-			}
-			else if(v == 2)
-			{
+			} else if(v == 2) {
 				attr |= DIM;
-			}
-			else if(v == 3)
-			{
+			} else if(v == 3) {
 				attr |= ITALIC;
-			}
-			else if(v == 4)
-			{
+			} else if(v == 4) {
 				attr |= UNDERLINE;
-			}
-			else if(v == 7)
-			{
+			} else if(v == 7) {
 				attr |= REVERSE;
-			}
-			else if(v == 22)
-			{
+			} else if(v == 22) {
 				attr &= ~(BOLD | DIM);
-			}
-			else if(v == 23)
-			{
+			} else if(v == 23) {
 				attr &= ~ITALIC;
-			}
-			else if(v == 24)
-			{
+			} else if(v == 24) {
 				attr &= ~UNDERLINE;
-			}
-			else if(v == 27)
-			{
+			} else if(v == 27) {
 				attr &= ~REVERSE;
-			}
-			else if(v >= 30 && v <= 37)
-			{
+			} else if(v >= 30 && v <= 37) {
 				fg = v - 30;
-			}
-			else if(v == 39)
-			{
+			} else if(v == 39) {
 				fg = -1;
-			}
-			else if(v >= 40 && v <= 47)
-			{
+			} else if(v >= 40 && v <= 47) {
 				bg = v - 40;
-			}
-			else if(v == 49)
-			{
+			} else if(v == 49) {
 				bg = -1;
-			}
-			else if(v >= 90 && v <= 97)
-			{
+			} else if(v >= 90 && v <= 97) {
 				fg = v - 90 + 8;
-			}
-			else if(v >= 100 && v <= 107)
-			{
+			} else if(v >= 100 && v <= 107) {
 				bg = v - 100 + 8;
-			}
-			else if(v == 38 || v == 48)
-			{
+			} else if(v == 38 || v == 48) {
 				int color = -1;
-				if(i + 2 < n.length && n[i + 1] == 5)
-				{
+				if(i + 2 < n.length && n[i + 1] == 5) {
 					color = Math.min(255, n[i + 2]);
 					i += 2;
-				}
-				else if(i + 4 < n.length && n[i + 1] == 2)
-				{
+				} else if(i + 4 < n.length && n[i + 1] == 2) {
 					color = TRUE_COLOR | (Math.min(255, n[i + 2]) << 16) | (Math.min(255, n[i + 3]) << 8) | Math.min(255, n[i + 4]);
 					i += 4;
 				}
-				if(v == 38)
-				{
+				if(v == 38) {
 					fg = color;
-				}
-				else
-				{
+				} else {
 					bg = color;
 				}
 			}
