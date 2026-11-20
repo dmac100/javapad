@@ -18,6 +18,8 @@ public class Icons {
 	public static final int STOP = 5;
 	public static final int RERUN_ALL = 6;
 	public static final int RERUN_FAILED = 7;
+	public static final int SIDEBAR = 8;
+	public static final int COMMIT = 9;
 
 	static final int SIZE = 20;
 	static final RGB KEY = new RGB(255, 0, 255);
@@ -106,6 +108,21 @@ public class Icons {
 			case RERUN_FAILED:
 				fill(d, gc, 210, 50, 50);
 				circularArrow(gc);
+				break;
+			case SIDEBAR:
+				fill(d, gc, 120, 130, 150);
+				gc.drawRectangle(2, 3, 15, 13);
+				gc.fillRectangle(3, 4, 5, 12);
+				gc.fillRectangle(10, 6, 5, 2);
+				gc.fillRectangle(10, 10, 5, 2);
+				break;
+			case COMMIT:
+				fill(d, gc, 230, 120, 40);
+				gc.fillRectangle(9, 1, 2, 7);
+				gc.fillRectangle(9, 13, 2, 6);
+				gc.setLineWidth(3);
+				gc.drawOval(6, 6, 8, 8);
+				gc.setLineWidth(1);
 				break;
 			default:
 				fill(d, gc, 210, 50, 50);

@@ -264,7 +264,7 @@ public class GitActions {
 		});
 	}
 
-	void commit() {
+	public void commit() {
 		if(!ready()) {
 			return;
 		}

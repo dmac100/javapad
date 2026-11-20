@@ -41,6 +41,8 @@ public class MenuBuilder {
 	public void addToolItems(ToolBar bar) {
 		item(bar, "Open Project", Icons.FOLDER, () -> w.chooseProject());
 		item(bar, "Save All", Icons.SAVE, () -> w.editors.saveAll());
+		item(bar, "Show in Sidebar (Ctrl+Alt+W)", Icons.SIDEBAR, () -> w.showInSidebar());
+		item(bar, "Commit...", Icons.COMMIT, () -> w.git.commit());
 		new ToolItem(bar, SWT.SEPARATOR);
 		item(bar, "Build", Icons.BUILD, () -> w.run.build(null));
 		item(bar, "Run", Icons.RUN, () -> w.run.runActive());
