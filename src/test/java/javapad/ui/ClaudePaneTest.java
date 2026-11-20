@@ -38,4 +38,13 @@ public class ClaudePaneTest
 	{
 		assertEquals("The project is at /p\n\nhello", ClaudePane.message("/p", "hello"));
 	}
+
+	@Test
+	public void blankPromptsAreEmpty()
+	{
+		assertEquals("", ClaudePane.promptOf(""));
+		assertEquals("", ClaudePane.promptOf("   \t\n  "));
+		assertEquals("", ClaudePane.promptOf("\u00a0\u2003\r\n"));
+		assertEquals("hi there", ClaudePane.promptOf("  hi there \n"));
+	}
 }
