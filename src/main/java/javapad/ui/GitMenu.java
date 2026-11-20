@@ -14,6 +14,7 @@ class GitMenu
 	private final List<MenuItem> needRepo = new ArrayList<MenuItem>();
 	private final List<MenuItem> needPath = new ArrayList<MenuItem>();
 	private MenuItem init;
+	private MenuItem assume;
 	private final CommandList commands;
 
 	// commands: every item is also added to this list (the Ctrl+3 dialog)
@@ -60,6 +61,11 @@ class GitMenu
 		needPath.add(entry(menu, "Git", "Add to Index", () -> w.git.addToIndex()));
 		needPath.add(entry(menu, "Git", "Untrack", () -> w.git.untrack()));
 		needPath.add(entry(menu, "Git", "Ignore", () -> w.git.ignore()));
+		assume = new MenuItem(menu, SWT.CHECK);
+		assume.setText("Assume Unchanged");
+		assume.addListener(SWT.Selection, e -> w.git.toggleAssumeUnchanged());
+		commands.add("Git > Assume Unchanged", () -> w.git.toggleAssumeUnchanged());
+		needPath.add(assume);
 		Menu replace = cascade(menu, "Replace with");
 		entry(replace, "Git > Replace with", "Head Revision", () -> w.git.replaceWith(true));
 		entry(replace, "Git > Replace with", "Previous Revision", () -> w.git.replaceWith(false));
@@ -80,6 +86,7 @@ class GitMenu
 			{
 				mi.setEnabled(path);
 			}
+			assume.setSelection(path && w.git.selectedAssumedUnchanged());
 		});
 	}
 

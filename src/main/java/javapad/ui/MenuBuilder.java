@@ -2,6 +2,7 @@ package javapad.ui;
 
 import java.util.ArrayList;
 import java.util.List;
+import javapad.lang.LineEndings;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Menu;
@@ -140,6 +141,8 @@ class MenuBuilder
 		menuItem(source, "Format", SWT.MOD1 | SWT.SHIFT | 'F', () -> w.withEditor(t -> w.format(t)));
 		menuItem(source, "Convert Spaces to Tabs", 0, () -> w.withEditor(t -> t.editor.convertIndent(true)));
 		menuItem(source, "Convert Tabs to Spaces", 0, () -> w.withEditor(t -> t.editor.convertIndent(false)));
+		menuItem(source, "Convert Line Endings to Unix (LF)", 0, () -> w.withEditor(t -> t.editor.convertLineEndings(LineEndings.UNIX)));
+		menuItem(source, "Convert Line Endings to Windows (CRLF)", 0, () -> w.withEditor(t -> t.editor.convertLineEndings(LineEndings.WINDOWS)));
 		menuItem(source, "Add Import", SWT.MOD1 | SWT.SHIFT | 'M', () -> w.withEditor(t -> w.importActions.addImport(t)));
 		menuItem(source, "Quick Fix", SWT.MOD1 | '1', () -> w.withEditor(t -> w.importActions.quickFix(t)));
 		Menu navigate = submenu(bar, "Navigate");
@@ -167,6 +170,15 @@ class MenuBuilder
 		{
 			toolbarItem.setSelection(!toolbarItem.getSelection());
 			w.showToolbar(toolbarItem.getSelection());
+		});
+		MenuItem whitespaceItem = new MenuItem(view, SWT.CHECK);
+		whitespaceItem.setText("Show Whitespace");
+		whitespaceItem.setSelection(w.theme.showWhitespace);
+		whitespaceItem.addListener(SWT.Selection, e -> w.showWhitespace(whitespaceItem.getSelection()));
+		commands.add("View > Show Whitespace", () ->
+		{
+			whitespaceItem.setSelection(!whitespaceItem.getSelection());
+			w.showWhitespace(whitespaceItem.getSelection());
 		});
 		menuItem(view, "Editor Font...", 0, () -> w.chooseFont());
 		commands.add("View > Show Project", () -> w.left.setSelection(w.projectTab));

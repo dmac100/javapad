@@ -44,4 +44,13 @@ public class CommandListTest
 		list.run("missing");
 		assertEquals(1, count[0]);
 	}
+
+	@Test
+	public void filesShowTheirNameFirst()
+	{
+		CommandList list = new CommandList();
+		list.add("Bar.java - src/foo", () -> {});
+		list.add("Foo.java - src/bar", () -> {});
+		assertEquals(Arrays.asList("Foo.java - src/bar", "Bar.java - src/foo"), list.find("foo", 10));
+	}
 }

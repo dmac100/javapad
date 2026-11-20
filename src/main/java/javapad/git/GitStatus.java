@@ -65,6 +65,19 @@ public class GitStatus
 		}
 	}
 
+	// Whether the file, or anything in the folder, given relative to the repository root, has a merge conflict.
+	public boolean conflicted(String path)
+	{
+		for(FileChange c : changes)
+		{
+			if(c.conflicted() && (path.isEmpty() || c.path.equals(path) || c.path.startsWith(path + "/")))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public boolean hasConflicts()
 	{
 		for(FileChange c : changes)

@@ -11,7 +11,8 @@ A small desktop editor (SWT) for Eclipse-style Java projects. It opens a project
 - **Hot swap:** saving while a main class is running puts the changed method bodies into the running program, like Eclipse's hot code replace. Changes the JVM cannot take (added or removed methods or fields, for example) are reported in the console and need a restart. Run > Hot Swap on Save turns it off.
 - **Terminal:** a tab with your login shell on a real pseudo-terminal (colours, full-screen programs, scrollback), starting in the project folder.
 - **Navigation:** open a declaration or implementation, call hierarchy, open a file by name, search the project's files.
-- **Git:** status in the sidebar, commit, branches and the usual commands, a history view with a commit graph, and side by side file comparison.
+- **Whitespace and line endings:** View > Show Whitespace draws spaces, tabs and the line ending (LF or CRLF) of each line; Source > Convert Line Endings switches a file to Unix or Windows endings.
+- **Git:** status in the sidebar (untracked files greyed, files with merge conflicts marked), assume-unchanged toggle, commit, branches and the usual commands, a history view with a commit graph, and side by side file comparison.
 
 | History | Comparing a file with an earlier version |
 | --- | --- |

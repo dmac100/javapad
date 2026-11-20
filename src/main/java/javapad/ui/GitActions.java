@@ -94,6 +94,8 @@ class GitActions
 		{
 			w.projectTree.setUntrackedTest(null);
 			w.sourceTree.setUntrackedTest(null);
+			w.projectTree.setConflictTest(null);
+			w.sourceTree.setConflictTest(null);
 			return;
 		}
 		GitRepo r = repo;
@@ -105,6 +107,13 @@ class GitActions
 		};
 		w.projectTree.setUntrackedTest(test);
 		w.sourceTree.setUntrackedTest(test);
+		Predicate<File> conflicts = f ->
+		{
+			String rel = r.relative(f);
+			return rel != null && s.conflicted(rel);
+		};
+		w.projectTree.setConflictTest(conflicts);
+		w.sourceTree.setConflictTest(conflicts);
 	}
 
 	// After a command: the files on disk may have changed, so open editors and trees are brought up to date.
@@ -425,6 +434,35 @@ class GitActions
 		{
 			run("Untrack", r -> r.untrack(Arrays.asList(path)), false);
 		}
+	}
+
+	// Whether the selected file (or the files in the selected folder) are flagged as assumed unchanged.
+	boolean selectedAssumedUnchanged()
+	{
+		return assumedUnchanged(selectedFile());
+	}
+
+	boolean assumedUnchanged(File f)
+	{
+		String path = pathOf(f);
+		return path != null && repo.assumedUnchanged(path);
+	}
+
+	// Flips the "assume unchanged" flag of the selected file or folder.
+	void toggleAssumeUnchanged()
+	{
+		toggleAssumeUnchanged(selectedFile());
+	}
+
+	void toggleAssumeUnchanged(File f)
+	{
+		String path = pathOf(f);
+		if(path == null)
+		{
+			return;
+		}
+		boolean on = !repo.assumedUnchanged(path);
+		run(on ? "Assume Unchanged" : "No Longer Assume Unchanged", r -> r.assumeUnchanged(path, on), false);
 	}
 
 	void ignore()

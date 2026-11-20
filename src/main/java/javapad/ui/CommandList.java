@@ -100,6 +100,12 @@ public class CommandList
 
 	static String namePart(String label)
 	{
+		// a file shown as "Name.java - folder"
+		int dash = label.indexOf(" - ");
+		if(dash > 0 && !label.contains(" > "))
+		{
+			return label.substring(0, dash);
+		}
 		int cut = Math.max(label.lastIndexOf(" > ") + 2, Math.max(label.lastIndexOf('/'), label.lastIndexOf(": ") + 1));
 		return cut < 0 ? label : label.substring(cut + 1);
 	}

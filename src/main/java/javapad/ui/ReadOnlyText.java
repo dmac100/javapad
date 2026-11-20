@@ -7,6 +7,7 @@ public class ReadOnlyText
 {
 	public static void installKeys(StyledText text)
 	{
+		LineScroll.install(text);
 		text.addListener(SWT.KeyDown, e ->
 		{
 			if((e.stateMask & SWT.MOD1) == 0 || (e.stateMask & (SWT.SHIFT | SWT.ALT)) != 0)

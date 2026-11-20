@@ -30,6 +30,8 @@ public class ProjectTree
 	private Consumer<File> opener;
 	// set when the project is in a git repository: tells which files are untracked, so their names are greyed
 	private Predicate<File> untracked;
+	// set when the project is in a git repository: tells which files, and folders holding files, have a merge conflict
+	private Predicate<File> conflicts;
 	private Color grey;
 	private Theme theme;
 	private GitStatus branch;
@@ -45,6 +47,7 @@ public class ProjectTree
 		{
 			paintBranch(e);
 			paintError(e);
+			paintConflict(e);
 		});
 		tree.addListener(SWT.Expand, e -> fill((TreeItem)e.item));
 		tree.addListener(SWT.Dispose, e -> disposeColor());
@@ -187,6 +190,35 @@ public class ProjectTree
 		int size = Math.max(7, Math.min(9, b.height - 8));
 		int x = b.x + e.gc.stringExtent(item.getText()).x + 6;
 		ProblemMarks.drawError(e.gc, theme, x, b.y + (b.height - size) / 2, size);
+	}
+
+	// Marks the files and folders the test calls conflicted; null removes the marks.
+	public void setConflictTest(Predicate<File> test)
+	{
+		conflicts = test;
+		tree.redraw();
+	}
+
+	// a sign after the name (and the error sign) of an item with a merge conflict in it
+	void paintConflict(Event e)
+	{
+		if(conflicts == null || theme == null || !(e.item instanceof TreeItem))
+		{
+			return;
+		}
+		TreeItem item = (TreeItem)e.item;
+		if(!(item.getData() instanceof File) || !conflicts.test((File)item.getData()))
+		{
+			return;
+		}
+		Rectangle b = item.getBounds(0);
+		int size = Math.max(7, Math.min(9, b.height - 8));
+		int x = b.x + e.gc.stringExtent(item.getText()).x + 6;
+		if(!withErrors.isEmpty() && withErrors.contains(realPath((File)item.getData())))
+		{
+			x += size + 4;
+		}
+		ProblemMarks.drawConflict(e.gc, theme, x, b.y + (b.height - size) / 2, size);
 	}
 
 	public void restyle(Theme theme)

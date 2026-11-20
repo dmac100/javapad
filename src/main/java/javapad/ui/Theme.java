@@ -15,8 +15,12 @@ public class Theme
 	static final File FONT_PREFERENCE = new File(System.getProperty("user.home"), ".javapad/font");
 	static final File TOOLBAR_PREFERENCE = new File(System.getProperty("user.home"), ".javapad/toolbar");
 
+	static final File WHITESPACE_PREFERENCE = new File(System.getProperty("user.home"), ".javapad/whitespace");
+
 	public Font font;
 	public boolean dark;
+	// whether the editors draw spaces, tabs and line ends
+	public boolean showWhitespace = loadWhitespace();
 	public Color background;
 	public Color foreground;
 	public Color sidebar;
@@ -84,6 +88,31 @@ public class Theme
 			// the font preference is optional
 		}
 		return old;
+	}
+
+	public static void saveWhitespace(boolean shown)
+	{
+		try
+		{
+			WHITESPACE_PREFERENCE.getParentFile().mkdirs();
+			Files.write(WHITESPACE_PREFERENCE.toPath(), (shown ? "shown" : "hidden").getBytes(StandardCharsets.UTF_8));
+		}
+		catch(Exception e)
+		{
+			// the whitespace preference is optional
+		}
+	}
+
+	public static boolean loadWhitespace()
+	{
+		try
+		{
+			return new String(Files.readAllBytes(WHITESPACE_PREFERENCE.toPath()), StandardCharsets.UTF_8).trim().equals("shown");
+		}
+		catch(Exception e)
+		{
+			return false;
+		}
 	}
 
 	public static boolean loadToolbar()

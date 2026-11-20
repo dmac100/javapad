@@ -27,6 +27,21 @@ class ProblemMarks
 		gc.setAntialias(aa);
 	}
 
+	// a filled circle with a white exclamation mark: the file has a merge conflict
+	static void drawConflict(GC gc, Theme theme, int x, int y, int size)
+	{
+		int aa = gc.getAntialias();
+		gc.setAntialias(SWT.ON);
+		gc.setBackground(theme.warning);
+		gc.fillOval(x, y, size, size);
+		gc.setBackground(gc.getDevice().getSystemColor(SWT.COLOR_WHITE));
+		int w = Math.max(2, size / 7);
+		int cx = x + size / 2 - w / 2;
+		gc.fillRectangle(cx, y + size * 2 / 10, w, size * 4 / 10);
+		gc.fillRectangle(cx, y + size * 7 / 10, w, w);
+		gc.setAntialias(aa);
+	}
+
 	// a filled triangle with a white exclamation mark
 	static void drawWarning(GC gc, Theme theme, int x, int y, int size)
 	{

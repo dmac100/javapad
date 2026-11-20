@@ -306,4 +306,34 @@ public class GitRepoTest
 		GitRepo viaDot = GitRepo.find(new File(dir, "src/."));
 		assertEquals("src/a.txt", viaDot.relative(new File(dir, "src/./a.txt")));
 	}
+
+	@Test
+	public void assumeUnchangedHidesLocalChangesAndCanBeUndone() throws Exception
+	{
+		commit("a.txt", "one\n", "first");
+		commit("sub/b.txt", "one\n", "second");
+		assertFalse(repo.assumedUnchanged("a.txt"));
+		assertTrue(repo.assumeUnchanged("a.txt", true).ok());
+		assertTrue(repo.assumedUnchanged("a.txt"));
+		assertFalse(repo.assumedUnchanged("sub"));
+		write("a.txt", "two\n");
+		assertNull(repo.status(false).find("a.txt"));
+		assertTrue(repo.assumeUnchanged("a.txt", false).ok());
+		assertFalse(repo.assumedUnchanged("a.txt"));
+		assertNotNull(repo.status(false).find("a.txt"));
+		assertTrue(repo.assumeUnchanged("sub", true).ok());
+		assertTrue(repo.assumedUnchanged("sub"));
+		assertTrue(repo.assumedUnchanged("sub/b.txt"));
+	}
+
+	@Test
+	public void conflictsAreFoundForFilesAndFolders() throws Exception
+	{
+		GitStatus s = new GitStatus("main", Arrays.asList(new FileChange("src/a.txt", 'U', 'U'), new FileChange("b.txt", ' ', 'M')));
+		assertTrue(s.conflicted("src/a.txt"));
+		assertTrue(s.conflicted("src"));
+		assertTrue(s.conflicted(""));
+		assertFalse(s.conflicted("b.txt"));
+		assertFalse(s.conflicted("sr"));
+	}
 }

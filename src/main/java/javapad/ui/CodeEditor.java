@@ -8,6 +8,7 @@ import javapad.lang.CompletionEngine;
 import javapad.lang.ImportEditor;
 import javapad.lang.IndentConverter;
 import javapad.lang.JavaFormatter;
+import javapad.lang.LineEndings;
 import javapad.lang.Proposal;
 import javapad.lang.SelectionRanges;
 import javapad.model.Problem;
@@ -26,9 +27,7 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
-import org.eclipse.swt.widgets.Listener;
 
 public class CodeEditor
 {
@@ -44,6 +43,7 @@ public class CodeEditor
 	private Bullet normalBullet;
 	private Bullet errorBullet;
 	private Bullet warningBullet;
+	private static final int TAB_WIDTH = 4;
 	private int bulletDigits;
 	private boolean replaying;
 	private Runnable modifyHook;
@@ -109,12 +109,16 @@ public class CodeEditor
 		text.setFont(theme.font);
 		text.setBackground(theme.background);
 		text.setForeground(theme.foreground);
-		text.setTabs(4);
+		text.setTabs(TAB_WIDTH);
 		ruler = new OverviewRuler(frame, text, theme, line -> goTo(line, 1));
 		GridData rulerData = new GridData(SWT.FILL, SWT.FILL, false, true);
 		rulerData.widthHint = OverviewRuler.WIDTH;
 		ruler.getControl().setLayoutData(rulerData);
-		text.addListener(SWT.Paint, e -> paintMarks(e.gc));
+		text.addListener(SWT.Paint, e ->
+		{
+			paintWhitespace(e.gc);
+			paintMarks(e.gc);
+		});
 		lineStates.add(JavaLexer.STATE_NORMAL);
 		makeBullets();
 		text.addLineStyleListener(e -> styleLine(e));
@@ -147,10 +151,7 @@ public class CodeEditor
 		text.addListener(SWT.MouseDown, e -> popup.close());
 		text.addListener(SWT.Dispose, e -> popup.dispose());
 		text.addListener(SWT.MouseMove, e -> updateTip(e.x, e.y));
-		Listener wheel = e -> wheel(e);
-		Display display = text.getDisplay();
-		display.addFilter(SWT.MouseWheel, wheel);
-		text.addListener(SWT.Dispose, e -> display.removeFilter(SWT.MouseWheel, wheel));
+		LineScroll.install(text);
 	}
 
 	public void setOccurrenceFinder(OccurrenceFinder finder)
@@ -217,18 +218,6 @@ public class CodeEditor
 		}
 		occurrences = list;
 		text.redraw();
-	}
-
-	void wheel(Event e)
-	{
-		if(e.widget != text || (e.stateMask & (SWT.SHIFT | SWT.MOD1)) != 0 || e.count == 0)
-		{
-			return;
-		}
-		e.doit = false;
-		int top = text.getTopIndex() - Integer.signum(e.count) * 3;
-		int max = Math.max(0, text.getLineCount() - 1);
-		text.setTopIndex(Math.max(0, Math.min(max, top)));
 	}
 
 	public StyledText getControl()
@@ -322,19 +311,21 @@ public class CodeEditor
 		gc.dispose();
 		text.setLeftMargin(markSize() + 6);
 		bulletDigits = Math.max(3, String.valueOf(text.getLineCount()).length());
+		// a whole number of tab stops, as tabs are measured from the start of the line number column
+		int bulletWidth = (bulletDigits + 1 + TAB_WIDTH - 1) / TAB_WIDTH * TAB_WIDTH;
 		StyleRange normal = new StyleRange();
 		normal.foreground = theme.gutter;
-		normal.metrics = new GlyphMetrics(0, 0, (bulletDigits + 1) * charWidth);
+		normal.metrics = new GlyphMetrics(0, 0, bulletWidth * charWidth);
 		normalBullet = new Bullet(ST.BULLET_NUMBER, normal);
 		StyleRange bad = new StyleRange();
 		bad.foreground = theme.error;
 		bad.fontStyle = SWT.BOLD;
-		bad.metrics = new GlyphMetrics(0, 0, (bulletDigits + 1) * charWidth);
+		bad.metrics = new GlyphMetrics(0, 0, bulletWidth * charWidth);
 		errorBullet = new Bullet(ST.BULLET_NUMBER, bad);
 		StyleRange warn = new StyleRange();
 		warn.foreground = theme.warning;
 		warn.fontStyle = SWT.BOLD;
-		warn.metrics = new GlyphMetrics(0, 0, (bulletDigits + 1) * charWidth);
+		warn.metrics = new GlyphMetrics(0, 0, bulletWidth * charWidth);
 		warningBullet = new Bullet(ST.BULLET_NUMBER, warn);
 	}
 
@@ -355,6 +346,75 @@ public class CodeEditor
 	}
 
 	// an error or warning sign in the left margin of each line with a problem
+	// Draws a dot over each space, an arrow over each tab and the kind of line break at the end of each visible line.
+	void paintWhitespace(GC gc)
+	{
+		if(!theme.showWhitespace)
+		{
+			return;
+		}
+		int lines = text.getLineCount();
+		int first = text.getTopIndex();
+		int visible = text.getClientArea().height / Math.max(1, text.getLineHeight()) + 2;
+		int width = text.getClientArea().width;
+		// the text colour, faded: visible on both the dark and the light background
+		gc.setForeground(theme.foreground);
+		gc.setBackground(theme.foreground);
+		gc.setAlpha(60);
+		for(int line = first; line < Math.min(lines, first + visible); line++)
+		{
+			String content = text.getLine(line);
+			int start = text.getOffsetAtLine(line);
+			int y = text.getLinePixel(line);
+			int lineHeight = text.getLineHeight(start);
+			for(int i = 0; i < content.length(); i++)
+			{
+				char c = content.charAt(i);
+				if(c != ' ' && c != '\t')
+				{
+					continue;
+				}
+				Point from = text.getLocationAtOffset(start + i);
+				Point to = text.getLocationAtOffset(start + i + 1);
+				if(to.x < 0 || from.x > width)
+				{
+					continue;
+				}
+				int mid = y + lineHeight / 2;
+				if(c == ' ')
+				{
+					gc.fillRectangle((from.x + to.x) / 2 - 1, mid, 3, 3);
+				}
+				else if(to.x - from.x > 4)
+				{
+					gc.drawLine(from.x + 2, mid, to.x - 3, mid);
+					gc.drawLine(to.x - 6, mid - 3, to.x - 3, mid);
+					gc.drawLine(to.x - 6, mid + 3, to.x - 3, mid);
+				}
+			}
+			int end = start + content.length();
+			String ending = line + 1 < lines ? text.getText(end, text.getOffsetAtLine(line + 1) - 1) : "";
+			String label = ending.replace("\r", "\u2190").replace("\n", "\u2193");
+			Point at = text.getLocationAtOffset(end);
+			if(!label.isEmpty() && at.x < width)
+			{
+				gc.drawString(label, at.x + 4, y, true);
+			}
+		}
+		gc.setAlpha(255);
+	}
+
+	// Sets every line break of the file to the given ending (a single undo step).
+	public void convertLineEndings(String ending)
+	{
+		replaceContentMinimal(LineEndings.convert(text.getText(), ending));
+	}
+
+	public void redrawWhitespace()
+	{
+		text.redraw();
+	}
+
 	void paintMarks(GC gc)
 	{
 		if(problems.isEmpty())

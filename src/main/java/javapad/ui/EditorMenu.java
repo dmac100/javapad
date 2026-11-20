@@ -42,6 +42,10 @@ class EditorMenu
 		items.add(contextItem(menu, "Add to Index", () -> w.git.addToIndex(tab.file)));
 		items.add(contextItem(menu, "Untrack", () -> w.git.untrack(tab.file)));
 		items.add(contextItem(menu, "Ignore", () -> w.git.ignore(tab.file)));
+		MenuItem assume = new MenuItem(menu, SWT.CHECK);
+		assume.setText("Assume Unchanged");
+		assume.addListener(SWT.Selection, e -> w.git.toggleAssumeUnchanged(tab.file));
+		items.add(assume);
 		new MenuItem(menu, SWT.SEPARATOR);
 		items.add(contextItem(menu, "Replace with Head Revision", () -> w.git.replaceWith(tab.file, true, () -> reload(tab))));
 		items.add(contextItem(menu, "Replace with Previous Revision", () -> w.git.replaceWith(tab.file, false, () -> reload(tab))));
@@ -53,6 +57,7 @@ class EditorMenu
 			{
 				item.setEnabled(on);
 			}
+			assume.setSelection(on && w.git.assumedUnchanged(tab.file));
 		});
 	}
 

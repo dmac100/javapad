@@ -238,6 +238,16 @@ public class MainWindow
 		Theme.saveToolbar(shown);
 	}
 
+	void showWhitespace(boolean shown)
+	{
+		theme.showWhitespace = shown;
+		Theme.saveWhitespace(shown);
+		for(EditorTab tab : editors.tabs())
+		{
+			tab.editor.redrawWhitespace();
+		}
+	}
+
 	void chooseFont()
 	{
 		FontDialog dialog = new FontDialog(shell);
@@ -578,10 +588,17 @@ public class MainWindow
 			listFiles(project.root, found, GitIgnore.of(project.root));
 			for(File f : found)
 			{
-				files.add(project.relative(f).replace(File.separatorChar, '/'), () -> open(new Location(f, 1, 1)));
+				files.add(fileLabel(project.relative(f).replace(File.separatorChar, '/')), () -> open(new Location(f, 1, 1)));
 			}
 		}
 		return files;
+	}
+
+	// "Name.java - src/pkg": the base name first, then the folder
+	static String fileLabel(String path)
+	{
+		int slash = path.lastIndexOf('/');
+		return slash < 0 ? path : path.substring(slash + 1) + " - " + path.substring(0, slash);
 	}
 
 	CommandDialog fileDialog()

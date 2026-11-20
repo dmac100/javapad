@@ -345,6 +345,63 @@ public class GitRepo
 		return withPaths(Arrays.asList("rm", "-r", "-q", "--cached", "--"), paths);
 	}
 
+	// Whether git is told to assume that the tracked files at the path (a file, or a folder with files in it) are unchanged.
+	public boolean assumedUnchanged(String path)
+	{
+		GitResult r = git("ls-files", "-v", "-z", "--", path);
+		if(!r.ok())
+		{
+			return false;
+		}
+		int count = 0;
+		for(String entry : r.out.split("\0"))
+		{
+			if(entry.length() < 3)
+			{
+				continue;
+			}
+			if(!Character.isLowerCase(entry.charAt(0)))
+			{
+				return false;
+			}
+			count++;
+		}
+		return count > 0;
+	}
+
+	// Sets or clears the "assume unchanged" flag of the tracked files at the path, so that git stops looking at their changes.
+	public GitResult assumeUnchanged(String path, boolean on)
+	{
+		GitResult listed = git("ls-files", "-z", "--", path);
+		if(!listed.ok())
+		{
+			return listed;
+		}
+		List<String> files = new ArrayList<String>();
+		for(String f : listed.out.split("\0"))
+		{
+			if(!f.isEmpty())
+			{
+				files.add(f);
+			}
+		}
+		if(files.isEmpty())
+		{
+			return new GitResult(1, "", "No tracked files at " + path);
+		}
+		GitResult result = new GitResult(0, "", "");
+		for(int i = 0; i < files.size(); i += 200)
+		{
+			List<String> chunk = files.subList(i, Math.min(files.size(), i + 200));
+			result = withPaths(Arrays.asList("update-index", on ? "--assume-unchanged" : "--no-assume-unchanged", "--"), chunk);
+			if(!result.ok())
+			{
+				return result;
+			}
+		}
+		return result;
+	}
+
 	// Adds the path to the .gitignore in the repository root.
 	public GitResult ignore(String path, boolean directory)
 	{

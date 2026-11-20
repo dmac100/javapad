@@ -49,12 +49,19 @@ class LineEdits
 	{
 		int line = text.getLineAtOffset(text.getCaretOffset());
 		int start = text.getOffsetAtLine(line);
-		int end = start + text.getLine(line).length();
-		if(end < text.getCharCount())
-		{
-			end++;
-		}
+		int end = line + 1 < text.getLineCount() ? text.getOffsetAtLine(line + 1) : start + text.getLine(line).length();
 		text.replaceTextRange(start, end - start, "");
+	}
+
+	// the line break after a line: whatever lies between its text and the next line, or the widget's default after the last line
+	String delimiterOf(int line)
+	{
+		if(line + 1 >= text.getLineCount())
+		{
+			return line > 0 ? delimiterOf(line - 1) : text.getLineDelimiter();
+		}
+		int end = text.getOffsetAtLine(line) + text.getLine(line).length();
+		return text.getText(end, text.getOffsetAtLine(line + 1) - 1);
 	}
 
 	void moveLines(boolean up)
@@ -76,17 +83,18 @@ class LineEdits
 		}
 		int from = up ? first - 1 : first;
 		int to = up ? last : last + 1;
+		String delimiter = delimiterOf(first);
 		StringBuilder block = new StringBuilder();
 		for(int l = first; l <= last; l++)
 		{
 			if(l > first)
 			{
-				block.append('\n');
+				block.append(delimiter);
 			}
 			block.append(text.getLine(l));
 		}
 		String other = text.getLine(up ? first - 1 : last + 1);
-		String result = up ? block + "\n" + other : other + "\n" + block;
+		String result = up ? block + delimiter + other : other + delimiter + block;
 		int start = text.getOffsetAtLine(from);
 		int end = text.getOffsetAtLine(to) + text.getLine(to).length();
 		text.replaceTextRange(start, end - start, result);
@@ -106,7 +114,7 @@ class LineEdits
 			before = "";
 		}
 		String indent = Indenter.newlineIndent(before);
-		String insert = "\n" + indent;
+		String insert = delimiterOf(line) + indent;
 		text.replaceTextRange(sel.x, sel.y - sel.x, insert);
 		text.setCaretOffset(sel.x + insert.length());
 		text.showSelection();
@@ -122,25 +130,24 @@ class LineEdits
 			last--;
 		}
 		int start = text.getOffsetAtLine(first);
-		int end = last + 1 < text.getLineCount() ? text.getOffsetAtLine(last + 1) - 1 : text.getCharCount();
-		String block = text.getTextRange(start, end - start);
-		String[] lines = block.split("\n", -1);
+		int end = text.getOffsetAtLine(last) + text.getLine(last).length();
 		StringBuilder result = new StringBuilder();
 		int firstDelta = 0;
 		int total = 0;
-		for(int i = 0; i < lines.length; i++)
+		for(int l = first; l <= last; l++)
 		{
-			String shifted = outdent ? Indenter.outdentLines(lines[i]) : Indenter.indentLines(lines[i]);
-			if(i > 0)
-			{
-				result.append('\n');
-			}
+			String line = text.getLine(l);
+			String shifted = outdent ? Indenter.outdentLines(line) : Indenter.indentLines(line);
 			result.append(shifted);
-			if(i == 0)
+			if(l < last)
 			{
-				firstDelta = shifted.length() - lines[i].length();
+				result.append(delimiterOf(l));
 			}
-			total += shifted.length() - lines[i].length();
+			if(l == first)
+			{
+				firstDelta = shifted.length() - line.length();
+			}
+			total += shifted.length() - line.length();
 		}
 		text.replaceTextRange(start, end - start, result.toString());
 		int x = Math.max(start, sel.x + firstDelta);
