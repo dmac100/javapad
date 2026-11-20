@@ -190,6 +190,12 @@ class MenuBuilder
 		commands.add("View > Show Search", () -> w.bottomTabs.show(w.searchTab));
 		commands.add("View > Show Terminal", () -> w.showBottomTab("terminal"));
 		commands.add("View > Show History", () -> w.showBottomTab("history"));
+		commands.add("View > Show Claude", () ->
+		{
+			w.showBottomTab("claude");
+			w.claude.focusInput();
+		});
+		commands.add("Claude > Clear", () -> w.claude.clear());
 		Menu runMenu = submenu(bar, "Run");
 		menuItem(runMenu, "Build", SWT.MOD1 | 'B', () -> w.run.build(null));
 		menuItem(runMenu, "Run Last Launched", SWT.F11, () -> w.run.runLast());

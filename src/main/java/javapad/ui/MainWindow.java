@@ -60,6 +60,8 @@ public class MainWindow
 	final BottomTabs.Tab historyTab;
 	final BottomTabs.Tab searchTab;
 	final BottomTabs.Tab terminalTab;
+	final BottomTabs.Tab claudeTab;
+	final ClaudePane claude;
 	private final TerminalPane terminal;
 	final SearchPane searchPane;
 	final HistoryPane history;
@@ -136,6 +138,9 @@ public class MainWindow
 		terminal.setFocusListener(focus -> menus.setAccelerators(!focus));
 		terminalTab = bottomTabs.add("terminal", "Terminal", terminal.getControl(), true);
 		historyTab = bottomTabs.add("history", "History", history.getControl(), true);
+		claude = new ClaudePane(bottom, theme);
+		claudeTab = bottomTabs.add("claude", "Claude", claude.getControl(), true);
+		claude.setWaitingHook(waiting -> bottomTabs.setText(claudeTab, waiting ? "Claude (waiting)" : "Claude"));
 		bottom.addListener(SWT.Selection, e ->
 		{
 			if(bottomTabs.selected() == terminalTab)
@@ -216,6 +221,7 @@ public class MainWindow
 		junitPane.restyle();
 		callPane.restyle();
 		history.restyle();
+		claude.restyle();
 		searchPane.restyle();
 		for(EditorTab tab : editors.tabs())
 		{
@@ -370,6 +376,7 @@ public class MainWindow
 		sourceTree.setProject(project);
 		console.setProject(project);
 		terminal.setProject(project);
+		claude.setProject(project);
 		problemsPane.setProject(project);
 		junitPane.setProject(project);
 		junitPane.clear();
