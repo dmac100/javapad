@@ -44,7 +44,7 @@ class RunController
 	private final BottomTabs bottom;
 	private final BottomTabs.Tab consoleTab;
 	private final BottomTabs.Tab problemsTab;
-	private final CTabItem junitTab;
+	private final SideTabs.Tab junitTab;
 	// repeats the last main class or test run; null until something has been launched
 	private Runnable lastLaunch;
 	private final Supplier<File> currentFile;
@@ -67,7 +67,7 @@ class RunController
 	private boolean hotSwapOn = HotSwap.enabled();
 
 	RunController(Display display, Shell shell, EditorTabs editors, ConsolePane console, ProblemsPane problemsPane, JUnitPane junitPane, CodeAssist assist,
-		BottomTabs bottom, BottomTabs.Tab consoleTab, BottomTabs.Tab problemsTab, CTabItem junitTab, Supplier<File> currentFile, Runnable beforeBuild, Consumer<String> errorSink)
+		BottomTabs bottom, BottomTabs.Tab consoleTab, BottomTabs.Tab problemsTab, SideTabs.Tab junitTab, Supplier<File> currentFile, Runnable beforeBuild, Consumer<String> errorSink)
 	{
 		this.display = display;
 		this.shell = shell;
@@ -470,9 +470,9 @@ class RunController
 		{
 			if(!junitPane.getControl().isDisposed())
 			{
-				if(junitTab.getParent().getSelection() != junitTab && junitPane.total() == 0)
+				if(!junitTab.selected() && junitPane.total() == 0)
 				{
-					junitTab.getParent().setSelection(junitTab);
+					junitTab.select();
 				}
 				junitPane.liveEvent(fields);
 			}
@@ -555,7 +555,7 @@ class RunController
 		int failed = junitPane.failures();
 		int total = junitPane.total();
 		junitTab.setText(total == 0 ? "JUnit" : failed == 0 ? "JUnit (" + total + " passed)" : "JUnit (" + failed + " of " + total + " failed)");
-		junitTab.getParent().setSelection(junitTab);
+		junitTab.select();
 		FileUtil.deleteRecursive(testRunDir);
 		testRunDir = null;
 	}

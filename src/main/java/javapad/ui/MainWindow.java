@@ -45,8 +45,9 @@ public class MainWindow
 	final ProjectTree projectTree;
 	final ProjectTree sourceTree;
 	final CTabFolder left;
-	final CTabItem projectTab;
-	final CTabItem sourceTab;
+	final SideTabs sideTabs;
+	final SideTabs.Tab projectTab;
+	final SideTabs.Tab sourceTab;
 	final EditorTabs editors;
 	final ConsolePane console;
 	final ProblemsPane problemsPane;
@@ -54,7 +55,7 @@ public class MainWindow
 	final BottomTabs bottomTabs;
 	final BottomTabs.Tab consoleTab;
 	final BottomTabs.Tab problemsTab;
-	final CTabItem junitTab;
+	final SideTabs.Tab junitTab;
 	final BottomTabs.Tab callTab;
 	final BottomTabs.Tab historyTab;
 	final BottomTabs.Tab searchTab;
@@ -105,13 +106,10 @@ public class MainWindow
 		left = new CTabFolder(horizontal, SWT.BORDER);
 		projectTree = new ProjectTree(left, false);
 		sourceTree = new ProjectTree(left, true);
-		projectTab = new CTabItem(left, SWT.NONE);
-		projectTab.setText("Project");
-		projectTab.setControl(projectTree.getControl());
-		sourceTab = new CTabItem(left, SWT.NONE);
-		sourceTab.setText("Sources");
-		sourceTab.setControl(sourceTree.getControl());
-		left.setSelection(projectTab);
+		sideTabs = new SideTabs(left, shell);
+		projectTab = sideTabs.add("Project", projectTree.getControl());
+		sourceTab = sideTabs.add("Sources", sourceTree.getControl());
+		projectTab.select();
 		vertical = new SashForm(horizontal, SWT.VERTICAL);
 		editors = new EditorTabs(vertical, theme);
 		editors.setAssist(assist);
@@ -122,13 +120,11 @@ public class MainWindow
 		bottom.setTabPosition(SWT.TOP);
 		console = new ConsolePane(bottom, theme);
 		problemsPane = new ProblemsPane(bottom);
-		bottomTabs = new BottomTabs(bottom);
+		bottomTabs = new BottomTabs(bottom, shell);
 		problemsTab = bottomTabs.add("problems", "Problems", problemsPane.getControl(), true);
 		consoleTab = bottomTabs.add("console", "Console", console.getControl(), true);
 		junitPane = new JUnitPane(left, theme);
-		junitTab = new CTabItem(left, SWT.NONE);
-		junitTab.setText("JUnit");
-		junitTab.setControl(junitPane.getControl());
+		junitTab = sideTabs.add("JUnit", junitPane.getControl());
 		callPane = new CallHierarchyPane(bottom, theme);
 		callTab = bottomTabs.add("call", "Call Hierarchy", callPane.getControl(), false);
 		searchPane = new SearchPane(bottom, theme);
@@ -165,7 +161,7 @@ public class MainWindow
 		importActions = new ImportActions(shell, assist);
 		menus.addToolItems(toolbar);
 		showToolbar(Theme.loadToolbar());
-		files = new FileActions(shell, () -> project, () -> activeTree(), () -> left.getSelection() == sourceTab, () -> refreshTrees(), l -> open(l), m -> error(m));
+		files = new FileActions(shell, () -> project, () -> activeTree(), () -> sourceTab.selected(), () -> refreshTrees(), l -> open(l), m -> error(m));
 		menus.buildMenus();
 		editors.setCompileHook(() -> run.runActive());
 		projectTree.setOpener(f -> open(new Location(f, 1, 1)));
@@ -200,7 +196,8 @@ public class MainWindow
 
 	void applyTheme()
 	{
-		CTabFolder[] folders = {editors.getControl(), bottom, left};
+		editors.restyle();
+		CTabFolder[] folders = {bottom, left};
 		for(CTabFolder f : folders)
 		{
 			f.setBackground(theme.chrome);
@@ -284,7 +281,7 @@ public class MainWindow
 
 	ProjectTree activeTree()
 	{
-		return left.getSelection() == sourceTab ? sourceTree : projectTree;
+		return sourceTab.selected() ? sourceTree : projectTree;
 	}
 
 	// One-off: select the file of the active editor in the sidebar, switching tab if this one does not list it.
@@ -295,7 +292,7 @@ public class MainWindow
 		{
 			return;
 		}
-		boolean sources = left.getSelection() == sourceTab;
+		boolean sources = sourceTab.selected();
 		ProjectTree first = sources ? sourceTree : projectTree;
 		ProjectTree second = sources ? projectTree : sourceTree;
 		if(first.reveal(tab.file))
@@ -304,7 +301,7 @@ public class MainWindow
 		}
 		if(second.reveal(tab.file))
 		{
-			left.setSelection(sources ? projectTab : sourceTab);
+			(sources ? projectTab : sourceTab).select();
 		}
 	}
 
@@ -826,7 +823,7 @@ public class MainWindow
 	{
 		if(name.equals("junit"))
 		{
-			junitTab.getParent().setSelection(junitTab);
+			junitTab.select();
 			return;
 		}
 		BottomTabs.Tab tab = bottomTabs.named(name);
@@ -842,7 +839,7 @@ public class MainWindow
 
 	void showSourcesTree()
 	{
-		left.setSelection(sourceTab);
+		sourceTab.select();
 	}
 
 	void selectProjectRoot()

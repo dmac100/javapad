@@ -8,9 +8,10 @@ import org.eclipse.swt.custom.CTabFolder2Adapter;
 import org.eclipse.swt.custom.CTabFolderEvent;
 import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Shell;
 
 // The tabs of the bottom panel. They can be closed, and show() brings a closed one back at its original place.
-class BottomTabs
+class BottomTabs implements TabDrag.Host
 {
 	private final CTabFolder folder;
 	// in display order
@@ -32,9 +33,10 @@ class BottomTabs
 		}
 	}
 
-	BottomTabs(CTabFolder folder)
+	BottomTabs(CTabFolder folder, Shell shell)
 	{
 		this.folder = folder;
+		new TabDrag(shell, this).attach(folder);
 		folder.addCTabFolder2Listener(new CTabFolder2Adapter()
 		{
 			public void close(CTabFolderEvent e)
@@ -123,6 +125,57 @@ class BottomTabs
 		tab.item = new CTabItem(folder, SWT.CLOSE, index);
 		tab.item.setText(tab.text);
 		tab.item.setControl(tab.control);
+	}
+
+	public List<CTabFolder> folders()
+	{
+		List<CTabFolder> list = new ArrayList<CTabFolder>();
+		list.add(folder);
+		return list;
+	}
+
+	public boolean splits()
+	{
+		return false;
+	}
+
+	// Moves an open tab, so that it is at the index among the open tabs (as numbered once it has left its old place). A closed tab later comes back at this new place.
+	public void drop(CTabItem item, CTabFolder target, int zone, int index)
+	{
+		Tab tab = tabOf(item);
+		if(tab == null || zone != TabDrag.INSERT)
+		{
+			return;
+		}
+		List<Tab> others = new ArrayList<Tab>();
+		for(Tab t : tabs)
+		{
+			if(t != tab && isOpen(t))
+			{
+				others.add(t);
+			}
+		}
+		int at = Math.max(0, Math.min(index, others.size()));
+		tabs.remove(tab);
+		int position = tabs.size();
+		if(at < others.size())
+		{
+			position = tabs.indexOf(others.get(at));
+		}
+		else if(!others.isEmpty())
+		{
+			position = tabs.indexOf(others.get(others.size() - 1)) + 1;
+		}
+		tabs.add(position, tab);
+		boolean selected = folder.getSelection() == item;
+		item.dispose();
+		tab.item = new CTabItem(folder, SWT.CLOSE, at);
+		tab.item.setText(tab.text);
+		tab.item.setControl(tab.control);
+		if(selected)
+		{
+			folder.setSelection(tab.item);
+		}
 	}
 
 	// opens the tab if needed and makes it the one showing

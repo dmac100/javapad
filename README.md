@@ -7,6 +7,7 @@ A small desktop editor (SWT) for Eclipse-style Java projects. It opens a project
 ## Features
 
 - **Editor:** syntax colouring (dark and light themes), content assist, imports, quick fixes and formatting, all based on javac's analysis of the project. Selecting an identifier highlights its other uses. Errors and warnings are marked in the left margin and on a strip beside the scrollbar (click a mark to go to its line), and files with errors are marked in the sidebar.
+- **Tabs:** drag an editor tab along its tab strip to reorder it, onto another group's strip to move it, or onto the edge of an editor to split the view (side by side or stacked); empty groups close themselves. The tabs of the side and bottom panels can be reordered by dragging too.
 - **Build, run, test:** compiles in process, runs main classes and JUnit 4 or 5 tests, and shows problems, console output (which also takes input) and test results.
 - **Hot swap:** saving while a main class is running puts the changed method bodies into the running program, like Eclipse's hot code replace. Changes the JVM cannot take (added or removed methods or fields, for example) are reported in the console and need a restart. Run > Hot Swap on Save turns it off.
 - **Terminal:** a tab with your login shell on a real pseudo-terminal (colours, full-screen programs, scrollback), starting in the project folder.

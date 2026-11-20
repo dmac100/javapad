@@ -181,11 +181,11 @@ class MenuBuilder
 			w.showWhitespace(whitespaceItem.getSelection());
 		});
 		menuItem(view, "Editor Font...", 0, () -> w.chooseFont());
-		commands.add("View > Show Project", () -> w.left.setSelection(w.projectTab));
-		commands.add("View > Show Sources", () -> w.left.setSelection(w.sourceTab));
+		commands.add("View > Show Project", () -> w.projectTab.select());
+		commands.add("View > Show Sources", () -> w.sourceTab.select());
 		commands.add("View > Show Problems", () -> w.bottomTabs.show(w.problemsTab));
 		commands.add("View > Show Console", () -> w.bottomTabs.show(w.consoleTab));
-		commands.add("View > Show JUnit", () -> w.junitTab.getParent().setSelection(w.junitTab));
+		commands.add("View > Show JUnit", () -> w.junitTab.select());
 		commands.add("View > Show Call Hierarchy", () -> w.bottomTabs.show(w.callTab));
 		commands.add("View > Show Search", () -> w.bottomTabs.show(w.searchTab));
 		commands.add("View > Show Terminal", () -> w.showBottomTab("terminal"));

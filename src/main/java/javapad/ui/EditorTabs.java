@@ -12,14 +12,21 @@ import org.eclipse.swt.custom.CTabFolder2Adapter;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabFolderEvent;
 import org.eclipse.swt.custom.CTabItem;
+import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Sash;
 import org.eclipse.swt.widgets.Shell;
 
-public class EditorTabs
+public class EditorTabs implements TabDrag.Host
 {
-	private final CTabFolder folder;
+	// a container holding either one folder or a tree of splits (a SashForm of two folders or splits)
+	private final Composite area;
+	private CTabFolder current;
 	private final Theme theme;
 	private final Shell shell;
+	private final TabDrag drag;
 	private List<Problem> problems = new ArrayList<Problem>();
 	private Runnable compileHook;
 	private CodeAssist assist;
@@ -31,15 +38,162 @@ public class EditorTabs
 	{
 		this.theme = theme;
 		this.shell = parent.getShell();
-		folder = new CTabFolder(parent, SWT.BORDER);
+		area = new Composite(parent, SWT.NONE);
+		area.setLayout(new FillLayout());
+		drag = new TabDrag(shell, this);
+		current = newFolder(area);
+	}
+
+	CTabFolder newFolder(Composite parent)
+	{
+		CTabFolder folder = new CTabFolder(parent, SWT.BORDER);
 		folder.setTabHeight(folder.getTabHeight() + 3);
+		styleFolder(folder, theme);
 		folder.addCTabFolder2Listener(new CTabFolder2Adapter()
 		{
 			public void close(CTabFolderEvent e)
 			{
 				e.doit = confirmClose((EditorTab)((CTabItem)e.item).getData());
+				shell.getDisplay().asyncExec(() -> removeIfEmpty(folder));
 			}
 		});
+		folder.addListener(SWT.Selection, e -> current = folder);
+		drag.attach(folder);
+		return folder;
+	}
+
+	static void styleFolder(CTabFolder folder, Theme theme)
+	{
+		folder.setBackground(theme.chrome);
+		folder.setForeground(theme.foreground);
+		folder.setSelectionBackground(theme.background);
+		folder.setSelectionForeground(theme.foreground);
+	}
+
+	public void restyle()
+	{
+		for(CTabFolder folder : folders())
+		{
+			styleFolder(folder, theme);
+		}
+	}
+
+	// every folder, left to right and top to bottom
+	public List<CTabFolder> folders()
+	{
+		List<CTabFolder> list = new ArrayList<CTabFolder>();
+		collect(area, list);
+		return list;
+	}
+
+	static void collect(Composite parent, List<CTabFolder> list)
+	{
+		for(Control c : parent.getChildren())
+		{
+			if(c instanceof CTabFolder)
+			{
+				list.add((CTabFolder)c);
+			}
+			else if(c instanceof Composite && !(c instanceof Sash))
+			{
+				collect((Composite)c, list);
+			}
+		}
+	}
+
+	// the folder that has the keyboard focus, or else the one used last
+	CTabFolder currentFolder()
+	{
+		List<CTabFolder> all = folders();
+		for(Control c = shell.getDisplay().getFocusControl(); c != null; c = c.getParent())
+		{
+			if(c instanceof CTabFolder && all.contains(c))
+			{
+				current = (CTabFolder)c;
+				break;
+			}
+		}
+		if(current == null || current.isDisposed() || !all.contains(current))
+		{
+			current = all.get(0);
+		}
+		return current;
+	}
+
+	// Splits a folder in two and returns the new, empty folder on the given side (TabDrag.LEFT and so on).
+	CTabFolder split(CTabFolder target, int side)
+	{
+		boolean horizontal = side == TabDrag.LEFT || side == TabDrag.RIGHT;
+		Composite parent = target.getParent();
+		SashForm sash = new SashForm(parent, horizontal ? SWT.HORIZONTAL : SWT.VERTICAL);
+		sash.moveAbove(target);
+		target.setParent(sash);
+		CTabFolder created = newFolder(sash);
+		if(side == TabDrag.LEFT || side == TabDrag.TOP)
+		{
+			created.moveAbove(target);
+		}
+		parent.layout(true, true);
+		return created;
+	}
+
+	// An empty folder goes away (the last one stays), and a split left with a single part is replaced by that part.
+	void removeIfEmpty(CTabFolder folder)
+	{
+		if(folder.isDisposed() || folder.getItemCount() > 0 || folders().size() < 2)
+		{
+			return;
+		}
+		Composite parent = folder.getParent();
+		folder.dispose();
+		if(parent == area || parent.isDisposed())
+		{
+			return;
+		}
+		Control only = null;
+		int count = 0;
+		for(Control c : parent.getChildren())
+		{
+			if(!(c instanceof Sash))
+			{
+				only = c;
+				count++;
+			}
+		}
+		if(count == 1)
+		{
+			Composite grand = parent.getParent();
+			only.setParent(grand);
+			only.moveAbove(parent);
+			parent.dispose();
+			grand.layout(true, true);
+		}
+		else
+		{
+			parent.layout(true, true);
+		}
+	}
+
+	public boolean splits()
+	{
+		return true;
+	}
+
+	public void drop(CTabItem item, CTabFolder target, int zone, int index)
+	{
+		EditorTab tab = (EditorTab)item.getData();
+		CTabFolder from = item.getParent();
+		if(zone == TabDrag.INSERT)
+		{
+			tab.moveTo(target, index);
+		}
+		else
+		{
+			tab.moveTo(split(target, zone), 0);
+		}
+		current = tab.item.getParent();
+		removeIfEmpty(from);
+		tab.editor.getControl().setFocus();
 	}
 
 	// Called once for every tab that is opened, to add menus and the like.
@@ -69,9 +223,9 @@ public class EditorTabs
 		compileHook = hook;
 	}
 
-	public CTabFolder getControl()
+	public Composite getControl()
 	{
-		return folder;
+		return area;
 	}
 
 	static File canonical(File file)
@@ -89,18 +243,18 @@ public class EditorTabs
 	public EditorTab open(File requested)
 	{
 		File file = canonical(requested);
-		for(CTabItem item : folder.getItems())
+		for(EditorTab tab : tabs())
 		{
-			EditorTab tab = (EditorTab)item.getData();
 			if(canonical(tab.file).equals(file))
 			{
-				folder.setSelection(item);
+				tab.item.getParent().setSelection(tab.item);
+				current = tab.item.getParent();
 				return tab;
 			}
 		}
 		try
 		{
-			EditorTab tab = new EditorTab(folder, file, theme);
+			EditorTab tab = new EditorTab(currentFolder(), file, theme);
 			tab.editor.setProblems(problemsFor(file));
 			tab.editor.setCompileHook(compileHook);
 			boolean java = tab.file.getName().endsWith(".java");
@@ -131,7 +285,7 @@ public class EditorTabs
 			{
 				tabHook.accept(tab);
 			}
-			folder.setSelection(tab.item);
+			tab.item.getParent().setSelection(tab.item);
 			return tab;
 		}
 		catch(IOException e)
@@ -144,40 +298,51 @@ public class EditorTabs
 
 	public EditorTab active()
 	{
-		CTabItem item = folder.getSelection();
+		CTabItem item = currentFolder().getSelection();
 		return item == null ? null : (EditorTab)item.getData();
 	}
 
 	public void show(EditorTab tab)
 	{
-		folder.setSelection(tab.item);
+		tab.item.getParent().setSelection(tab.item);
+		current = tab.item.getParent();
 		tab.editor.getControl().setFocus();
 	}
 
 	public List<EditorTab> tabs()
 	{
 		List<EditorTab> list = new ArrayList<EditorTab>();
-		for(CTabItem item : folder.getItems())
+		for(CTabFolder folder : folders())
 		{
-			list.add((EditorTab)item.getData());
+			for(CTabItem item : folder.getItems())
+			{
+				list.add((EditorTab)item.getData());
+			}
 		}
 		return list;
 	}
 
 	public void closeActive()
 	{
+		CTabFolder folder = currentFolder();
 		CTabItem item = folder.getSelection();
 		if(item != null && confirmClose((EditorTab)item.getData()))
 		{
 			item.dispose();
+			removeIfEmpty(folder);
 		}
 	}
 
 	public void closeAll()
 	{
-		for(CTabItem item : folder.getItems())
+		for(EditorTab tab : tabs())
 		{
-			item.dispose();
+			tab.item.dispose();
+		}
+		List<CTabFolder> all = folders();
+		for(int i = all.size() - 1; i > 0; i--)
+		{
+			removeIfEmpty(all.get(i));
 		}
 	}
 
