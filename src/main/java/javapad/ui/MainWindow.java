@@ -191,7 +191,7 @@ public class MainWindow {
 		horizontal.setWeights(new int[] {20, 80});
 		vertical.setWeights(new int[] {60, 40});
 		run = new RunController(display, shell, editors, console, problemsPane, junitPane, assist, bottomTabs, consoleTab, problemsTab, junitTab, () -> currentFile(), () -> refreshSources(), m -> error(m));
-		importActions = new ImportActions(shell, assist);
+		importActions = new ImportActions(shell, assist, () -> project);
 		menus.addToolItems(toolbar);
 		showToolbar(Theme.loadToolbar());
 		files = new FileActions(shell, () -> project, () -> activeTree(), () -> sourceTab.selected(), () -> refreshTrees(), l -> open(l), m -> error(m), editors, () -> git.repo(), () -> refreshAll());

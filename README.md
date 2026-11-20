@@ -39,7 +39,7 @@ Without Maven: put the jars in `lib/` on the class path, compile `src/main/java`
 | Ctrl+Shift+R | Open file by name |
 | Ctrl+F / Ctrl+Shift+H | Find / find in files |
 | Ctrl+Space | Content assist |
-| Ctrl+1 | Quick fix |
+| Ctrl+1 | Quick fix (import a missing type, or correct a package that does not match the folder) |
 | Ctrl+Shift+O / Ctrl+Shift+F | Organize imports / format |
 | Alt+Shift+Up / Alt+Shift+Down | Expand / shrink the selection to the enclosing code |
 | F3 | Open declaration |

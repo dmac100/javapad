@@ -9,9 +9,12 @@ import javapad.ui.editor.EditorTab;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import javapad.lang.ImportEditor;
 import javapad.lang.ImportFixer;
 import javapad.lang.JavaAnalyzer;
+import javapad.lang.PackageFixer;
+import javapad.model.EclipseProject;
 import javapad.lang.TypeIndex;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Shell;
@@ -20,10 +23,12 @@ import org.eclipse.swt.widgets.Shell;
 public class ImportActions {
 	private final Shell shell;
 	private final CodeAssist assist;
+	private final Supplier<EclipseProject> project;
 
-	public ImportActions(Shell shell, CodeAssist assist) {
+	public ImportActions(Shell shell, CodeAssist assist, Supplier<EclipseProject> project) {
 		this.shell = shell;
 		this.assist = assist;
+		this.project = project;
 	}
 
 	void info(String title, String message) {
@@ -129,8 +134,29 @@ public class ImportActions {
 		});
 	}
 
-	// Ctrl+1: add the import for an unresolved type on the caret's line.
+	// Offers to set the package declaration to the one the file's folder implies. False when it already matches.
+	boolean fixPackage(EditorTab tab) {
+		EclipseProject p = project.get();
+		if(p == null || tab.file == null) {
+			return false;
+		}
+		String expected = PackageFixer.expected(tab.file, p.sourceFolders);
+		String content = tab.editor.getContent();
+		if(expected == null || PackageFixer.declared(content).equals(expected)) {
+			return false;
+		}
+		String label = expected.isEmpty() ? "the default package" : "'" + expected + "'";
+		if(ConfirmDialog.confirm(shell, "Quick Fix", "The package does not match the folder. Change it to " + label + "?")) {
+			tab.editor.replaceContentMinimal(PackageFixer.fix(content, expected));
+		}
+		return true;
+	}
+
+	// Ctrl+1: fix a package that does not match the folder, else add the import for an unresolved type on the caret's line.
 	public void quickFix(EditorTab tab) {
+		if(fixPackage(tab)) {
+			return;
+		}
 		if(!ready()) {
 			return;
 		}
