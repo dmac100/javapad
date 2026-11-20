@@ -49,6 +49,8 @@ public class ClaudePane
 	// the running request, and a number that tells its output from that of an earlier one
 	private Process process;
 	private int request;
+	private static final String INDICATOR = "Waiting for Claude";
+	private int indicatorPrefix;
 	private boolean waiting;
 	private int dots;
 	// whether the next prompt continues the conversation in the machine (after a first answer)
@@ -711,9 +713,16 @@ public class ClaudePane
 			return;
 		}
 		hideIndicator();
+		// where the next block would start, so that nothing moves when it arrives: after a blank line, but under a tool line
+		int wanted = text.getCharCount() == 0 ? 0 : lastKind < 0 || lastKind == ClaudeStream.TOOL ? 1 : 2;
 		String all = text.getText();
-		// on a line of its own
-		String label = (all.isEmpty() || all.endsWith("\n") ? "" : "\n") + "Waiting for Claude" + ".".repeat(dots);
+		int have = 0;
+		while(have < wanted && have < all.length() && all.charAt(all.length() - 1 - have) == '\n')
+		{
+			have++;
+		}
+		indicatorPrefix = wanted - have;
+		String label = "\n".repeat(indicatorPrefix) + INDICATOR + ".".repeat(dots);
 		indicatorStart = text.getCharCount();
 		internal = true;
 		text.replaceTextRange(indicatorStart, 0, label);
@@ -742,15 +751,23 @@ public class ClaudePane
 			return;
 		}
 		dots = (dots + 1) % 4;
-		// no redraw in between, so that the line going and coming back is not seen
-		text.setRedraw(false);
-		try
+		if(indicatorStart >= 0)
 		{
-			showIndicator();
-		}
-		finally
-		{
-			text.setRedraw(true);
+			// only the dots change; the rest of the text is left alone
+			int from = indicatorStart + indicatorPrefix + INDICATOR.length();
+			text.setRedraw(false);
+			try
+			{
+				internal = true;
+				text.replaceTextRange(from, text.getCharCount() - from, ".".repeat(dots));
+				internal = false;
+				text.setStyleRange(style(indicatorStart, text.getCharCount() - indicatorStart, KIND_NOTE));
+				inputStart = text.getCharCount();
+			}
+			finally
+			{
+				text.setRedraw(true);
+			}
 		}
 		display.timerExec(DOT_MILLIS, () -> tick(id));
 	}
