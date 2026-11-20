@@ -375,9 +375,19 @@ public class ClaudePane
 		{
 			return;
 		}
+		// only the end that changed is replaced, so the text before it is not redrawn
+		int same = 0;
+		if(answerShown != null && text.getCharCount() >= answerStart + answerShown.text.length())
+		{
+			int most = Math.min(answerShown.text.length(), shown.text.length());
+			while(same < most && answerShown.text.charAt(same) == shown.text.charAt(same))
+			{
+				same++;
+			}
+		}
 		answerShown = shown;
 		internal = true;
-		text.replaceTextRange(answerStart, text.getCharCount() - answerStart, shown.text);
+		text.replaceTextRange(answerStart + same, text.getCharCount() - answerStart - same, shown.text.substring(same));
 		internal = false;
 		final int from = answerStart;
 		segments.removeIf(seg -> seg[0] >= from);
@@ -729,7 +739,16 @@ public class ClaudePane
 			return;
 		}
 		dots = (dots + 1) % 4;
-		showIndicator();
+		// no redraw in between, so that the line going and coming back is not seen
+		text.setRedraw(false);
+		try
+		{
+			showIndicator();
+		}
+		finally
+		{
+			text.setRedraw(true);
+		}
 		display.timerExec(DOT_MILLIS, () -> tick(id));
 	}
 
