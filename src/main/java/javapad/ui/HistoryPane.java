@@ -107,6 +107,8 @@ public class HistoryPane
 			c.setText(fileTitles[i]);
 			c.setWidth(fileWidths[i]);
 		}
+		vertical.SASH_WIDTH = 5;
+		lower.SASH_WIDTH = 5;
 		vertical.setWeights(new int[] {55, 45});
 		lower.setWeights(new int[] {70, 30});
 		bold = boldFont();
@@ -179,8 +181,8 @@ public class HistoryPane
 			radio.setBackground(theme.chrome);
 			radio.setForeground(theme.foreground);
 		}
-		vertical.setBackground(theme.chrome);
-		lower.setBackground(theme.chrome);
+		vertical.setBackground(theme.divider);
+		lower.setBackground(theme.divider);
 		for(Table t : new Table[] {commitTable, fileTable})
 		{
 			t.setBackground(theme.background);

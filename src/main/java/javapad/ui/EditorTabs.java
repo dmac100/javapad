@@ -68,6 +68,16 @@ public class EditorTabs implements TabDrag.Host
 		folder.setForeground(theme.foreground);
 		folder.setSelectionBackground(theme.background);
 		folder.setSelectionForeground(theme.foreground);
+		if(folder.getParent() instanceof SashForm)
+		{
+			styleSash((SashForm)folder.getParent(), theme);
+		}
+	}
+
+	static void styleSash(SashForm sash, Theme theme)
+	{
+		sash.setBackground(theme.divider);
+		sash.SASH_WIDTH = 5;
 	}
 
 	public void restyle()

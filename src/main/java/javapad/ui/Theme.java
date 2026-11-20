@@ -26,6 +26,7 @@ public class Theme
 	public Color sidebar;
 	public Color sidebarText;
 	public Color chrome;
+	public Color divider;
 	public Color keyword;
 	public Color type;
 	public Color string;
@@ -184,6 +185,7 @@ public class Theme
 			sidebar = color(30, 30, 30);
 			sidebarText = color(212, 212, 212);
 			chrome = color(30, 30, 30);
+			divider = color(100, 100, 100);
 			keyword = color(0xf9, 0x26, 0x72);
 			type = color(0x66, 0xd9, 0xef);
 			string = color(0xe6, 0xdb, 0x74);
@@ -212,6 +214,7 @@ public class Theme
 			sidebar = background;
 			sidebarText = foreground;
 			chrome = color(240, 240, 240);
+			divider = color(160, 160, 160);
 			keyword = color(127, 0, 85);
 			type = color(0, 90, 130);
 			string = color(42, 0, 255);

@@ -211,8 +211,8 @@ public class MainWindow
 			f.setSelectionBackground(f == left ? theme.sidebar : theme.background);
 			f.setSelectionForeground(f == left ? theme.sidebarText : theme.foreground);
 		}
-		horizontal.setBackground(theme.chrome);
-		vertical.setBackground(theme.chrome);
+		EditorTabs.styleSash(horizontal, theme);
+		EditorTabs.styleSash(vertical, theme);
 		projectTree.restyle(theme);
 		sourceTree.restyle(theme);
 		problemsPane.restyle(theme);
