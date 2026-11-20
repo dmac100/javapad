@@ -196,9 +196,11 @@ public class MainWindow
 		importActions = new ImportActions(shell, assist);
 		menus.addToolItems(toolbar);
 		showToolbar(Theme.loadToolbar());
-		files = new FileActions(shell, () -> project, () -> activeTree(), () -> sourceTab.selected(), () -> refreshTrees(), l -> open(l), m -> error(m));
+		files = new FileActions(shell, () -> project, () -> activeTree(), () -> sourceTab.selected(), () -> refreshTrees(), l -> open(l), m -> error(m), editors, () -> git.repo(), () -> refreshAll());
 		menus.buildMenus();
 		editors.setCompileHook(() -> run.runActive());
+		projectTree.setMover((f, dir) -> files.moveInto(f, dir));
+		sourceTree.setMover((f, dir) -> files.moveInto(f, dir));
 		projectTree.setOpener(f -> open(new Location(f, 1, 1)));
 		sourceTree.setOpener(f -> open(new Location(f, 1, 1)));
 		editors.setProblemsHook(list -> markErrorFiles(list));

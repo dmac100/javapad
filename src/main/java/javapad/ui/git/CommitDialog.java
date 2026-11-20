@@ -241,6 +241,11 @@ public class CommitDialog
 			if(checked.contains(c.path))
 			{
 				r.paths.add(c.path);
+				if(c.oldPath != null)
+				{
+					// the other half of a rename, or the old file would stay in the tree of the commit
+					r.paths.add(c.oldPath);
+				}
 			}
 		}
 		if(r.paths.isEmpty() && !r.amend)

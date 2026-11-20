@@ -68,7 +68,7 @@ public class GitActions
 		});
 	}
 
-	GitRepo repo()
+	public GitRepo repo()
 	{
 		return repo;
 	}

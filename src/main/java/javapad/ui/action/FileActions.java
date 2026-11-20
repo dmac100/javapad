@@ -9,10 +9,16 @@ import javapad.ui.pane.ProjectTree;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import javapad.git.GitRepo;
+import javapad.git.GitResult;
 import javapad.model.EclipseProject;
+import javapad.ui.editor.EditorTab;
+import javapad.ui.editor.EditorTabs;
+import java.util.Map;
 import javapad.model.JavaTemplate;
 import org.eclipse.swt.widgets.Shell;
 
@@ -26,10 +32,16 @@ public class FileActions
 	private final Runnable refreshTrees;
 	private final Consumer<Location> opener;
 	private final Consumer<String> error;
+	private final EditorTabs editors;
+	private final Supplier<GitRepo> repo;
+	private final Runnable afterMove;
 
 	public FileActions(Shell shell, Supplier<EclipseProject> project, Supplier<ProjectTree> activeTree, BooleanSupplier inSources, Runnable refreshTrees, Consumer<Location> opener,
-		Consumer<String> error)
+		Consumer<String> error, EditorTabs editors, Supplier<GitRepo> repo, Runnable afterMove)
 	{
+		this.editors = editors;
+		this.repo = repo;
+		this.afterMove = afterMove;
 		this.shell = shell;
 		this.project = project;
 		this.activeTree = activeTree;
@@ -94,6 +106,91 @@ public class FileActions
 		{
 			FileUtil.deleteRecursive(f);
 			refreshTrees.run();
+		}
+	}
+
+	// Renames the selected file or folder; a name with slashes moves it, relative to the folder it is in.
+	void renameSelected()
+	{
+		File f = selectedMovable();
+		String name = f == null ? null : Prompt.ask(shell, "Rename / Move", "New name or path, relative to " + f.getParentFile().getName() + ":", f.getName());
+		if(name == null || name.trim().isEmpty() || name.trim().equals(f.getName()))
+		{
+			return;
+		}
+		move(f, new File(f.getParentFile(), name.trim()).toPath().normalize().toFile());
+	}
+
+	// Drag and drop in the tree: moves a file or folder into a folder.
+	public void moveInto(File f, File dir)
+	{
+		EclipseProject p = project.get();
+		if(p == null || f.equals(p.root) || !dir.isDirectory() || dir.equals(f.getParentFile()))
+		{
+			return;
+		}
+		move(f, new File(dir, f.getName()));
+	}
+
+	private File selectedMovable()
+	{
+		File f = activeTree.get().selected();
+		EclipseProject p = project.get();
+		return f == null || p == null || f.equals(p.root) ? null : f;
+	}
+
+	// Moves the file or folder on disk, through git when it is tracked so that git sees a rename, and the open editors follow it.
+	void move(File from, File to)
+	{
+		EclipseProject p = project.get();
+		Path root = p.root.toPath().toAbsolutePath().normalize();
+		Path target = to.toPath().toAbsolutePath().normalize();
+		if(!target.startsWith(root))
+		{
+			error.accept("A file cannot be moved out of the project.");
+			return;
+		}
+		if(target.startsWith(from.toPath().toAbsolutePath().normalize()))
+		{
+			error.accept("A folder cannot be moved into itself.");
+			return;
+		}
+		if(to.exists())
+		{
+			error.accept(to.getName() + " already exists.");
+			return;
+		}
+		Map<EditorTab, File> plan = editors.planMove(from, to);
+		GitRepo r = repo.get();
+		GitResult result;
+		if(r != null)
+		{
+			result = r.move(from, to);
+		}
+		else
+		{
+			result = plainMove(from, to);
+		}
+		if(!result.ok())
+		{
+			error.accept(result.message());
+			return;
+		}
+		editors.applyMove(plan);
+		afterMove.run();
+	}
+
+	private static GitResult plainMove(File from, File to)
+	{
+		try
+		{
+			to.getAbsoluteFile().getParentFile().mkdirs();
+			Files.move(from.toPath(), to.toPath());
+			return new GitResult(0, "", "");
+		}
+		catch(Exception e)
+		{
+			return new GitResult(1, "", String.valueOf(e.getMessage()));
 		}
 	}
 

@@ -428,9 +428,56 @@ public class GitRepo
 		return withPaths(Arrays.asList("checkout", rev, "--"), paths);
 	}
 
-	// Throws away the changes of a tracked file, or deletes an untracked one.
+	// Moves or renames a file or folder. Tracked ones go through "git mv", so that git records a rename; others are just moved on disk.
+	public GitResult move(File from, File to)
+	{
+		String a = relative(from);
+		String b = relative(to);
+		try
+		{
+			if(to.exists())
+			{
+				return new GitResult(1, "", to.getName() + " already exists.");
+			}
+			File parent = to.getAbsoluteFile().getParentFile();
+			if(parent != null)
+			{
+				parent.mkdirs();
+			}
+			if(a != null && b != null && !a.isEmpty() && !b.isEmpty())
+			{
+				GitResult tracked = git("ls-files", "--", a);
+				if(tracked.ok() && !tracked.out.trim().isEmpty())
+				{
+					return git("mv", "--", a, b);
+				}
+			}
+			Files.move(from.toPath(), to.toPath());
+			return new GitResult(0, "", "");
+		}
+		catch(IOException e)
+		{
+			return new GitResult(1, "", String.valueOf(e.getMessage()));
+		}
+	}
+
+	// Throws away the changes of a tracked file, or deletes an untracked one. A rename goes back to the old name.
 	public GitResult discard(FileChange c)
 	{
+		if(c.oldPath != null)
+		{
+			GitResult r = git("reset", "-q", "--", c.oldPath, c.path);
+			if(!r.ok())
+			{
+				return r;
+			}
+			r = git("checkout", "--", c.oldPath);
+			if(!r.ok())
+			{
+				return r;
+			}
+			return git("clean", "-f", "-q", "--", c.path);
+		}
 		if(c.untracked())
 		{
 			return git("clean", "-f", "-q", "--", c.path);
@@ -443,7 +490,16 @@ public class GitRepo
 	{
 		if(!paths.isEmpty())
 		{
-			GitResult added = add(paths);
+			// a path that is gone (the old name of a rename) has nothing to add, and git refuses a pathspec that matches nothing
+			List<String> present = new ArrayList<String>();
+			for(String path : paths)
+			{
+				if(file(path).exists())
+				{
+					present.add(path);
+				}
+			}
+			GitResult added = present.isEmpty() ? new GitResult(0, "", "") : add(present);
 			if(!added.ok())
 			{
 				return added;

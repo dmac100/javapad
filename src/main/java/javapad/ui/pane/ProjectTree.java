@@ -12,11 +12,21 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import javapad.git.GitStatus;
 import javapad.model.EclipseProject;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.DragSource;
+import org.eclipse.swt.dnd.DragSourceAdapter;
+import org.eclipse.swt.dnd.DragSourceEvent;
+import org.eclipse.swt.dnd.DropTarget;
+import org.eclipse.swt.dnd.DropTargetAdapter;
+import org.eclipse.swt.dnd.DropTargetEvent;
+import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
@@ -73,6 +83,65 @@ public class ProjectTree
 			else if(f.isDirectory())
 			{
 				toggle(tree.getSelection()[0]);
+			}
+		});
+	}
+
+	// Drag and drop within the tree: dropping a file or folder on a folder (or beside a file, into its folder) calls the mover with the dragged file and the target folder.
+	public void setMover(BiConsumer<File, File> mover)
+	{
+		Transfer[] types = {TextTransfer.getInstance()};
+		DragSource source = new DragSource(tree, DND.DROP_MOVE);
+		source.setTransfer(types);
+		File[] dragged = new File[1];
+		source.addDragListener(new DragSourceAdapter()
+		{
+			public void dragStart(DragSourceEvent e)
+			{
+				dragged[0] = selected();
+				e.doit = dragged[0] != null && project != null && !dragged[0].equals(project.root);
+			}
+
+			public void dragSetData(DragSourceEvent e)
+			{
+				e.data = dragged[0] == null ? "" : dragged[0].getPath();
+			}
+		});
+		DropTarget target = new DropTarget(tree, DND.DROP_MOVE);
+		target.setTransfer(types);
+		target.addDropListener(new DropTargetAdapter()
+		{
+			public void dragOver(DropTargetEvent e)
+			{
+				e.feedback = DND.FEEDBACK_SELECT | DND.FEEDBACK_SCROLL | DND.FEEDBACK_EXPAND;
+				e.detail = dropDir(e) == null ? DND.DROP_NONE : DND.DROP_MOVE;
+			}
+
+			public void drop(DropTargetEvent e)
+			{
+				File dir = dropDir(e);
+				File f = dragged[0];
+				dragged[0] = null;
+				if(dir != null && f != null)
+				{
+					mover.accept(f, dir);
+				}
+			}
+
+			private File dropDir(DropTargetEvent e)
+			{
+				File f = dragged[0];
+				TreeItem over = tree.getItem(tree.toControl(e.x, e.y));
+				if(f == null || over == null || !(over.getData() instanceof File))
+				{
+					return null;
+				}
+				File dir = (File)over.getData();
+				if(!dir.isDirectory())
+				{
+					dir = dir.getParentFile();
+				}
+				return dir == null || dir.equals(f.getParentFile()) || dir.toPath().startsWith(f.toPath()) ? null : dir;
 			}
 		});
 	}

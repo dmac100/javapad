@@ -6,8 +6,11 @@ import javapad.ui.dialog.ConfirmDialog;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import javapad.lang.Occurrences;
 import javapad.model.Problem;
@@ -334,6 +337,30 @@ public class EditorTabs implements TabDrag.Host
 			}
 		}
 		return list;
+	}
+
+	// The new file of every tab whose file is the one at "from" or inside that folder, were it moved to "to". Call before moving.
+	public Map<EditorTab, File> planMove(File from, File to)
+	{
+		Map<EditorTab, File> plan = new LinkedHashMap<EditorTab, File>();
+		Path source = canonical(from).toPath();
+		for(EditorTab tab : tabs())
+		{
+			Path p = canonical(tab.file).toPath();
+			if(p.startsWith(source))
+			{
+				plan.put(tab, to.toPath().toAbsolutePath().resolve(source.relativize(p).toString()).normalize().toFile());
+			}
+		}
+		return plan;
+	}
+
+	public void applyMove(Map<EditorTab, File> plan)
+	{
+		for(Map.Entry<EditorTab, File> e : plan.entrySet())
+		{
+			e.getKey().rename(e.getValue());
+		}
 	}
 
 	public void closeActive()

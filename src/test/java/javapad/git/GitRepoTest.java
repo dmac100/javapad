@@ -76,6 +76,42 @@ public class GitRepoTest
 	}
 
 	@Test
+	public void movingATrackedFileIsARenameAndCommitsWhole() throws Exception
+	{
+		commit("a.txt", "one\nline\nthree\n", "first");
+		commit("keep.txt", "k\n", "second");
+		assertTrue(repo.move(new File(dir, "a.txt"), new File(dir, "sub/b.txt")).ok());
+		assertFalse(new File(dir, "a.txt").exists());
+		FileChange c = repo.status(true).find("sub/b.txt");
+		assertEquals('R', c.index);
+		assertEquals("a.txt", c.oldPath);
+		assertTrue(repo.commit("move", "", "", false, Arrays.asList("sub/b.txt", "a.txt")).ok());
+		assertTrue(repo.status(true).changes.isEmpty());
+		assertEquals('R', repo.changedFiles("HEAD").get(0).status);
+	}
+
+	@Test
+	public void movingAnUntrackedFileJustMovesIt() throws Exception
+	{
+		commit("a.txt", "one\n", "first");
+		write("u.txt", "u\n");
+		assertTrue(repo.move(new File(dir, "u.txt"), new File(dir, "d/v.txt")).ok());
+		assertTrue(repo.status(true).find("d/v.txt").untracked());
+		assertFalse(repo.move(new File(dir, "a.txt"), new File(dir, "d/v.txt")).ok());
+	}
+
+	@Test
+	public void discardingARenameRestoresTheOldName() throws Exception
+	{
+		commit("a.txt", "one\n", "first");
+		repo.move(new File(dir, "a.txt"), new File(dir, "b.txt"));
+		assertTrue(repo.discard(repo.status(true).find("b.txt")).ok());
+		assertTrue(new File(dir, "a.txt").exists());
+		assertFalse(new File(dir, "b.txt").exists());
+		assertTrue(repo.status(true).changes.isEmpty());
+	}
+
+	@Test
 	public void untrackedFoldersCountForEverythingInThem() throws Exception
 	{
 		commit("a.txt", "one\n", "first");

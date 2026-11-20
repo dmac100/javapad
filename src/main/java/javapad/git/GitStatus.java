@@ -3,6 +3,7 @@ package javapad.git;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 // The parsed result of "git status --porcelain=v2 -z --branch".
@@ -55,7 +56,7 @@ public class GitStatus
 		{
 			FileChange a = changes.get(i);
 			FileChange b = o.changes.get(i);
-			if(!a.path.equals(b.path) || a.index != b.index || a.work != b.work)
+			if(!a.path.equals(b.path) || a.index != b.index || a.work != b.work || !Objects.equals(a.oldPath, b.oldPath))
 			{
 				return false;
 			}
@@ -154,8 +155,8 @@ public class GitStatus
 			else if(p.startsWith("2 "))
 			{
 				String[] f = p.split(" ", 10);
-				list.add(new FileChange(f[9], column(f[1].charAt(0)), column(f[1].charAt(1))));
 				// the original path follows as its own entry
+				list.add(new FileChange(f[9], column(f[1].charAt(0)), column(f[1].charAt(1)), i + 1 < parts.length ? parts[i + 1] : null));
 				i++;
 			}
 			else if(p.startsWith("u "))

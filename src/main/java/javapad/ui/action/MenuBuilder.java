@@ -236,6 +236,7 @@ public class MenuBuilder
 		menuItem(treeMenu, "Run Tests", 0, () -> w.run.runTestsIn(w.activeTree().selected()));
 		menuItem(treeMenu, "New File...", 0, () -> w.files.newFile());
 		menuItem(treeMenu, "New Folder...", 0, () -> w.files.newFolder());
+		menuItem(treeMenu, "Rename / Move...", 0, () -> w.files.renameSelected());
 		menuItem(treeMenu, "Delete", 0, () -> w.files.deleteSelected());
 		menuItem(treeMenu, "Refresh", 0, () -> w.refreshAll());
 		new MenuItem(treeMenu, SWT.SEPARATOR);

@@ -6,12 +6,20 @@ public class FileChange
 	public final String path;
 	public final char index;
 	public final char work;
+	// for a rename, the path the file had before; otherwise null
+	public final String oldPath;
 
 	public FileChange(String path, char index, char work)
+	{
+		this(path, index, work, null);
+	}
+
+	public FileChange(String path, char index, char work, String oldPath)
 	{
 		this.path = path;
 		this.index = index;
 		this.work = work;
+		this.oldPath = oldPath;
 	}
 
 	public boolean untracked()

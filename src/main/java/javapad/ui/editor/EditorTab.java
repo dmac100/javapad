@@ -12,7 +12,7 @@ import org.eclipse.swt.custom.CTabItem;
 
 public class EditorTab
 {
-	public final File file;
+	public File file;
 	public CTabItem item;
 	public final CodeEditor editor;
 	private boolean dirty;
@@ -66,6 +66,14 @@ public class EditorTab
 		updateTitle();
 		moving = false;
 		folder.setSelection(item);
+	}
+
+	// The file was moved or renamed on disk; the tab, with any unsaved changes, follows it.
+	public void rename(File moved)
+	{
+		file = moved;
+		item.setToolTipText(moved.getAbsolutePath());
+		updateTitle();
 	}
 
 	public boolean isDirty()
