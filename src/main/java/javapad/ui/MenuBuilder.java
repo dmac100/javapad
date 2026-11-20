@@ -165,20 +165,26 @@ class MenuBuilder
 			w.showWhitespace(whitespaceItem.getSelection());
 		});
 		menuItem(view, "Editor Font...", 0, () -> w.chooseFont());
-		commands.add("View > Show Project", () -> w.projectTab.select());
-		commands.add("View > Show Sources", () -> w.sourceTab.select());
-		commands.add("View > Show Problems", () -> w.bottomTabs.show(w.problemsTab));
-		commands.add("View > Show Console", () -> w.bottomTabs.show(w.consoleTab));
-		commands.add("View > Show JUnit", () -> w.junitTab.select());
-		commands.add("View > Show Call Hierarchy", () -> w.bottomTabs.show(w.callTab));
-		commands.add("View > Show Search", () -> w.bottomTabs.show(w.searchTab));
-		commands.add("View > Show Terminal", () -> w.showBottomTab("terminal"));
-		commands.add("View > Show History", () -> w.showBottomTab("history"));
-		commands.add("View > Show Claude", () ->
+		MenuItem showItem = new MenuItem(view, SWT.CASCADE);
+		showItem.setText("Show");
+		Menu show = new Menu(w.shell, SWT.DROP_DOWN);
+		showItem.setMenu(show);
+		menuName = "View > Show";
+		menuItem(show, "Project", 0, () -> w.projectTab.select());
+		menuItem(show, "Sources", 0, () -> w.sourceTab.select());
+		menuItem(show, "Problems", 0, () -> w.bottomTabs.show(w.problemsTab));
+		menuItem(show, "Console", 0, () -> w.bottomTabs.show(w.consoleTab));
+		menuItem(show, "JUnit", 0, () -> w.junitTab.select());
+		menuItem(show, "Call Hierarchy", 0, () -> w.bottomTabs.show(w.callTab));
+		menuItem(show, "Search", 0, () -> w.bottomTabs.show(w.searchTab));
+		menuItem(show, "Terminal", 0, () -> w.showBottomTab("terminal"));
+		menuItem(show, "History", 0, () -> w.showBottomTab("history"));
+		menuItem(show, "Claude", 0, () ->
 		{
 			w.showBottomTab("claude");
 			w.claude.focusInput();
 		});
+		menuName = "View";
 		commands.add("Claude > Clear", () -> w.claude.clear());
 		Menu source = submenu(bar, "Source");
 		menuItem(source, "Organize Imports", SWT.MOD1 | SWT.SHIFT | 'O', () -> w.withEditor(t -> w.importActions.organize(t)));
