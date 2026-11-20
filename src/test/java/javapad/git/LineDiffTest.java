@@ -64,4 +64,12 @@ public class LineDiffTest
 		assertEquals("==", kinds(LineDiff.diff("a\nb", "a\nb\n")));
 		assertEquals("=~", kinds(LineDiff.diff("a\r\nb\r\n", "a\nc\n")));
 	}
+
+	@Test
+	public void changedLinesAreThoseAddedOrChangedInTheNewText()
+	{
+		assertEquals(new java.util.HashSet<Integer>(java.util.Arrays.asList(1, 3, 4)), LineDiff.changedLines("a\nb\nc\nd\n", "a\nB\nc\nx\ny\n"));
+		assertEquals(new java.util.HashSet<Integer>(), LineDiff.changedLines("a\nb\n", "a\nb\n"));
+		assertEquals(new java.util.HashSet<Integer>(), LineDiff.changedLines("a\nb\n", "a\n"));
+	}
 }

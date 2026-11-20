@@ -2,7 +2,9 @@ package javapad.git;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 // A line diff of two texts as aligned rows for a side-by-side view: every row has a line on the left, on the right, or both.
 public class LineDiff
@@ -71,6 +73,26 @@ public class LineDiff
 			rows.add(new Row(SAME, a.get(a.size() - i), b.get(b.size() - i)));
 		}
 		return rows;
+	}
+
+	// The 0-based lines of the new text that were added or changed.
+	public static Set<Integer> changedLines(String before, String after)
+	{
+		Set<Integer> lines = new HashSet<Integer>();
+		int line = 0;
+		for(Row row : diff(before, after))
+		{
+			if(row.kind == REMOVED)
+			{
+				continue;
+			}
+			if(row.kind != SAME)
+			{
+				lines.add(line);
+			}
+			line++;
+		}
+		return lines;
 	}
 
 	static void middle(List<String> a, List<String> b, List<Row> out)

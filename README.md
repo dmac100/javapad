@@ -12,7 +12,7 @@ A small desktop editor (SWT) for Eclipse-style Java projects. It opens a project
 - **Terminal:** a tab with your login shell on a real pseudo-terminal (colours, full-screen programs, scrollback), starting in the project folder.
 - **Navigation:** open a declaration or implementation, call hierarchy, open a file by name, search the project's files.
 - **Whitespace and line endings:** View > Show Whitespace draws spaces, tabs and the line ending (LF or CRLF) of each line; Source > Convert Line Endings switches a file to Unix or Windows endings.
-- **Git:** status in the sidebar (untracked files greyed, files with merge conflicts marked), assume-unchanged toggle, commit, branches and the usual commands, a history view with a commit graph, and side by side file comparison.
+- **Git:** status in the sidebar (untracked files greyed, modified files green, files with merge conflicts marked; modified lines are marked in the editor margin), assume-unchanged toggle, commit, branches and the usual commands, a history view with a commit graph, and side by side file comparison.
 
 | History | Comparing a file with an earlier version |
 | --- | --- |

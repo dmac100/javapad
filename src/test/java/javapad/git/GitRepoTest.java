@@ -336,4 +336,16 @@ public class GitRepoTest
 		assertFalse(s.conflicted("b.txt"));
 		assertFalse(s.conflicted("sr"));
 	}
+
+	@Test
+	public void foldersHoldingModifiedFilesAreModified()
+	{
+		GitStatus s = new GitStatus("main", Arrays.asList(new FileChange("a/b/c.txt", ' ', 'M'), new FileChange("x/y.txt", '?', '?')));
+		assertTrue(s.modified("a/b/c.txt"));
+		assertTrue(s.modified("a/b"));
+		assertTrue(s.modified("a"));
+		assertTrue(s.modified(""));
+		assertFalse(s.modified("a/b/c"));
+		assertFalse(s.modified("x"));
+	}
 }

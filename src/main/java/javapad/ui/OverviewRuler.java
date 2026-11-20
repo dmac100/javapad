@@ -1,7 +1,9 @@
 package javapad.ui;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.IntConsumer;
 import javapad.model.Problem;
 import org.eclipse.swt.SWT;
@@ -13,7 +15,7 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 
-// A strip to the right of the editor's scrollbar with a mark for each problem, placed by where its line is in the file.
+// A strip to the right of the editor's scrollbar with a mark for each problem and each line that differs from the last commit, placed by where its line is in the file.
 // Clicking a mark goes to its line.
 class OverviewRuler
 {
@@ -27,6 +29,8 @@ class OverviewRuler
 	private final Theme theme;
 	private final IntConsumer goToLine;
 	private List<Problem> problems = new ArrayList<Problem>();
+	// the 0-based lines that differ from the last commit
+	private Set<Integer> changed = new HashSet<Integer>();
 	private String shownTip;
 	private final Cursor hand;
 
@@ -55,6 +59,12 @@ class OverviewRuler
 		canvas.redraw();
 	}
 
+	void setChangedLines(Set<Integer> lines)
+	{
+		changed = lines;
+		canvas.redraw();
+	}
+
 	void redraw()
 	{
 		canvas.redraw();
@@ -73,6 +83,11 @@ class OverviewRuler
 		Rectangle area = canvas.getClientArea();
 		gc.setBackground(theme.background);
 		gc.fillRectangle(area);
+		gc.setBackground(theme.modified);
+		for(int line : changed)
+		{
+			gc.fillRectangle(2, markY(line + 1), area.width - 4, MARK_HEIGHT);
+		}
 		// warnings first, so an error on the same spot is drawn over them
 		for(int pass = 0; pass < 2; pass++)
 		{
@@ -107,12 +122,35 @@ class OverviewRuler
 		return found;
 	}
 
+	// the first changed line (1-based) whose mark is at height y, or 0
+	int changeAt(int y)
+	{
+		int best = 0;
+		for(int line : changed)
+		{
+			int top = markY(line + 1);
+			if(y >= top - SLOP && y < top + MARK_HEIGHT + SLOP && (best == 0 || line + 1 < best))
+			{
+				best = line + 1;
+			}
+		}
+		return best;
+	}
+
 	void click(Event e)
 	{
 		List<Problem> found = at(e.y);
 		if(e.button == 1 && !found.isEmpty())
 		{
 			goToLine.accept(found.get(0).line);
+		}
+		else if(e.button == 1)
+		{
+			int near = changeAt(e.y);
+			if(near > 0)
+			{
+				goToLine.accept(near);
+			}
 		}
 	}
 

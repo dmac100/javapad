@@ -15,6 +15,7 @@ import javapad.model.EclipseProject;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Composite;
@@ -32,6 +33,8 @@ public class ProjectTree
 	private Predicate<File> untracked;
 	// set when the project is in a git repository: tells which files, and folders holding files, have a merge conflict
 	private Predicate<File> conflicts;
+	// set when the project is in a git repository: tells which files are modified, so their names are green
+	private Predicate<File> modified;
 	private Color grey;
 	private Theme theme;
 	private GitStatus branch;
@@ -45,6 +48,7 @@ public class ProjectTree
 		tree = new Tree(parent, SWT.BORDER | SWT.SINGLE | SWT.V_SCROLL | SWT.H_SCROLL);
 		tree.addListener(SWT.PaintItem, e ->
 		{
+			paintName(e);
 			paintBranch(e);
 			paintError(e);
 			paintConflict(e);
@@ -115,6 +119,33 @@ public class ProjectTree
 	}
 
 	// the branch and arrows are drawn over the plain text in one colour of their own
+	// With a paint listener on the tree the toolkit ignores the colour of an item, so the name of a coloured item (untracked, modified) is drawn here.
+	void paintName(Event e)
+	{
+		if(theme == null || !(e.item instanceof TreeItem) || (e.detail & SWT.SELECTED) != 0)
+		{
+			return;
+		}
+		TreeItem item = (TreeItem)e.item;
+		Color color = item.getForeground();
+		if(color.equals(tree.getForeground()) || item.getData() == null)
+		{
+			return;
+		}
+		String name = item.getText();
+		if(item.getData().equals(project == null ? null : project.root) && name.indexOf("  ") > 0)
+		{
+			// the project's name, without the branch that is drawn after it
+			name = name.substring(0, name.indexOf("  "));
+		}
+		Rectangle b = item.getBounds(0);
+		Point extent = e.gc.stringExtent(name);
+		e.gc.setBackground(theme.sidebar);
+		e.gc.fillRectangle(b.x, b.y, extent.x + 2, b.height);
+		e.gc.setForeground(color);
+		e.gc.drawString(name, b.x, b.y + (b.height - extent.y) / 2, true);
+	}
+
 	void paintBranch(Event e)
 	{
 		if(branch == null || theme == null || project == null || !(e.item instanceof TreeItem))
@@ -247,6 +278,17 @@ public class ProjectTree
 		}
 	}
 
+	// Colours the names of the files the test calls modified green; null removes the colour.
+	public void setModifiedTest(Predicate<File> test)
+	{
+		modified = test;
+		for(TreeItem top : tree.getItems())
+		{
+			decorate(top);
+		}
+		tree.redraw();
+	}
+
 	void decorate(TreeItem item)
 	{
 		item.setForeground(colorFor(item.getData()));
@@ -265,7 +307,11 @@ public class ProjectTree
 		{
 			return null;
 		}
-		return untracked.test((File)data) ? grey : null;
+		if(untracked.test((File)data))
+		{
+			return grey;
+		}
+		return modified != null && theme != null && modified.test((File)data) ? theme.modified : null;
 	}
 
 	void disposeColor()

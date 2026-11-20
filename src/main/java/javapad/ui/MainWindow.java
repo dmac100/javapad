@@ -117,7 +117,7 @@ public class MainWindow
 		editors.setAssist(assist);
 		navigation = new NavigationActions(shell, assist, loc -> openLine(loc));
 		editors.setNavigation(navigation);
-		editors.setTabHook(tab -> new EditorMenu(this).attach(tab));
+		editors.setTabHook(tab -> tabOpened(tab));
 		bottom = new CTabFolder(vertical, SWT.BORDER);
 		bottom.setTabPosition(SWT.TOP);
 		console = new ConsolePane(bottom, theme);
@@ -236,6 +236,13 @@ public class MainWindow
 		((GridData)toolbar.getLayoutData()).exclude = !shown;
 		shell.layout(true, true);
 		Theme.saveToolbar(shown);
+	}
+
+	// a new editor tab: its menu, and the committed text its changed lines are marked against
+	void tabOpened(EditorTab tab)
+	{
+		new EditorMenu(this).attach(tab);
+		git.loadBaseline(tab);
 	}
 
 	void showWhitespace(boolean shown)

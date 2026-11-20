@@ -96,6 +96,9 @@ class GitActions
 			w.sourceTree.setUntrackedTest(null);
 			w.projectTree.setConflictTest(null);
 			w.sourceTree.setConflictTest(null);
+			w.projectTree.setModifiedTest(null);
+			w.sourceTree.setModifiedTest(null);
+			updateBaselines();
 			return;
 		}
 		GitRepo r = repo;
@@ -114,6 +117,40 @@ class GitActions
 		};
 		w.projectTree.setConflictTest(conflicts);
 		w.sourceTree.setConflictTest(conflicts);
+		Predicate<File> changed = f ->
+		{
+			String rel = r.relative(f);
+			return rel != null && s.modified(rel);
+		};
+		w.projectTree.setModifiedTest(changed);
+		w.sourceTree.setModifiedTest(changed);
+		updateBaselines();
+	}
+
+	// Gives every open editor the committed text of its file, to mark the modified lines against.
+	void updateBaselines()
+	{
+		for(EditorTab tab : w.editors.tabs())
+		{
+			loadBaseline(tab);
+		}
+	}
+
+	void loadBaseline(EditorTab tab)
+	{
+		GitRepo r = repo;
+		GitStatus s = status;
+		String path = r == null || s == null ? null : r.relative(tab.file);
+		if(path == null || path.isEmpty() || s.untracked(path))
+		{
+			tab.editor.setBaseline(null);
+			return;
+		}
+		background(() ->
+		{
+			String head = r.show("HEAD", path);
+			return () -> tab.editor.setBaseline(head);
+		});
 	}
 
 	// After a command: the files on disk may have changed, so open editors and trees are brought up to date.

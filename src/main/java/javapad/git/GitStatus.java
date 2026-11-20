@@ -13,6 +13,7 @@ public class GitStatus
 	public final int behind;
 	public final List<FileChange> changes;
 	private final Set<String> untracked = new HashSet<String>();
+	private final Set<String> modified = new HashSet<String>();
 
 	public GitStatus(String branch, List<FileChange> changes)
 	{
@@ -30,6 +31,15 @@ public class GitStatus
 			if(c.untracked())
 			{
 				untracked.add(c.path);
+			}
+			else if(!c.conflicted())
+			{
+				modified.add(c.path);
+				modified.add("");
+				for(int slash = c.path.lastIndexOf('/'); slash > 0; slash = c.path.lastIndexOf('/', slash - 1))
+				{
+					modified.add(c.path.substring(0, slash));
+				}
 			}
 		}
 	}
@@ -76,6 +86,12 @@ public class GitStatus
 			}
 		}
 		return false;
+	}
+
+	// Whether the tracked file, or a folder holding such a file, given relative to the repository root, has changes in the index or the working tree (conflicts are not counted).
+	public boolean modified(String path)
+	{
+		return modified.contains(path);
 	}
 
 	public boolean hasConflicts()

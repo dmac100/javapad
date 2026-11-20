@@ -2,8 +2,11 @@ package javapad.ui;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
+import javapad.git.LineDiff;
 import javapad.lang.CompletionEngine;
 import javapad.lang.ImportEditor;
 import javapad.lang.IndentConverter;
@@ -44,6 +47,10 @@ public class CodeEditor
 	private Bullet errorBullet;
 	private Bullet warningBullet;
 	private static final int TAB_WIDTH = 4;
+	// the committed text of the file, and the lines of the editor that differ from it
+	private String baseline;
+	private Set<Integer> changedLines = new HashSet<Integer>();
+	private int changeRequest;
 	private int bulletDigits;
 	private boolean replaying;
 	private Runnable modifyHook;
@@ -117,6 +124,7 @@ public class CodeEditor
 		text.addListener(SWT.Paint, e ->
 		{
 			paintWhitespace(e.gc);
+			paintChanges(e.gc);
 			paintMarks(e.gc);
 		});
 		lineStates.add(JavaLexer.STATE_NORMAL);
@@ -413,6 +421,56 @@ public class CodeEditor
 	public void redrawWhitespace()
 	{
 		text.redraw();
+	}
+
+	// Sets the text the file has in the last commit (null if it has none) and marks the lines that differ from it.
+	public void setBaseline(String text)
+	{
+		baseline = text;
+		updateChangedLines();
+	}
+
+	void updateChangedLines()
+	{
+		int request = ++changeRequest;
+		if(baseline == null)
+		{
+			changedLines = new HashSet<Integer>();
+			ruler.setChangedLines(changedLines);
+			text.redraw();
+			return;
+		}
+		// wait for a pause in typing
+		text.getDisplay().timerExec(200, () ->
+		{
+			if(text.isDisposed() || request != changeRequest)
+			{
+				return;
+			}
+			changedLines = LineDiff.changedLines(baseline, text.getText());
+			ruler.setChangedLines(changedLines);
+			text.redraw();
+		});
+	}
+
+	// a bar at the left edge of each line that is new or differs from the last commit
+	void paintChanges(GC gc)
+	{
+		if(changedLines.isEmpty())
+		{
+			return;
+		}
+		gc.setBackground(theme.modified);
+		int lines = text.getLineCount();
+		int first = text.getTopIndex();
+		int visible = text.getClientArea().height / Math.max(1, text.getLineHeight()) + 2;
+		for(int line = first; line < Math.min(lines, first + visible); line++)
+		{
+			if(changedLines.contains(line))
+			{
+				gc.fillRectangle(0, text.getLinePixel(line), 3, text.getLineHeight(text.getOffsetAtLine(line)));
+			}
+		}
 	}
 
 	void paintMarks(GC gc)
@@ -731,6 +789,10 @@ public class CodeEditor
 		}
 		updateBullets();
 		ruler.redraw();
+		if(baseline != null)
+		{
+			updateChangedLines();
+		}
 		if(!replaying)
 		{
 			record(e);

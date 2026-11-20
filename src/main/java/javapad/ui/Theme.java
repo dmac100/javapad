@@ -46,6 +46,8 @@ public class Theme
 	public Color diffRemoved;
 	public Color diffHunk;
 	public Color branch;
+	// modified files in the sidebar and modified lines in the editor margin
+	public Color modified;
 	private final Display display;
 
 	public Theme(Display d)
@@ -201,6 +203,7 @@ public class Theme
 			diffRemoved = color(84, 36, 36);
 			diffHunk = color(86, 156, 214);
 			branch = color(120, 170, 220);
+			modified = color(110, 200, 100);
 		}
 		else
 		{
@@ -228,6 +231,7 @@ public class Theme
 			diffRemoved = color(255, 218, 218);
 			diffHunk = color(0, 90, 160);
 			branch = color(30, 100, 170);
+			modified = color(30, 140, 50);
 		}
 	}
 
