@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import javapad.lang.FileSearch;
@@ -115,6 +116,8 @@ public class MainWindow {
 	private boolean searchCase;
 	private boolean searchRegex;
 	private int searchGeneration;
+	private Runnable stopSearch = () -> {
+	};
 	static final Set<String> BINARY = new HashSet<String>(Arrays.asList(
 		"class", "jar", "zip", "gz", "png", "jpg", "jpeg", "gif", "bmp", "ico", "so", "dll", "exe", "pdf", "wav", "mp3",
 		"ogg", "iso", "grp", "wad", "dylib", "o", "a", "tar", "7z"));
@@ -160,6 +163,7 @@ public class MainWindow {
 		searchPane = new SearchPane(bottom, theme);
 		searchTab = bottomTabs.add("search", "Search", searchPane.getControl(), false);
 		searchPane.setOpener((f, line, column, length) -> openMatch(f, line, column, length));
+		searchPane.setOnStop(() -> stopSearch.run());
 		git = new GitActions(this);
 		history = new HistoryPane(bottom, theme, this);
 		terminal = new TerminalPane(bottom, theme);
@@ -489,12 +493,14 @@ public class MainWindow {
 			}
 		}
 		int mine = ++searchGeneration;
+		AtomicBoolean stopped = new AtomicBoolean();
+		stopSearch = () -> stopped.set(true);
 		searchPane.searching(req.query);
 		showBottomTab("search");
 		Thread t = new Thread(() -> {
 			List<File> found = new ArrayList<File>();
 			listFiles(project.root, found, GitIgnore.of(project.root));
-			FileSearch.Result result = FileSearch.search(found, unsaved, pattern, 5000);
+			FileSearch.Result result = FileSearch.search(found, unsaved, pattern, stopped::get);
 			display.asyncExec(() -> {
 				if(!shell.isDisposed() && mine == searchGeneration) {
 					searchPane.show(req.query, result);

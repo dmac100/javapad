@@ -22,9 +22,9 @@ public class FileSearchTest {
 	public void caseSensitivityIsAnOption() throws Exception {
 		File f = file("a.txt", "Hello\nhello world\nHELLO\n");
 		Map<File, String> none = new HashMap<File, String>();
-		FileSearch.Result insensitive = FileSearch.search(Arrays.asList(f), none, FileSearch.pattern("hello", false, false), 100);
+		FileSearch.Result insensitive = FileSearch.search(Arrays.asList(f), none, FileSearch.pattern("hello", false, false));
 		assertEquals(3, insensitive.matches.size());
-		FileSearch.Result sensitive = FileSearch.search(Arrays.asList(f), none, FileSearch.pattern("hello", true, false), 100);
+		FileSearch.Result sensitive = FileSearch.search(Arrays.asList(f), none, FileSearch.pattern("hello", true, false));
 		assertEquals(1, sensitive.matches.size());
 		assertEquals(2, sensitive.matches.get(0).line);
 		assertEquals(1, sensitive.matches.get(0).column);
@@ -35,8 +35,8 @@ public class FileSearchTest {
 	public void theQueryIsLiteralUnlessItIsARegularExpression() throws Exception {
 		File f = file("a.txt", "a.b\naxb\n");
 		Map<File, String> none = new HashMap<File, String>();
-		assertEquals(1, FileSearch.search(Arrays.asList(f), none, FileSearch.pattern("a.b", true, false), 100).matches.size());
-		assertEquals(2, FileSearch.search(Arrays.asList(f), none, FileSearch.pattern("a.b", true, true), 100).matches.size());
+		assertEquals(1, FileSearch.search(Arrays.asList(f), none, FileSearch.pattern("a.b", true, false)).matches.size());
+		assertEquals(2, FileSearch.search(Arrays.asList(f), none, FileSearch.pattern("a.b", true, true)).matches.size());
 	}
 
 	@Test
@@ -44,19 +44,29 @@ public class FileSearchTest {
 		File f = file("a.txt", "old\n");
 		Map<File, String> unsaved = new HashMap<File, String>();
 		unsaved.put(f, "new text\r\nmore new\r\n");
-		FileSearch.Result r = FileSearch.search(Arrays.asList(f), unsaved, FileSearch.pattern("new", true, false), 100);
+		FileSearch.Result r = FileSearch.search(Arrays.asList(f), unsaved, FileSearch.pattern("new", true, false));
 		assertEquals(2, r.matches.size());
 		assertEquals("new text", r.matches.get(0).text);
-		assertEquals(0, FileSearch.search(Arrays.asList(f), unsaved, FileSearch.pattern("old", true, false), 100).matches.size());
+		assertEquals(0, FileSearch.search(Arrays.asList(f), unsaved, FileSearch.pattern("old", true, false)).matches.size());
 	}
 
 	@Test
-	public void stopsAtTheLimitAndSkipsBinaryFiles() throws Exception {
+	public void findsEveryMatchAndSkipsBinaryFiles() throws Exception {
 		File f = file("a.txt", "x\nx\nx\nx\n");
 		File bin = file("b.dat", "x\0x\n");
-		FileSearch.Result r = FileSearch.search(Arrays.asList(bin, f), new HashMap<File, String>(), FileSearch.pattern("x", true, false), 3);
-		assertEquals(3, r.matches.size());
-		assertTrue(r.truncated);
+		FileSearch.Result r = FileSearch.search(Arrays.asList(bin, f), new HashMap<File, String>(), FileSearch.pattern("x", true, false));
+		assertEquals(4, r.matches.size());
+		assertEquals(1, r.filesSearched);
+	}
+
+	@Test
+	public void aStoppedSearchKeepsWhatItFound() throws Exception {
+		File a = file("a.txt", "x\n");
+		File b = file("b.txt", "x\n");
+		int[] asked = {0};
+		FileSearch.Result r = FileSearch.search(Arrays.asList(a, b), new HashMap<File, String>(), FileSearch.pattern("x", true, false), () -> ++asked[0] > 1);
+		assertTrue(r.stopped);
+		assertEquals(1, r.matches.size());
 		assertEquals(1, r.filesSearched);
 	}
 }

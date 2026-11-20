@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,8 +32,8 @@ public class FileSearch {
 	public static class Result {
 		public final List<Match> matches = new ArrayList<Match>();
 		public int filesSearched;
-		// set when the search stopped at the limit
-		public boolean truncated;
+		// set when the search was stopped before it had read all the files
+		public boolean stopped;
 	}
 
 	// regex: treat the query as a regular expression (throws PatternSyntaxException if it is not one)
@@ -42,9 +43,18 @@ public class FileSearch {
 	}
 
 	// unsaved: text of files with unsaved changes in an editor, used instead of what is on disk
-	public static Result search(List<File> files, Map<File, String> unsaved, Pattern pattern, int limit) {
+	public static Result search(List<File> files, Map<File, String> unsaved, Pattern pattern) {
+		return search(files, unsaved, pattern, () -> false);
+	}
+
+	// stop: asked before each file; when it returns true the search ends with what it has found so far
+	public static Result search(List<File> files, Map<File, String> unsaved, Pattern pattern, BooleanSupplier stop) {
 		Result result = new Result();
 		for(File f : files) {
+			if(stop.getAsBoolean()) {
+				result.stopped = true;
+				return result;
+			}
 			String text = unsaved.containsKey(f) ? unsaved.get(f) : read(f);
 			if(text == null) {
 				continue;
@@ -54,10 +64,6 @@ public class FileSearch {
 			for(int i = 0; i < lines.length; i++) {
 				Matcher m = pattern.matcher(lines[i]);
 				if(m.find()) {
-					if(result.matches.size() >= limit) {
-						result.truncated = true;
-						return result;
-					}
 					result.matches.add(new Match(f, i + 1, m.start() + 1, Math.max(1, m.end() - m.start()), lines[i]));
 				}
 			}

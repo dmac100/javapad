@@ -12,6 +12,7 @@ import javapad.model.EclipseProject;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Tree;
@@ -20,11 +21,14 @@ import org.eclipse.swt.widgets.TreeItem;
 // The Search tab: the lines found by "Find in Files", grouped by file.
 public class SearchPane {
 	private final Composite composite;
+	private final Composite header;
 	private final Label summary;
+	private final Button stop;
 	private final Tree tree;
 	private final Theme theme;
 	private EclipseProject project;
 	private Opener opener;
+	private Runnable onStop;
 
 	public interface Opener {
 		void open(File file, int line, int column, int length);
@@ -37,8 +41,23 @@ public class SearchPane {
 		layout.marginWidth = 4;
 		layout.marginHeight = 2;
 		composite.setLayout(layout);
-		summary = new Label(composite, SWT.NONE);
+		header = new Composite(composite, SWT.NONE);
+		header.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		GridLayout headerLayout = new GridLayout(2, false);
+		headerLayout.marginWidth = 0;
+		headerLayout.marginHeight = 0;
+		header.setLayout(headerLayout);
+		summary = new Label(header, SWT.NONE);
 		summary.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		stop = new Button(header, SWT.PUSH);
+		stop.setText("Stop");
+		stop.setToolTipText("Stop the search");
+		stop.setEnabled(false);
+		stop.addListener(SWT.Selection, e -> {
+			if(onStop != null) {
+				onStop.run();
+			}
+		});
 		tree = new Tree(composite, SWT.BORDER | SWT.SINGLE | SWT.V_SCROLL | SWT.H_SCROLL);
 		tree.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		tree.addListener(SWT.DefaultSelection, e -> activate());
@@ -53,7 +72,13 @@ public class SearchPane {
 	public void setProject(EclipseProject project) {
 		this.project = project;
 		tree.removeAll();
+		stop.setEnabled(false);
 		summary.setText("Use Edit > Find in Files to search the project.");
+	}
+
+	// called when the Stop button is pressed
+	public void setOnStop(Runnable onStop) {
+		this.onStop = onStop;
 	}
 
 	public void setOpener(Opener opener) {
@@ -62,6 +87,9 @@ public class SearchPane {
 
 	public void restyle() {
 		composite.setBackground(theme.chrome);
+		header.setBackground(theme.chrome);
+		stop.setBackground(theme.chrome);
+		stop.setForeground(theme.foreground);
 		summary.setBackground(theme.chrome);
 		summary.setForeground(theme.foreground);
 		tree.setBackground(theme.background);
@@ -70,11 +98,14 @@ public class SearchPane {
 
 	public void searching(String query) {
 		tree.removeAll();
+		stop.setEnabled(true);
 		summary.setText("Searching for \"" + query + "\"...");
+		header.layout();
 	}
 
 	public void show(String query, FileSearch.Result result) {
 		tree.removeAll();
+		stop.setEnabled(false);
 		Map<File, List<FileSearch.Match>> byFile = new LinkedHashMap<File, List<FileSearch.Match>>();
 		for(FileSearch.Match m : result.matches) {
 			byFile.computeIfAbsent(m.file, k -> new ArrayList<FileSearch.Match>()).add(m);
@@ -92,7 +123,8 @@ public class SearchPane {
 		}
 		String lines = result.matches.size() == 1 ? "1 line" : result.matches.size() + " lines";
 		String files = byFile.size() == 1 ? "1 file" : byFile.size() + " files";
-		summary.setText("\"" + query + "\": " + lines + " in " + files + " (" + result.filesSearched + " searched)" + (result.truncated ? ", stopped at the limit" : ""));
+		summary.setText("\"" + query + "\": " + lines + " in " + files + " (" + result.filesSearched + " searched)" + (result.stopped ? ", stopped by you" : ""));
+		header.layout();
 		if(tree.getItemCount() > 0) {
 			tree.showItem(tree.getItem(0));
 		}
