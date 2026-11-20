@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,6 +19,7 @@ import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
@@ -27,6 +29,8 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
+import org.eclipse.swt.widgets.ToolBar;
+import org.eclipse.swt.widgets.ToolItem;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeItem;
 
@@ -36,6 +40,15 @@ public class JUnitPane
 
 	private SashForm sash;
 	private final Composite composite;
+	private final ToolBar toolbar;
+	private final ToolItem rerunAll;
+	private final ToolItem rerunFailed;
+	private final ToolItem stop;
+	private Runnable rerunAllHandler;
+	private Runnable rerunFailedHandler;
+	private Runnable stopHandler;
+	private BooleanSupplier running = () -> false;
+	private BooleanSupplier hasRun = () -> false;
 	private final Label summary;
 	private final Canvas bar;
 	private int progressDone;
@@ -63,6 +76,11 @@ public class JUnitPane
 		layout.marginHeight = 2;
 		layout.verticalSpacing = 3;
 		composite.setLayout(layout);
+		toolbar = new ToolBar(composite, SWT.FLAT);
+		toolbar.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+		rerunAll = tool("Re-run All Tests", Icons.RERUN_ALL, () -> run(rerunAllHandler));
+		rerunFailed = tool("Re-run Failed Tests", Icons.RERUN_FAILED, () -> run(rerunFailedHandler));
+		stop = tool("Stop Tests", Icons.STOP, () -> run(stopHandler));
 		summary = new Label(composite, SWT.NONE);
 		summary.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
 		bar = new Canvas(composite, SWT.NO_BACKGROUND);
@@ -98,14 +116,57 @@ public class JUnitPane
 		runSelected.addListener(SWT.Selection, e -> run(selectedSpecs()));
 		MenuItem runFailed = new MenuItem(menu, SWT.PUSH);
 		runFailed.setText("Re-run Failed Tests");
-		runFailed.addListener(SWT.Selection, e -> run(failedSpecs()));
+		runFailed.addListener(SWT.Selection, e -> run(rerunFailedHandler));
 		menu.addListener(SWT.Show, e ->
 		{
 			runSelected.setEnabled(!selectedSpecs().isEmpty());
-			runFailed.setEnabled(!failedSpecs().isEmpty());
+			runFailed.setEnabled(!failedSpecs().isEmpty() && !running.getAsBoolean());
 		});
 		tree.setMenu(menu);
 		clear();
+	}
+
+	ToolItem tool(String tip, int icon, Runnable action)
+	{
+		ToolItem item = new ToolItem(toolbar, SWT.PUSH);
+		Image image = Icons.create(toolbar.getDisplay(), icon);
+		item.setImage(image);
+		item.setToolTipText(tip);
+		item.addListener(SWT.Selection, e -> action.run());
+		item.addListener(SWT.Dispose, e -> image.dispose());
+		return item;
+	}
+
+	void run(Runnable handler)
+	{
+		if(handler != null)
+		{
+			handler.run();
+		}
+	}
+
+	// The toolbar's actions, and what tells whether tests are running and whether there is a run to repeat.
+	public void setToolbar(Runnable rerunAll, Runnable rerunFailed, Runnable stop, BooleanSupplier running, BooleanSupplier hasRun)
+	{
+		this.rerunAllHandler = rerunAll;
+		this.rerunFailedHandler = rerunFailed;
+		this.stopHandler = stop;
+		this.running = running;
+		this.hasRun = hasRun;
+		updateToolbar();
+	}
+
+	// Enables the buttons that make sense now: stop while tests run, the reruns when they do not.
+	public void updateToolbar()
+	{
+		if(toolbar.isDisposed())
+		{
+			return;
+		}
+		boolean busy = running.getAsBoolean();
+		rerunAll.setEnabled(!busy && hasRun.getAsBoolean());
+		rerunFailed.setEnabled(!busy && !failedSpecs().isEmpty());
+		stop.setEnabled(busy);
 	}
 
 	public void setRunner(Consumer<List<String>> runner)
@@ -328,6 +389,7 @@ public class JUnitPane
 		detail.setFont(theme.font);
 		composite.setBackground(theme.chrome);
 		sash.setBackground(theme.chrome);
+		toolbar.setBackground(theme.chrome);
 		summary.setBackground(theme.chrome);
 		summary.setForeground(theme.foreground);
 		tree.setBackground(theme.background);
@@ -351,6 +413,7 @@ public class JUnitPane
 		detail.setText("");
 		summary.setText("No test results yet. Run tests to see them here.");
 		setProgress(0, 0, 0);
+		updateToolbar();
 	}
 
 	public int failures()

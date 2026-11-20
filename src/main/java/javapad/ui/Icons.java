@@ -17,6 +17,8 @@ public class Icons
 	public static final int RUN = 3;
 	public static final int TESTS = 4;
 	public static final int STOP = 5;
+	public static final int RERUN_ALL = 6;
+	public static final int RERUN_FAILED = 7;
 
 	static final int SIZE = 20;
 	static final RGB KEY = new RGB(255, 0, 255);
@@ -44,6 +46,15 @@ public class Icons
 		gc.setBackground(c);
 		gc.setForeground(c);
 		c.dispose();
+	}
+
+	// an arc of almost a full circle that ends in an arrow head: "again"
+	static void circularArrow(GC gc)
+	{
+		gc.setLineWidth(3);
+		gc.drawArc(3, 5, 12, 12, 80, 270);
+		gc.setLineWidth(1);
+		gc.fillPolygon(new int[] {11, 10, 19, 10, 15, 4});
 	}
 
 	static void draw(Display d, GC gc, int icon)
@@ -93,6 +104,14 @@ public class Icons
 			case TESTS:
 				fill(d, gc, 40, 170, 70);
 				gc.fillPolygon(new int[] {3, 10, 6, 7, 8, 10, 15, 3, 18, 6, 8, 16});
+				break;
+			case RERUN_ALL:
+				fill(d, gc, 40, 170, 70);
+				circularArrow(gc);
+				break;
+			case RERUN_FAILED:
+				fill(d, gc, 210, 50, 50);
+				circularArrow(gc);
 				break;
 			default:
 				fill(d, gc, 210, 50, 50);

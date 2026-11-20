@@ -179,6 +179,7 @@ public class MainWindow
 		});
 		junitPane.setOpener(l -> openLine(l));
 		junitPane.setRunner(specs -> run.runSpecs(specs));
+		junitPane.setToolbar(() -> run.rerunAll(), () -> run.rerunFailed(), () -> run.stop(), () -> run.testsRunning(), () -> run.hasTestRun());
 		console.setInputSink(s ->
 		{
 			run.sendInput(s);

@@ -47,6 +47,9 @@ class RunController
 	private final SideTabs.Tab junitTab;
 	// repeats the last main class or test run; null until something has been launched
 	private Runnable lastLaunch;
+	// the tests of the last test run that was not a re-run of failures, for "Re-run All"
+	private List<String> allSpecs;
+	private boolean rerunningFailed;
 	private final Supplier<File> currentFile;
 	private final Runnable beforeBuild;
 	private final Consumer<String> errorSink;
@@ -131,8 +134,46 @@ class RunController
 	}
 
 	// the stop button is only live while a process is running
+	boolean testsRunning()
+	{
+		return testRunDir != null && launcher != null && launcher.isRunning();
+	}
+
+	boolean hasTestRun()
+	{
+		return allSpecs != null;
+	}
+
+	void rerunAll()
+	{
+		if(allSpecs != null)
+		{
+			runSpecs(allSpecs);
+		}
+	}
+
+	// runs again the tests that failed in the last run
+	void rerunFailed()
+	{
+		List<String> failed = junitPane.failedSpecs();
+		if(failed.isEmpty())
+		{
+			return;
+		}
+		rerunningFailed = true;
+		try
+		{
+			runSpecs(failed);
+		}
+		finally
+		{
+			rerunningFailed = false;
+		}
+	}
+
 	void updateStop()
 	{
+		junitPane.updateToolbar();
 		if(stopItem != null && !stopItem.isDisposed())
 		{
 			stopItem.setEnabled(launcher != null && launcher.isRunning());
@@ -558,6 +599,7 @@ class RunController
 		junitTab.select();
 		FileUtil.deleteRecursive(testRunDir);
 		testRunDir = null;
+		junitPane.updateToolbar();
 	}
 
 	void runTests()
@@ -622,6 +664,10 @@ class RunController
 			return;
 		}
 		lastLaunch = () -> runSpecs(specs);
+		if(!rerunningFailed)
+		{
+			allSpecs = specs;
+		}
 		build(() ->
 		{
 			if(hasErrors())

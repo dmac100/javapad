@@ -198,7 +198,8 @@ class MenuBuilder
 		menuItem(runMenu, "Run Main Class...", 0, () -> w.run.runMainClass());
 		menuItem(runMenu, "Run Tests", SWT.MOD1 | SWT.F11, () -> w.run.runTests());
 		menuItem(runMenu, "Run Test at Cursor", SWT.MOD1 | SWT.ALT | 'R', () -> w.run.runTestAtCursor());
-		menuItem(runMenu, "Re-run Failed Tests", 0, () -> w.run.runSpecs(w.junitPane.failedSpecs()));
+		menuItem(runMenu, "Re-run All Tests", 0, () -> w.run.rerunAll());
+		menuItem(runMenu, "Re-run Failed Tests", 0, () -> w.run.rerunFailed());
 		menuItem(runMenu, "Program Arguments...", 0, () -> w.editArguments());
 		menuItem(runMenu, "Stop", 0, () -> w.run.stop());
 		MenuItem hotSwapItem = new MenuItem(runMenu, SWT.CHECK);
