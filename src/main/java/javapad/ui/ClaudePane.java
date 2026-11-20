@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -15,6 +16,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.events.VerifyEvent;
@@ -63,6 +65,8 @@ public class ClaudePane
 	// while an answer arrives: where it starts in the text, and what was received of it so far (Markdown, as Claude wrote it)
 	private int answerStart = -1;
 	private final StringBuilder answerRaw = new StringBuilder();
+	// what the answer looked like when it was last shown, so that an unchanged rendering is not shown again
+	private ChatMarkdown.Result answerShown;
 	// what the answer being received has shown so far: the kind of the last thing (an ClaudeStream kind, or -1 for nothing yet), whether any answer text came, and whether an error was shown
 	private int lastKind = -1;
 	private boolean answered;
@@ -146,6 +150,28 @@ public class ClaudePane
 	// Enter sends the prompt (and is not typed); Shift+Enter is a line break in it
 	void key(VerifyEvent e)
 	{
+		if(e.keyCode == SWT.HOME && (e.stateMask & (SWT.MOD1 | SWT.ALT)) == 0 && promptStart >= 0 && !waiting)
+		{
+			int caret = text.getCaretOffset();
+			int line = text.getLineAtOffset(caret);
+			if(text.getOffsetAtLine(line) == promptStart && caret >= promptStart)
+			{
+				// Home goes to where the typing starts, after the "> "
+				e.doit = false;
+				int target = promptStart + PROMPT.length();
+				if((e.stateMask & SWT.SHIFT) != 0)
+				{
+					Point sel = text.getSelection();
+					int anchor = sel.x == caret ? sel.y : sel.x;
+					text.setSelectionRange(anchor, target - anchor);
+				}
+				else
+				{
+					text.setSelection(target);
+				}
+				return;
+			}
+		}
 		boolean enter = e.keyCode == SWT.CR || e.keyCode == SWT.KEYPAD_CR;
 		if(enter && (e.stateMask & SWT.SHIFT) == 0)
 		{
@@ -345,6 +371,11 @@ public class ClaudePane
 		}
 		answerRaw.append(chunk);
 		ChatMarkdown.Result shown = ChatMarkdown.render(answerRaw.toString());
+		if(answerShown != null && answerShown.text.equals(shown.text) && sameRuns(answerShown.bold, shown.bold) && text.getCharCount() == answerStart + shown.text.length())
+		{
+			return;
+		}
+		answerShown = shown;
 		internal = true;
 		text.replaceTextRange(answerStart, text.getCharCount() - answerStart, shown.text);
 		internal = false;
@@ -361,8 +392,14 @@ public class ClaudePane
 		focusInputIfShowing();
 	}
 
+	static boolean sameRuns(List<int[]> a, List<int[]> b)
+	{
+		return Arrays.deepEquals(a.toArray(), b.toArray());
+	}
+
 	void endAnswer()
 	{
+		answerShown = null;
 		answerStart = -1;
 		answerRaw.setLength(0);
 	}
@@ -455,9 +492,18 @@ public class ClaudePane
 		{
 			if(!text.isDisposed() && id == request)
 			{
-				hideIndicator();
-				display(event);
-				showIndicator();
+				// no redraw in between, so that the indicator going and coming back is not seen
+				text.setRedraw(false);
+				try
+				{
+					hideIndicator();
+					display(event);
+					showIndicator();
+				}
+				finally
+				{
+					text.setRedraw(true);
+				}
 			}
 		});
 	}
