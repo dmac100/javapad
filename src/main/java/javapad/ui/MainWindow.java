@@ -1,5 +1,35 @@
 package javapad.ui;
 
+import javapad.ui.action.Automation;
+import javapad.ui.action.FileActions;
+import javapad.ui.action.ImportActions;
+import javapad.ui.action.MenuBuilder;
+import javapad.ui.action.NavigationActions;
+import javapad.ui.action.RunController;
+import javapad.ui.claude.ClaudePane;
+import javapad.ui.claude.Prompt;
+import javapad.ui.dialog.CommandDialog;
+import javapad.ui.dialog.CommandList;
+import javapad.ui.dialog.ConfirmDialog;
+import javapad.ui.dialog.FindDialog;
+import javapad.ui.dialog.FindInFilesDialog;
+import javapad.ui.editor.CodeAssist;
+import javapad.ui.editor.EditorMenu;
+import javapad.ui.editor.EditorTab;
+import javapad.ui.editor.EditorTabs;
+import javapad.ui.editor.Location;
+import javapad.ui.git.GitActions;
+import javapad.ui.git.HistoryPane;
+import javapad.ui.pane.BottomTabs;
+import javapad.ui.pane.CallHierarchyPane;
+import javapad.ui.pane.JUnitPane;
+import javapad.ui.pane.ProblemsPane;
+import javapad.ui.pane.ProjectTree;
+import javapad.ui.pane.SearchPane;
+import javapad.ui.pane.SideTabs;
+import javapad.ui.terminal.ConsolePane;
+import javapad.ui.terminal.TerminalPane;
+
 import java.io.File;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -39,33 +69,33 @@ import org.eclipse.swt.widgets.ToolBar;
 
 public class MainWindow
 {
-	final Display display;
-	final Shell shell;
-	final Theme theme;
-	final ProjectTree projectTree;
-	final ProjectTree sourceTree;
+	public final Display display;
+	public final Shell shell;
+	public final Theme theme;
+	public final ProjectTree projectTree;
+	public final ProjectTree sourceTree;
 	final CTabFolder left;
 	final SideTabs sideTabs;
-	final SideTabs.Tab projectTab;
-	final SideTabs.Tab sourceTab;
-	final EditorTabs editors;
-	final ConsolePane console;
+	public final SideTabs.Tab projectTab;
+	public final SideTabs.Tab sourceTab;
+	public final EditorTabs editors;
+	public final ConsolePane console;
 	final ProblemsPane problemsPane;
 	final CTabFolder bottom;
-	final BottomTabs bottomTabs;
-	final BottomTabs.Tab consoleTab;
-	final BottomTabs.Tab problemsTab;
-	final SideTabs.Tab junitTab;
-	final BottomTabs.Tab callTab;
+	public final BottomTabs bottomTabs;
+	public final BottomTabs.Tab consoleTab;
+	public final BottomTabs.Tab problemsTab;
+	public final SideTabs.Tab junitTab;
+	public final BottomTabs.Tab callTab;
 	final BottomTabs.Tab historyTab;
-	final BottomTabs.Tab searchTab;
+	public final BottomTabs.Tab searchTab;
 	final BottomTabs.Tab terminalTab;
 	final BottomTabs.Tab claudeTab;
-	final ClaudePane claude;
+	public final ClaudePane claude;
 	private final TerminalPane terminal;
 	final SearchPane searchPane;
-	final HistoryPane history;
-	final GitActions git;
+	public final HistoryPane history;
+	public final GitActions git;
 	private final CallHierarchyPane callPane;
 	final JUnitPane junitPane;
 	private final SashForm horizontal;
@@ -73,11 +103,11 @@ public class MainWindow
 	private final ToolBar toolbar;
 	private EclipseProject project;
 	private LaunchSettings settings;
-	RunController run;
-	FileActions files;
+	public RunController run;
+	public FileActions files;
 	final CodeAssist assist;
-	ImportActions importActions;
-	NavigationActions navigation;
+	public ImportActions importActions;
+	public NavigationActions navigation;
 	private FindDialog findDialog;
 	private final MenuBuilder menus = new MenuBuilder(this);
 	private CommandList lastCommands = new CommandList();
@@ -229,12 +259,12 @@ public class MainWindow
 		}
 	}
 
-	boolean toolbarShown()
+	public boolean toolbarShown()
 	{
 		return !((GridData)toolbar.getLayoutData()).exclude;
 	}
 
-	void showToolbar(boolean shown)
+	public void showToolbar(boolean shown)
 	{
 		toolbar.setVisible(shown);
 		((GridData)toolbar.getLayoutData()).exclude = !shown;
@@ -249,7 +279,7 @@ public class MainWindow
 		git.loadBaseline(tab);
 	}
 
-	void showWhitespace(boolean shown)
+	public void showWhitespace(boolean shown)
 	{
 		theme.showWhitespace = shown;
 		Theme.saveWhitespace(shown);
@@ -259,7 +289,7 @@ public class MainWindow
 		}
 	}
 
-	void chooseFont()
+	public void chooseFont()
 	{
 		FontDialog dialog = new FontDialog(shell);
 		dialog.setFontList(theme.font.getFontData());
@@ -273,20 +303,20 @@ public class MainWindow
 		old.dispose();
 	}
 
-	void updateBranch(GitStatus status)
+	public void updateBranch(GitStatus status)
 	{
 		projectTree.setBranch(status);
 		sourceTree.setBranch(status);
 	}
 
-	void setDark(boolean dark)
+	public void setDark(boolean dark)
 	{
 		theme.use(dark);
 		theme.savePreference();
 		applyTheme();
 	}
 
-	ProjectTree activeTree()
+	public ProjectTree activeTree()
 	{
 		return sourceTab.selected() ? sourceTree : projectTree;
 	}
@@ -313,7 +343,7 @@ public class MainWindow
 	}
 
 	// Picks up what changed outside the IDE: open files, the trees, the code analysis, and the git branch, status and history.
-	void refreshAll()
+	public void refreshAll()
 	{
 		if(project == null)
 		{
@@ -325,7 +355,7 @@ public class MainWindow
 		git.projectChanged();
 	}
 
-	void refreshTrees()
+	public void refreshTrees()
 	{
 		projectTree.refresh();
 		sourceTree.refresh();
@@ -399,7 +429,7 @@ public class MainWindow
 			+ project.libraries.size() + " classpath entries, output " + project.relative(project.outputFolder) + "\n", false);
 	}
 
-	void regenerateProject()
+	public void regenerateProject()
 	{
 		if(project == null)
 		{
@@ -443,7 +473,7 @@ public class MainWindow
 		}
 	}
 
-	void error(String message)
+	public void error(String message)
 	{
 		ConfirmDialog.message(shell, "Error", message, SWT.ICON_ERROR);
 	}
@@ -466,7 +496,7 @@ public class MainWindow
 		return true;
 	}
 
-	void saveActive()
+	public void saveActive()
 	{
 		EditorTab tab = editors.active();
 		if(tab == null)
@@ -491,7 +521,7 @@ public class MainWindow
 	}
 
 	// Edit > Find in Files: asks what to look for, searches every project file (using unsaved editor text) and lists the lines in the Search tab.
-	void findInFiles()
+	public void findInFiles()
 	{
 		if(project == null)
 		{
@@ -559,7 +589,7 @@ public class MainWindow
 		}
 	}
 
-	void find()
+	public void find()
 	{
 		if(editors.active() == null)
 		{
@@ -576,7 +606,7 @@ public class MainWindow
 		findDialog.open();
 	}
 
-	CommandDialog commandDialog()
+	public CommandDialog commandDialog()
 	{
 		CommandList all = new CommandList();
 		for(EditorTab tab : editors.tabs())
@@ -620,7 +650,7 @@ public class MainWindow
 		return new CommandDialog(shell, text -> files.find(text, 300), "Open File");
 	}
 
-	void runFileDialog()
+	public void runFileDialog()
 	{
 		if(project == null)
 		{
@@ -634,7 +664,7 @@ public class MainWindow
 		}
 	}
 
-	void runCommandDialog()
+	public void runCommandDialog()
 	{
 		String choice = commandDialog().open();
 		if(choice != null)
@@ -677,7 +707,7 @@ public class MainWindow
 		}
 	}
 
-	void gotoLine()
+	public void gotoLine()
 	{
 		EditorTab tab = editors.active();
 		if(tab == null)
@@ -709,13 +739,13 @@ public class MainWindow
 		return activeTree().selected();
 	}
 
-	void runSelected()
+	public void runSelected()
 	{
 		run.runFrom(activeTree().selected());
 	}
 
 	// Selection if there is one, else the whole file; only Java files have a formatter.
-	void format(EditorTab tab)
+	public void format(EditorTab tab)
 	{
 		if(tab.file.getName().endsWith(".java"))
 		{
@@ -742,7 +772,7 @@ public class MainWindow
 		}
 	}
 
-	void withEditor(Consumer<EditorTab> action)
+	public void withEditor(Consumer<EditorTab> action)
 	{
 		EditorTab tab = editors.active();
 		if(tab != null)
@@ -751,7 +781,7 @@ public class MainWindow
 		}
 	}
 
-	void contentAssist()
+	public void contentAssist()
 	{
 		EditorTab tab = editors.active();
 		if(tab != null)
@@ -776,7 +806,7 @@ public class MainWindow
 		sourceTree.setErrorFiles(files);
 	}
 
-	void goToMatchingBracket()
+	public void goToMatchingBracket()
 	{
 		EditorTab tab = editors.active();
 		if(tab != null)
@@ -785,7 +815,7 @@ public class MainWindow
 		}
 	}
 
-	void editArguments()
+	public void editArguments()
 	{
 		File f = currentFile();
 		String cls = project == null || f == null ? null : project.classNameOf(f);
@@ -827,7 +857,7 @@ public class MainWindow
 	}
 
 	// Used by Automation: shows one of the tabs by name (problems, console, call, history, search at the bottom; junit in the sidebar); a closed one is reopened.
-	void showBottomTab(String name)
+	public void showBottomTab(String name)
 	{
 		if(name.equals("junit"))
 		{
@@ -845,37 +875,37 @@ public class MainWindow
 		}
 	}
 
-	void showSourcesTree()
+	public void showSourcesTree()
 	{
 		sourceTab.select();
 	}
 
-	void selectProjectRoot()
+	public void selectProjectRoot()
 	{
 		projectTree.selectRoot();
 	}
 
-	void runCommand(String choice)
+	public void runCommand(String choice)
 	{
 		lastCommands.run(choice);
 	}
 
-	EclipseProject project()
+	public EclipseProject project()
 	{
 		return project;
 	}
 
-	RunController runner()
+	public RunController runner()
 	{
 		return run;
 	}
 
-	JUnitPane junit()
+	public JUnitPane junit()
 	{
 		return junitPane;
 	}
 
-	Display display()
+	public Display display()
 	{
 		return display;
 	}

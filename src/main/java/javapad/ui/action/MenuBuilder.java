@@ -1,0 +1,256 @@
+package javapad.ui.action;
+
+import javapad.ui.Icons;
+import javapad.ui.MainWindow;
+import javapad.ui.dialog.CommandList;
+import javapad.ui.git.GitMenu;
+
+import java.util.ArrayList;
+import java.util.List;
+import javapad.lang.LineEndings;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
+import org.eclipse.swt.widgets.ToolBar;
+import org.eclipse.swt.widgets.ToolItem;
+
+// The menu bar, the toolbar and the sidebar tree menu. Every menu item is also registered in the Ctrl+3 command list.
+public class MenuBuilder
+{
+	private final MainWindow w;
+	private final CommandList commands = new CommandList();
+	private String menuName;
+	private ToolItem stopItem;
+	private GitMenu gitMenu;
+	private final List<MenuItem> accelerated = new ArrayList<MenuItem>();
+	private final List<Integer> accelerators = new ArrayList<Integer>();
+
+	public MenuBuilder(MainWindow window)
+	{
+		this.w = window;
+	}
+
+	public CommandList commands()
+	{
+		return commands;
+	}
+
+	// the git commands that depend on the repository's branches and stashes
+	public void addGitCommands(CommandList list)
+	{
+		gitMenu.addDynamic(list);
+	}
+
+	public void addToolItems(ToolBar bar)
+	{
+		item(bar, "Open Project", Icons.FOLDER, () -> w.chooseProject());
+		item(bar, "Save All", Icons.SAVE, () -> w.editors.saveAll());
+		new ToolItem(bar, SWT.SEPARATOR);
+		item(bar, "Build", Icons.BUILD, () -> w.run.build(null));
+		item(bar, "Run", Icons.RUN, () -> w.run.runActive());
+		item(bar, "Run Tests", Icons.TESTS, () -> w.run.runTests());
+		stopItem = item(bar, "Stop", Icons.STOP, () -> w.run.stop());
+		stopItem.setEnabled(false);
+		w.run.setStopItem(stopItem);
+	}
+
+	ToolItem item(ToolBar bar, String label, int icon, Runnable action)
+	{
+		ToolItem b = new ToolItem(bar, SWT.PUSH);
+		Image image = Icons.create(w.display, icon);
+		b.setImage(image);
+		b.setToolTipText(label);
+		b.addListener(SWT.Selection, e -> action.run());
+		b.addListener(SWT.Dispose, e -> image.dispose());
+		return b;
+	}
+
+	void menuItem(Menu menu, String label, int accel, Runnable action)
+	{
+		MenuItem mi = new MenuItem(menu, SWT.PUSH);
+		mi.setText(accel == 0 ? label : label + "\t" + accelName(accel));
+		if(accel != 0)
+		{
+			mi.setAccelerator(accel);
+			accelerated.add(mi);
+			accelerators.add(accel);
+		}
+		mi.addListener(SWT.Selection, e -> action.run());
+		if(menuName != null)
+		{
+			commands.add(menuName + " > " + label, action);
+		}
+	}
+
+	// While the terminal has the keyboard the shortcuts are off, so Ctrl+R, Ctrl+W and the like reach the shell.
+	public void setAccelerators(boolean on)
+	{
+		for(int i = 0; i < accelerated.size(); i++)
+		{
+			if(!accelerated.get(i).isDisposed())
+			{
+				accelerated.get(i).setAccelerator(on ? accelerators.get(i) : 0);
+			}
+		}
+	}
+
+	static String accelName(int accel)
+	{
+		String s = "";
+		if((accel & SWT.MOD1) != 0)
+		{
+			s += "Ctrl+";
+		}
+		if((accel & SWT.SHIFT) != 0)
+		{
+			s += "Shift+";
+		}
+		if((accel & SWT.ALT) != 0)
+		{
+			s += "Alt+";
+		}
+		int key = accel & ~(SWT.MOD1 | SWT.SHIFT | SWT.ALT);
+		if(key >= SWT.F1 && key <= SWT.F12)
+		{
+			return s + "F" + (key - SWT.F1 + 1);
+		}
+		return s + (char)key;
+	}
+
+	public void buildMenus()
+	{
+		Menu bar = new Menu(w.shell, SWT.BAR);
+		w.shell.setMenuBar(bar);
+		Menu file = submenu(bar, "File");
+		menuItem(file, "Open Project...", SWT.MOD1 | 'O', () -> w.chooseProject());
+		menuItem(file, "Run Command...", SWT.MOD1 | '3', () -> w.runCommandDialog());
+		menuItem(file, "Open File...", SWT.MOD1 | SWT.SHIFT | 'R', () -> w.runFileDialog());
+		menuItem(file, "Regenerate Project File...", 0, () -> w.regenerateProject());
+		menuItem(file, "Save", SWT.MOD1 | 'S', () -> w.saveActive());
+		menuItem(file, "Save All", SWT.MOD1 | SWT.SHIFT | 'S', () -> w.editors.saveAll());
+		menuItem(file, "Close Tab", SWT.MOD1 | 'W', () -> w.editors.closeActive());
+		menuItem(file, "Refresh", SWT.F5, () -> w.refreshAll());
+		menuItem(file, "Exit", 0, () -> w.shell.close());
+		Menu edit = submenu(bar, "Edit");
+		menuItem(edit, "Find...", SWT.MOD1 | 'F', () -> w.find());
+		menuItem(edit, "Find in Files...", SWT.MOD1 | SWT.SHIFT | 'H', () -> w.findInFiles());
+		menuItem(edit, "Go to Line...", SWT.MOD1 | 'L', () -> w.gotoLine());
+		menuItem(edit, "Content Assist", 0, () -> w.contentAssist());
+		menuItem(edit, "Go to Matching Bracket", SWT.MOD1 | SWT.SHIFT | 'P', () -> w.goToMatchingBracket());
+		// Alt+Shift+Up and Alt+Shift+Down are handled by the editor itself
+		menuItem(edit, "Expand Selection", 0, () -> w.withEditor(t -> t.editor.expandSelection()));
+		menuItem(edit, "Shrink Selection", 0, () -> w.withEditor(t -> t.editor.shrinkSelection()));
+		Menu view = submenu(bar, "View");
+		MenuItem darkItem = new MenuItem(view, SWT.CHECK);
+		darkItem.setText("Dark Mode");
+		darkItem.setSelection(w.theme.dark);
+		darkItem.addListener(SWT.Selection, e -> w.setDark(darkItem.getSelection()));
+		commands.add("View > Dark Mode", () ->
+		{
+			darkItem.setSelection(!darkItem.getSelection());
+			w.setDark(darkItem.getSelection());
+		});
+		MenuItem toolbarItem = new MenuItem(view, SWT.CHECK);
+		toolbarItem.setText("Show Toolbar");
+		toolbarItem.setSelection(w.toolbarShown());
+		toolbarItem.addListener(SWT.Selection, e -> w.showToolbar(toolbarItem.getSelection()));
+		commands.add("View > Show Toolbar", () ->
+		{
+			toolbarItem.setSelection(!toolbarItem.getSelection());
+			w.showToolbar(toolbarItem.getSelection());
+		});
+		MenuItem whitespaceItem = new MenuItem(view, SWT.CHECK);
+		whitespaceItem.setText("Show Whitespace");
+		whitespaceItem.setSelection(w.theme.showWhitespace);
+		whitespaceItem.addListener(SWT.Selection, e -> w.showWhitespace(whitespaceItem.getSelection()));
+		commands.add("View > Show Whitespace", () ->
+		{
+			whitespaceItem.setSelection(!whitespaceItem.getSelection());
+			w.showWhitespace(whitespaceItem.getSelection());
+		});
+		menuItem(view, "Editor Font...", 0, () -> w.chooseFont());
+		MenuItem showItem = new MenuItem(view, SWT.CASCADE);
+		showItem.setText("Show");
+		Menu show = new Menu(w.shell, SWT.DROP_DOWN);
+		showItem.setMenu(show);
+		menuName = "View > Show";
+		menuItem(show, "Project", 0, () -> w.projectTab.select());
+		menuItem(show, "Sources", 0, () -> w.sourceTab.select());
+		menuItem(show, "Problems", 0, () -> w.bottomTabs.show(w.problemsTab));
+		menuItem(show, "Console", 0, () -> w.bottomTabs.show(w.consoleTab));
+		menuItem(show, "JUnit", 0, () -> w.junitTab.select());
+		menuItem(show, "Call Hierarchy", 0, () -> w.bottomTabs.show(w.callTab));
+		menuItem(show, "Search", 0, () -> w.bottomTabs.show(w.searchTab));
+		menuItem(show, "Terminal", 0, () -> w.showBottomTab("terminal"));
+		menuItem(show, "History", 0, () -> w.showBottomTab("history"));
+		menuItem(show, "Claude", 0, () ->
+		{
+			w.showBottomTab("claude");
+			w.claude.focusInput();
+		});
+		menuName = "View";
+		commands.add("Claude > Clear", () -> w.claude.clear());
+		Menu source = submenu(bar, "Source");
+		menuItem(source, "Organize Imports", SWT.MOD1 | SWT.SHIFT | 'O', () -> w.withEditor(t -> w.importActions.organize(t)));
+		menuItem(source, "Format", SWT.MOD1 | SWT.SHIFT | 'F', () -> w.withEditor(t -> w.format(t)));
+		menuItem(source, "Convert Spaces to Tabs", 0, () -> w.withEditor(t -> t.editor.convertIndent(true)));
+		menuItem(source, "Convert Tabs to Spaces", 0, () -> w.withEditor(t -> t.editor.convertIndent(false)));
+		menuItem(source, "Convert Line Endings to Unix (LF)", 0, () -> w.withEditor(t -> t.editor.convertLineEndings(LineEndings.UNIX)));
+		menuItem(source, "Convert Line Endings to Windows (CRLF)", 0, () -> w.withEditor(t -> t.editor.convertLineEndings(LineEndings.WINDOWS)));
+		menuItem(source, "Add Import", SWT.MOD1 | SWT.SHIFT | 'M', () -> w.withEditor(t -> w.importActions.addImport(t)));
+		menuItem(source, "Quick Fix", SWT.MOD1 | '1', () -> w.withEditor(t -> w.importActions.quickFix(t)));
+		Menu navigate = submenu(bar, "Navigate");
+		menuItem(navigate, "Show Current File in Sidebar", SWT.MOD1 | SWT.ALT | 'W', () -> w.showInSidebar());
+		menuItem(navigate, "Open Declaration", SWT.F3, () -> w.withEditor(t -> w.navigation.openDeclaration(t, t.editor.getControl().getCaretOffset())));
+		menuItem(navigate, "Open Implementation", SWT.MOD1 | 'T', () -> w.withEditor(t -> w.navigation.openImplementation(t, t.editor.getControl().getCaretOffset())));
+		menuItem(navigate, "Call Hierarchy", SWT.MOD1 | SWT.ALT | 'H', () -> w.withEditor(t -> w.navigation.callHierarchy(t, t.editor.getControl().getCaretOffset())));
+		gitMenu = new GitMenu(w, commands);
+		gitMenu.build(submenu(bar, "Git"));
+		Menu runMenu = submenu(bar, "Run");
+		menuItem(runMenu, "Build", SWT.MOD1 | 'B', () -> w.run.build(null));
+		menuItem(runMenu, "Run Last Launched", SWT.F11, () -> w.run.runLast());
+		menuItem(runMenu, "Build and Run", 0, () -> w.run.runActive());
+		menuItem(runMenu, "Run", SWT.MOD1 | 'R', () -> w.run.runActive());
+		menuItem(runMenu, "Run Main Class...", 0, () -> w.run.runMainClass());
+		menuItem(runMenu, "Run Tests", SWT.MOD1 | SWT.F11, () -> w.run.runTests());
+		menuItem(runMenu, "Run Test at Cursor", SWT.MOD1 | SWT.ALT | 'R', () -> w.run.runTestAtCursor());
+		menuItem(runMenu, "Re-run All Tests", 0, () -> w.run.rerunAll());
+		menuItem(runMenu, "Re-run Failed Tests", 0, () -> w.run.rerunFailed());
+		menuItem(runMenu, "Program Arguments...", 0, () -> w.editArguments());
+		menuItem(runMenu, "Stop", 0, () -> w.run.stop());
+		MenuItem hotSwapItem = new MenuItem(runMenu, SWT.CHECK);
+		hotSwapItem.setText("Hot Swap on Save");
+		hotSwapItem.setSelection(w.run.hotSwapOn());
+		hotSwapItem.addListener(SWT.Selection, e -> w.run.setHotSwap(hotSwapItem.getSelection()));
+		commands.add("Run > Hot Swap on Save", () ->
+		{
+			hotSwapItem.setSelection(!hotSwapItem.getSelection());
+			w.run.setHotSwap(hotSwapItem.getSelection());
+		});
+		menuName = "Sidebar";
+		Menu treeMenu = new Menu(w.shell, SWT.POP_UP);
+		w.projectTree.getControl().setMenu(treeMenu);
+		w.sourceTree.getControl().setMenu(treeMenu);
+		menuItem(treeMenu, "Run", 0, () -> w.runSelected());
+		menuItem(treeMenu, "Run Tests", 0, () -> w.run.runTestsIn(w.activeTree().selected()));
+		menuItem(treeMenu, "New File...", 0, () -> w.files.newFile());
+		menuItem(treeMenu, "New Folder...", 0, () -> w.files.newFolder());
+		menuItem(treeMenu, "Delete", 0, () -> w.files.deleteSelected());
+		menuItem(treeMenu, "Refresh", 0, () -> w.refreshAll());
+		new MenuItem(treeMenu, SWT.SEPARATOR);
+		menuName = null;
+		new GitMenu(w, commands).attach(treeMenu);
+	}
+
+	Menu submenu(Menu bar, String label)
+	{
+		menuName = label;
+		MenuItem mi = new MenuItem(bar, SWT.CASCADE);
+		mi.setText(label);
+		Menu menu = new Menu(w.shell, SWT.DROP_DOWN);
+		mi.setMenu(menu);
+		return menu;
+	}
+
+}

@@ -53,7 +53,14 @@ The menus show the rest.
 
 | Package | What it holds |
 | --- | --- |
-| `javapad.ui` | The SWT window (`MainWindow` and the classes it delegates to) and the editor. |
+| `javapad.ui` | The SWT window: `MainWindow`, `Theme`, `Icons`, `FileUtil`. Subpackages below. |
+| `javapad.ui.editor` | The code editor, its tabs, completion, and editing helpers. |
+| `javapad.ui.claude` | The Claude chat pane and its stream and markdown handling. |
+| `javapad.ui.terminal` | The terminal and console panes and ANSI parsing. |
+| `javapad.ui.git` | Git menu, actions, commit, diff and history views. |
+| `javapad.ui.dialog` | Find, command and confirmation dialogs. |
+| `javapad.ui.pane` | Side and bottom panes: project tree, problems, search, JUnit, call hierarchy. |
+| `javapad.ui.action` | Menu building and file, navigation, import and run actions. |
 | `javapad.lang` | Code intelligence on javac's Tree API, the formatter, and text search. No SWT. |
 | `javapad.git` | The `git` command line and what is parsed from it. No SWT. |
 | `javapad.run`, `javapad.build` | Compiling, and starting programs and tests. |

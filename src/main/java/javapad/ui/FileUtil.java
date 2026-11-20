@@ -4,10 +4,10 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
-class FileUtil
+public class FileUtil
 {
 	// the file's text, or "" when it cannot be read
-	static String contentOf(File f)
+	public static String contentOf(File f)
 	{
 		try
 		{
@@ -19,7 +19,7 @@ class FileUtil
 		}
 	}
 
-	static void deleteRecursive(File f)
+	public static void deleteRecursive(File f)
 	{
 		File[] children = f.listFiles();
 		if(children != null)
