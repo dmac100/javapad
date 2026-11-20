@@ -18,6 +18,8 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
 
 public class ConsolePane
 {
@@ -81,6 +83,7 @@ public class ConsolePane
 		});
 		text.addListener(SWT.KeyDown, e -> key(e));
 		text.addListener(SWT.MouseUp, e -> clicked(e.x, e.y));
+		text.setMenu(menu());
 		text.addListener(SWT.Dispose, e ->
 		{
 			for(Color c : colors.values())
@@ -88,6 +91,17 @@ public class ConsolePane
 				c.dispose();
 			}
 		});
+	}
+
+	Menu menu()
+	{
+		Menu menu = new Menu(text);
+		MenuItem copy = ClaudePane.item(menu, "Copy", () -> text.copy());
+		ClaudePane.item(menu, "Select All", () -> text.selectAll());
+		new MenuItem(menu, SWT.SEPARATOR);
+		ClaudePane.item(menu, "Clear", () -> clear());
+		menu.addListener(SWT.Show, e -> copy.setEnabled(text.getSelectionCount() > 0));
+		return menu;
 	}
 
 	public Composite getControl()
