@@ -6,8 +6,8 @@ import javapad.ui.action.ImportActions;
 import javapad.ui.action.MenuBuilder;
 import javapad.ui.action.NavigationActions;
 import javapad.ui.action.RunController;
-import javapad.ui.claude.ClaudePane;
-import javapad.ui.claude.Prompt;
+import javapad.ui.chat.ChatPane;
+import javapad.ui.chat.Prompt;
 import javapad.ui.dialog.CommandDialog;
 import javapad.ui.dialog.CommandList;
 import javapad.ui.dialog.ConfirmDialog;
@@ -90,8 +90,8 @@ public class MainWindow {
 	final BottomTabs.Tab historyTab;
 	public final BottomTabs.Tab searchTab;
 	final BottomTabs.Tab terminalTab;
-	final BottomTabs.Tab claudeTab;
-	public final ClaudePane claude;
+	final BottomTabs.Tab chatTab;
+	public final ChatPane chat;
 	private final TerminalPane terminal;
 	final SearchPane searchPane;
 	public final HistoryPane history;
@@ -170,9 +170,9 @@ public class MainWindow {
 		terminal.setFocusListener(focus -> menus.setAccelerators(!focus));
 		terminalTab = bottomTabs.add("terminal", "Terminal", terminal.getControl(), true);
 		historyTab = bottomTabs.add("history", "History", history.getControl(), true);
-		claude = new ClaudePane(bottom, theme);
-		claudeTab = bottomTabs.add("claude", "Claude", claude.getControl(), true);
-		claude.setWaitingHook(waiting -> bottomTabs.setText(claudeTab, waiting ? "Claude (waiting)" : "Claude"));
+		chat = new ChatPane(bottom, theme);
+		chatTab = bottomTabs.add("chat", "AI Chat", chat.getControl(), true);
+		chat.setWaitingHook(waiting -> bottomTabs.setText(chatTab, waiting ? "AI Chat (waiting)" : "AI Chat"));
 		bottom.addListener(SWT.Selection, e -> {
 			if(bottomTabs.selected() == terminalTab) {
 				terminal.ensureStarted();
@@ -245,7 +245,7 @@ public class MainWindow {
 		junitPane.restyle();
 		callPane.restyle();
 		history.restyle();
-		claude.restyle();
+		chat.restyle();
 		searchPane.restyle();
 		for(EditorTab tab : editors.tabs()) {
 			tab.editor.restyle();
@@ -373,7 +373,7 @@ public class MainWindow {
 		sourceTree.setProject(project);
 		console.setProject(project);
 		terminal.setProject(project);
-		claude.setProject(project);
+		chat.setProject(project);
 		problemsPane.setProject(project);
 		junitPane.setProject(project);
 		junitPane.clear();
@@ -736,7 +736,7 @@ public class MainWindow {
 		new Automation(this).run();
 	}
 
-	// Used by Automation: shows one of the tabs by name (problems, console, call, history, search at the bottom; junit in the sidebar); a closed one is reopened.
+	// Used by Automation: shows one of the tabs by name (problems, console, call, history, chat, search at the bottom; junit in the sidebar); a closed one is reopened.
 	public void showBottomTab(String name) {
 		if(name.equals("junit")) {
 			junitTab.select();

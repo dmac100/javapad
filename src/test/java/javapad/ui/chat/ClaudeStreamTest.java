@@ -1,4 +1,4 @@
-package javapad.ui.claude;
+package javapad.ui.chat;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -27,20 +27,20 @@ public class ClaudeStreamTest {
 			+ "{\"type\":\"thinking\",\"thinking\":\"Let me look.\"},"
 			+ "{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"src/A.java\"}},"
 			+ "{\"type\":\"text\",\"text\":\"Done.\"}]}}";
-		List<ClaudeStream.Event> events = ClaudeStream.parse(line);
+		List<ChatEvent> events = ClaudeStream.parse(line);
 		assertEquals(3, events.size());
-		assertEquals(ClaudeStream.THOUGHT, events.get(0).kind);
+		assertEquals(ChatEvent.THOUGHT, events.get(0).kind);
 		assertEquals("Let me look.", events.get(0).text);
-		assertEquals(ClaudeStream.TOOL, events.get(1).kind);
+		assertEquals(ChatEvent.TOOL, events.get(1).kind);
 		assertEquals("Read: src/A.java", events.get(1).text);
-		assertEquals(ClaudeStream.ANSWER, events.get(2).kind);
+		assertEquals(ChatEvent.ANSWER, events.get(2).kind);
 	}
 
 	@Test
 	public void resultsAndErrors() {
-		assertEquals(ClaudeStream.RESULT, ClaudeStream.parse("{\"type\":\"result\",\"is_error\":false,\"result\":\"ok\"}").get(0).kind);
-		ClaudeStream.Event error = ClaudeStream.parse("{\"type\":\"result\",\"is_error\":true,\"result\":\"bad\"}").get(0);
-		assertEquals(ClaudeStream.ERROR, error.kind);
+		assertEquals(ChatEvent.RESULT, ClaudeStream.parse("{\"type\":\"result\",\"is_error\":false,\"result\":\"ok\"}").get(0).kind);
+		ChatEvent error = ClaudeStream.parse("{\"type\":\"result\",\"is_error\":true,\"result\":\"bad\"}").get(0);
+		assertEquals(ChatEvent.ERROR, error.kind);
 		assertEquals("bad", error.text);
 	}
 
@@ -48,14 +48,14 @@ public class ClaudeStreamTest {
 	public void otherLinesAreIgnoredOrShownAsText() {
 		assertTrue(ClaudeStream.parse("{\"type\":\"system\",\"subtype\":\"init\"}").isEmpty());
 		assertTrue(ClaudeStream.parse("   ").isEmpty());
-		ClaudeStream.Event plain = ClaudeStream.parse("warning from the shell").get(0);
-		assertEquals(ClaudeStream.PLAIN, plain.kind);
+		ChatEvent plain = ClaudeStream.parse("warning from the shell").get(0);
+		assertEquals(ChatEvent.PLAIN, plain.kind);
 		assertEquals("warning from the shell", plain.text);
 	}
 
 	@Test
 	public void longToolDetailsAreCut() {
-		String text = ClaudeStream.toolSummary("Bash", Json.object(Json.parse("{\"command\":\"" + "x".repeat(300) + "\"}")));
+		String text = ChatEvent.toolSummary("Bash", Json.object(Json.parse("{\"command\":\"" + "x".repeat(300) + "\"}")));
 		assertTrue(text.length() < 120);
 		assertTrue(text.endsWith("..."));
 	}

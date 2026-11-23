@@ -1,9 +1,10 @@
-package javapad.ui.claude;
+package javapad.ui.chat;
 
 import javapad.ui.Theme;
 import javapad.ui.editor.LineScroll;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -11,7 +12,9 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 import javapad.model.EclipseProject;
@@ -20,15 +23,20 @@ import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 
-// A chat with Claude Code running in the multipass virtual machine "claude". One text holds the whole conversation: your prompts (typed on the last line, sent with Enter) and the answers, in different colours.
-// Each prompt is sent, with the path of the project, to "claude -p" in the machine.
-public class ClaudePane {
+// A chat with Claude Code or OpenCode running in the multipass virtual machine "claude"; a dropdown chooses which one answers.
+// One text holds the whole conversation: your prompts (typed on the last line, sent with Enter) and the answers, in different colours.
+// Each prompt is sent, with the path of the project, to the chosen AI in the machine.
+public class ChatPane {
 	static final String MACHINE = "claude";
 	static final String COMMAND = "multipass";
 	static final String PROMPT = "> ";
@@ -39,47 +47,78 @@ public class ClaudePane {
 	static final int KIND_NOTE = 3;
 	static final int KIND_BOLD = 4;
 	static final int KIND_THOUGHT = 5;
+	static final String OPENCODE = "~/.opencode/bin/opencode";
+	static final String CLAUDE_SHELL = "cd \"$1\" 2>/dev/null; shift; exec claude \"$@\"";
+	static final String OPENCODE_SHELL = "cd \"$1\" 2>/dev/null; shift; "
+		+ "if [ -x \"$HOME/.opencode/bin/opencode\" ]; then exec \"$HOME/.opencode/bin/opencode\" run \"$@\"; fi; "
+		+ "echo 'opencode is not installed at " + OPENCODE + " in the " + MACHINE + " VM' >&2; exit 127";
 
+	private final Composite panel;
+	private final Composite header;
+	private final Label aiLabel;
+	private final Combo aiChoice;
 	private final StyledText text;
 	private final Theme theme;
 	private final Display display;
 	private EclipseProject project;
 	private Consumer<Boolean> waitingHook;
+	private Assistant assistant = Assistant.CLAUDE;
+	// each AI keeps its own session, so switching the dropdown does not mix their contexts
+	private final Map<Assistant, Chat> chats = new EnumMap<Assistant, Chat>(Assistant.class);
 	// the running request, and a number that tells its output from that of an earlier one
 	private Process process;
 	private int request;
-	private static final String INDICATOR = "Waiting for Claude";
 	private int indicatorPrefix;
 	private boolean waiting;
 	private int dots;
-	// whether the next prompt continues the conversation in the machine (after a first answer)
-	private boolean continuing;
-	// the id of the Claude session that all the prompts of the conversation go to
-	private String sessionId = UUID.randomUUID().toString();
 	// everything before inputStart is history; what follows is the prompt being typed
 	private int inputStart;
 	// the start of the prompt being typed (its "> "), or -1 while waiting for an answer
 	private int promptStart = -1;
-	// the start of the "Waiting for Claude" line at the end of the text, or -1
+	// the start of the "Waiting for ..." line at the end of the text, or -1
 	private int indicatorStart = -1;
 	// set while this class changes the text itself
 	private boolean internal;
 	// the finished parts of the text: start, length, kind
 	private final List<int[]> segments = new ArrayList<int[]>();
-	// while an answer arrives: where it starts in the text, and what was received of it so far (Markdown, as Claude wrote it)
+	// while an answer arrives: where it starts in the text, and what was received of it so far (Markdown, as the AI wrote it)
 	private int answerStart = -1;
 	private final StringBuilder answerRaw = new StringBuilder();
 	// what the answer looked like when it was last shown, so that an unchanged rendering is not shown again
 	private ChatMarkdown.Result answerShown;
-	// what the answer being received has shown so far: the kind of the last thing (an ClaudeStream kind, or -1 for nothing yet), whether any answer text came, and whether an error was shown
+	// what the answer being received has shown so far: the kind of the last thing (a chat event kind, or -1 for nothing yet), whether any answer text came, and whether an error was shown
 	private int lastKind = -1;
 	private boolean answered;
 	private boolean errorShown;
 
-	public ClaudePane(Composite parent, Theme theme) {
+	// one conversation in one AI, remembered while the dropdown switches to another
+	private static class Chat {
+		String session = UUID.randomUUID().toString();
+		boolean continuing;
+	}
+
+	public ChatPane(Composite parent, Theme theme) {
 		this.theme = theme;
 		this.display = parent.getDisplay();
-		text = new StyledText(parent, SWT.V_SCROLL | SWT.WRAP);
+		for(Assistant a : Assistant.values()) {
+			chats.put(a, new Chat());
+		}
+		panel = new Composite(parent, SWT.NONE);
+		panel.setLayout(new GridLayout(1, false));
+		header = new Composite(panel, SWT.NONE);
+		header.setLayout(new GridLayout(2, false));
+		header.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+		aiLabel = new Label(header, SWT.NONE);
+		aiLabel.setText("AI:");
+		aiLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+		aiChoice = new Combo(header, SWT.DROP_DOWN | SWT.READ_ONLY);
+		aiChoice.setItems(new String[] {Assistant.CLAUDE.label, Assistant.OPENCODE.label});
+		aiChoice.select(0);
+		aiChoice.setToolTipText("AI to send prompts to");
+		aiChoice.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+		aiChoice.addListener(SWT.Selection, e -> choose(aiChoice.getText()));
+		text = new StyledText(panel, SWT.V_SCROLL | SWT.WRAP);
+		text.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		text.setFont(theme.font);
 		LineScroll.install(text);
 		text.addVerifyListener(e -> verify(e));
@@ -87,6 +126,29 @@ public class ClaudePane {
 		text.addVerifyKeyListener(e -> key(e));
 		text.addListener(SWT.Dispose, e -> cancel());
 		text.setMenu(menu());
+		newPrompt();
+	}
+
+	// switching AI starts a new session for it, but keeps what is already in the chat and any prompt being typed
+	void choose(String label) {
+		Assistant selected = Assistant.withLabel(label);
+		if(selected == assistant || waiting) {
+			return;
+		}
+		assistant = selected;
+		note("Chatting with " + selected.label + " (" + selected.cli + " in " + MACHINE + ")");
+	}
+
+	// a line about the chat itself, after whatever was typed, which becomes history
+	void note(String content) {
+		internal = true;
+		int start = text.getCharCount();
+		String line = "\n\n" + content + "\n";
+		text.replaceTextRange(start, 0, line);
+		internal = false;
+		segments.add(new int[] {start, line.length(), KIND_NOTE});
+		text.setStyleRange(style(start, line.length(), KIND_NOTE));
+		inputStart = text.getCharCount();
 		newPrompt();
 	}
 
@@ -113,12 +175,14 @@ public class ClaudePane {
 	}
 
 	public Composite getControl() {
-		return text;
+		return panel;
 	}
 
 	public void setProject(EclipseProject project) {
 		this.project = project;
-		newSession();
+		for(Assistant a : Assistant.values()) {
+			newSession(a);
+		}
 	}
 
 	// called with true when a request starts and with false when it is answered or stopped
@@ -173,20 +237,38 @@ public class ClaudePane {
 		text.showSelection();
 	}
 
-	// the text sent to Claude: the path of the project, then what was typed
+	// the text sent to the AI: the path of the project, then what was typed
 	static String message(String path, String prompt) {
 		return "The project is at " + path + "\n\n" + prompt;
 	}
 
-	// a new conversation: the next prompt starts a session with a new id
-	void newSession() {
-		sessionId = UUID.randomUUID().toString();
-		continuing = false;
+	// the path of the project, written with ~ when it is in the home directory
+	static String projectPath(File root) {
+		String path = root.getAbsolutePath();
+		String home = System.getProperty("user.home");
+		if(path.equals(home)) {
+			return "~";
+		}
+		if(path.startsWith(home + File.separator)) {
+			return "~" + path.substring(home.length());
+		}
+		return path;
 	}
 
-	// what runs in the machine: it goes to the project folder if the machine has it at the same path, then starts claude in auto mode with the arguments after the path; the prompt is read from stdin
-	// The first prompt creates the session with the given id and the later ones resume it, so that they all go to the same session.
+	// a new conversation for one AI: the next prompt starts a session with a new id
+	void newSession(Assistant ai) {
+		Chat chat = chats.get(ai);
+		chat.session = UUID.randomUUID().toString();
+		chat.continuing = false;
+	}
+
+	// what runs in the machine: it goes to the project folder if the machine has it at the same path, then starts the chosen AI; the prompt is read from stdin
+	// Claude is given a session id for its first prompt and resumes it afterwards. OpenCode chooses its own id, which is read from the stream and used with --session later.
 	static List<String> command(String path, String sessionId, boolean resume) {
+		return command(path, sessionId, resume, Assistant.CLAUDE);
+	}
+
+	static List<String> command(String path, String sessionId, boolean resume, Assistant ai) {
 		List<String> c = new ArrayList<String>();
 		c.add(COMMAND);
 		c.add("exec");
@@ -194,18 +276,29 @@ public class ClaudePane {
 		c.add("--");
 		c.add("bash");
 		c.add("-lc");
-		c.add("cd \"$1\" 2>/dev/null; shift; exec claude \"$@\"");
-		c.add("claude-pane");
+		c.add(ai == Assistant.OPENCODE ? OPENCODE_SHELL : CLAUDE_SHELL);
+		// the first argument after -lc's command is $0, so the path is $1
+		c.add("chat-pane");
 		c.add(path);
-		c.add("-p");
-		c.add("--permission-mode");
-		c.add("auto");
-		// the lines of JSON tell what Claude does while it works, not only its last words
-		c.add("--output-format");
-		c.add("stream-json");
-		c.add("--verbose");
-		c.add(resume ? "--resume" : "--session-id");
-		c.add(sessionId);
+		if(ai == Assistant.OPENCODE) {
+			c.add("--auto");
+			// the lines of JSON tell what OpenCode does while it works, not only its last words
+			c.add("--format");
+			c.add("json");
+			if(resume) {
+				c.add("--session");
+				c.add(sessionId);
+			}
+		} else {
+			c.add("-p");
+			c.add("--permission-mode");
+			c.add("auto");
+			c.add("--output-format");
+			c.add("stream-json");
+			c.add("--verbose");
+			c.add(resume ? "--resume" : "--session-id");
+			c.add(sessionId);
+		}
 		return c;
 	}
 
@@ -242,16 +335,18 @@ public class ClaudePane {
 			newPrompt();
 			return;
 		}
-		String path = project.root.getAbsolutePath();
+		String path = projectPath(project.root);
+		Assistant ai = assistant;
+		Chat chat = chats.get(ai);
 		finishPrompt();
 		int id = ++request;
-		boolean resume = continuing;
-		String session = sessionId;
+		boolean resume = chat.continuing;
+		String session = chat.session;
 		lastKind = -1;
 		answered = false;
 		errorShown = false;
 		setWaiting(true);
-		Thread t = new Thread(() -> talk(id, path, session, message(path, prompt), resume), "claude-pane");
+		Thread t = new Thread(() -> talk(id, path, session, message(path, prompt), resume, ai), "chat-pane");
 		t.setDaemon(true);
 		t.start();
 	}
@@ -382,11 +477,12 @@ public class ClaudePane {
 	}
 
 	// runs on a thread: starts the process, hands it the prompt and shows what it prints
-	void talk(int id, String path, String session, String message, boolean resume) {
+	void talk(int id, String path, String session, String message, boolean resume, Assistant ai) {
 		StringBuilder errors = new StringBuilder();
+		String[] chosenSession = {null};
 		int exit = -1;
 		try {
-			ProcessBuilder pb = new ProcessBuilder(command(path, session, resume));
+			ProcessBuilder pb = new ProcessBuilder(command(path, session, resume, ai));
 			Process p = pb.start();
 			synchronized(this) {
 				if(id != request) {
@@ -395,7 +491,7 @@ public class ClaudePane {
 				}
 				process = p;
 			}
-			Thread err = new Thread(() -> read(p.getErrorStream(), errors), "claude-pane-err");
+			Thread err = new Thread(() -> read(p.getErrorStream(), errors), "chat-pane-err");
 			err.setDaemon(true);
 			err.start();
 			try(OutputStream out = p.getOutputStream()) {
@@ -406,18 +502,25 @@ public class ClaudePane {
 			BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
 			String line;
 			while((line = in.readLine()) != null) {
-				for(ClaudeStream.Event event : ClaudeStream.parse(line)) {
+				if(ai == Assistant.OPENCODE) {
+					String found = OpenCodeStream.session(line);
+					if(found != null) {
+						chosenSession[0] = found;
+					}
+				}
+				List<ChatEvent> events = ai == Assistant.OPENCODE ? OpenCodeStream.parse(line) : ClaudeStream.parse(line);
+				for(ChatEvent event : events) {
 					show(id, event);
 				}
 			}
 			exit = p.waitFor();
 			err.join(2000);
 		} catch(IOException e) {
-			errors.append(COMMAND + " could not be started: " + e.getMessage());
+			errors.append(COMMAND + " could not start " + ai.cli + ": " + e.getMessage());
 		} catch(InterruptedException e) {
 			Thread.currentThread().interrupt();
 		}
-		finish(id, exit, errors.toString().trim());
+		finish(id, exit, errors.toString().trim(), ai, chosenSession[0]);
 	}
 
 	static void read(InputStream in, StringBuilder into) {
@@ -434,7 +537,7 @@ public class ClaudePane {
 		}
 	}
 
-	void show(int id, ClaudeStream.Event event) {
+	void show(int id, ChatEvent event) {
 		display.asyncExec(() -> {
 			if(!text.isDisposed() && id == request) {
 				// no redraw in between, so that the indicator going and coming back is not seen
@@ -450,39 +553,39 @@ public class ClaudePane {
 		});
 	}
 
-	// shows one thing Claude did: a thought (dim, italic), a tool it uses (dim), or text of the answer
-	void display(ClaudeStream.Event event) {
+	// shows one thing the AI did: a thought (dim, italic), a tool it uses (dim), or text of the answer
+	void display(ChatEvent event) {
 		switch(event.kind) {
-			case ClaudeStream.THOUGHT:
+			case ChatEvent.THOUGHT:
 				block(event.text.strip(), KIND_THOUGHT, event.kind);
 				break;
-			case ClaudeStream.TOOL:
+			case ChatEvent.TOOL:
 				block("\u25b8 " + event.text, KIND_NOTE, event.kind);
 				break;
-			case ClaudeStream.ERROR:
+			case ChatEvent.ERROR:
 				errorShown = true;
 				block(event.text.strip(), KIND_ERROR, event.kind);
 				break;
-			case ClaudeStream.PLAIN:
+			case ChatEvent.PLAIN:
 				if(answerStart < 0) {
 					separate(event.kind);
 				}
 				answer(event.text + "\n");
 				answered = true;
-				lastKind = ClaudeStream.ANSWER;
+				lastKind = ChatEvent.ANSWER;
 				break;
-			case ClaudeStream.RESULT:
+			case ChatEvent.RESULT:
 				if(answered) {
 					break;
 				}
 				// no break: with no text before it, the result is the answer
 			default:
 				endAnswer();
-				separate(ClaudeStream.ANSWER);
+				separate(ChatEvent.ANSWER);
 				answer(event.text.strip());
 				endAnswer();
 				answered = true;
-				lastKind = ClaudeStream.ANSWER;
+				lastKind = ChatEvent.ANSWER;
 				break;
 		}
 	}
@@ -497,7 +600,7 @@ public class ClaudePane {
 
 	// line breaks before the next thing: a blank line between paragraphs, but tool lines under each other
 	void separate(int eventKind) {
-		int wanted = lastKind < 0 || (eventKind == ClaudeStream.TOOL && lastKind == ClaudeStream.TOOL) ? 1 : 2;
+		int wanted = lastKind < 0 || (eventKind == ChatEvent.TOOL && lastKind == ChatEvent.TOOL) ? 1 : 2;
 		String all = text.getText();
 		int have = 0;
 		while(have < wanted && have < all.length() && all.charAt(all.length() - 1 - have) == '\n') {
@@ -508,23 +611,28 @@ public class ClaudePane {
 		}
 	}
 
-	void finish(int id, int exit, String errors) {
+	void finish(int id, int exit, String errors, Assistant ai, String chosenSession) {
 		display.asyncExec(() -> {
 			if(text.isDisposed() || id != request) {
 				return;
 			}
 			hideIndicator();
 			endAnswer();
+			Chat chat = chats.get(ai);
 			if(exit == 0) {
-				continuing = true;
+				// OpenCode chooses its own session id and writes it in the stream
+				if(chosenSession != null && !chosenSession.isEmpty()) {
+					chat.session = chosenSession;
+				}
+				chat.continuing = true;
 			} else if(exit >= 0 || !errors.isEmpty() || errorShown) {
-				if(!continuing) {
+				if(!chat.continuing) {
 					// the session may or may not have been created: the next try uses a new id
-					newSession();
+					newSession(ai);
 				}
 				if(!errorShown || !errors.isEmpty()) {
-					String message = errors.isEmpty() ? COMMAND + " exited with code " + exit : errors;
-					block(message, KIND_ERROR, ClaudeStream.ERROR);
+					String message = errors.isEmpty() ? ai.cli + " exited with code " + exit : errors;
+					block(message, KIND_ERROR, ChatEvent.ERROR);
 				}
 			}
 			synchronized(this) {
@@ -573,7 +681,9 @@ public class ClaudePane {
 		if(waiting) {
 			setWaiting(false);
 		}
-		newSession();
+		for(Assistant a : Assistant.values()) {
+			newSession(a);
+		}
 		endAnswer();
 		indicatorStart = -1;
 		segments.clear();
@@ -589,6 +699,10 @@ public class ClaudePane {
 	void setWaiting(boolean on) {
 		waiting = on;
 		dots = 0;
+		// the AI cannot be changed while it is working: the answer belongs to the one that was chosen
+		if(!aiChoice.isDisposed()) {
+			aiChoice.setEnabled(!on);
+		}
 		if(waitingHook != null) {
 			waitingHook.accept(on);
 		}
@@ -600,21 +714,25 @@ public class ClaudePane {
 		}
 	}
 
-	// the "Waiting for Claude..." line at the end of the text, with dots that come and go so that it is seen to be alive
+	String indicator() {
+		return "Waiting for " + assistant.label;
+	}
+
+	// the "Waiting for ..." line at the end of the text, with dots that come and go so that it is seen to be alive
 	void showIndicator() {
 		if(!waiting || text.isDisposed()) {
 			return;
 		}
 		hideIndicator();
 		// where the next block would start, so that nothing moves when it arrives: after a blank line, but under a tool line
-		int wanted = text.getCharCount() == 0 ? 0 : lastKind < 0 || lastKind == ClaudeStream.TOOL ? 1 : 2;
+		int wanted = text.getCharCount() == 0 ? 0 : lastKind < 0 || lastKind == ChatEvent.TOOL ? 1 : 2;
 		String all = text.getText();
 		int have = 0;
 		while(have < wanted && have < all.length() && all.charAt(all.length() - 1 - have) == '\n') {
 			have++;
 		}
 		indicatorPrefix = wanted - have;
-		String label = "\n".repeat(indicatorPrefix) + INDICATOR + ".".repeat(dots);
+		String label = "\n".repeat(indicatorPrefix) + indicator() + ".".repeat(dots);
 		indicatorStart = text.getCharCount();
 		internal = true;
 		text.replaceTextRange(indicatorStart, 0, label);
@@ -641,7 +759,7 @@ public class ClaudePane {
 		dots = (dots + 1) % 4;
 		if(indicatorStart >= 0) {
 			// only the dots change; the rest of the text is left alone
-			int from = indicatorStart + indicatorPrefix + INDICATOR.length();
+			int from = indicatorStart + indicatorPrefix + indicator().length();
 			text.setRedraw(false);
 			try {
 				internal = true;
@@ -657,6 +775,11 @@ public class ClaudePane {
 	}
 
 	public void restyle() {
+		panel.setBackground(theme.background);
+		header.setBackground(theme.chrome);
+		aiLabel.setForeground(theme.foreground);
+		aiChoice.setBackground(theme.background);
+		aiChoice.setForeground(theme.foreground);
 		text.setFont(theme.font);
 		text.setBackground(theme.background);
 		text.setForeground(theme.foreground);

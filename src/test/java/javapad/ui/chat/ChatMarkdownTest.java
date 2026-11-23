@@ -1,4 +1,4 @@
-package javapad.ui.claude;
+package javapad.ui.chat;
 
 import static org.junit.Assert.assertEquals;
 

@@ -1,9 +1,9 @@
-package javapad.ui.claude;
+package javapad.ui.chat;
 
 import java.util.ArrayList;
 import java.util.List;
 
-// The little bit of Markdown that Claude's answers use, made readable in plain text: "- item" and "* item" lines become bullets, and **text** becomes bold (the asterisks go).
+// The little bit of Markdown that the AIs' answers use, made readable in plain text: "- item" and "* item" lines become bullets, and **text** becomes bold (the asterisks go).
 public class ChatMarkdown {
 	static class Result {
 		final String text;

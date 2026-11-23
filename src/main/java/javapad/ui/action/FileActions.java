@@ -1,7 +1,7 @@
 package javapad.ui.action;
 
 import javapad.ui.FileUtil;
-import javapad.ui.claude.Prompt;
+import javapad.ui.chat.Prompt;
 import javapad.ui.dialog.ConfirmDialog;
 import javapad.ui.editor.Location;
 import javapad.ui.pane.ProjectTree;

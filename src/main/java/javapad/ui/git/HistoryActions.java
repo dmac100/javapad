@@ -1,7 +1,7 @@
 package javapad.ui.git;
 
 import javapad.ui.MainWindow;
-import javapad.ui.claude.Prompt;
+import javapad.ui.chat.Prompt;
 import javapad.ui.dialog.ChoiceDialog;
 import javapad.ui.dialog.ConfirmDialog;
 import javapad.ui.editor.Location;

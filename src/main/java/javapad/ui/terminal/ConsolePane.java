@@ -1,7 +1,7 @@
 package javapad.ui.terminal;
 
 import javapad.ui.Theme;
-import javapad.ui.claude.ClaudePane;
+import javapad.ui.chat.ChatPane;
 import javapad.ui.editor.Location;
 import javapad.ui.editor.ReadOnlyText;
 
@@ -92,10 +92,10 @@ public class ConsolePane {
 
 	Menu menu() {
 		Menu menu = new Menu(text);
-		MenuItem copy = ClaudePane.item(menu, "Copy", () -> text.copy());
-		ClaudePane.item(menu, "Select All", () -> text.selectAll());
+		MenuItem copy = ChatPane.item(menu, "Copy", () -> text.copy());
+		ChatPane.item(menu, "Select All", () -> text.selectAll());
 		new MenuItem(menu, SWT.SEPARATOR);
-		ClaudePane.item(menu, "Clear", () -> clear());
+		ChatPane.item(menu, "Clear", () -> clear());
 		menu.addListener(SWT.Show, e -> copy.setEnabled(text.getSelectionCount() > 0));
 		return menu;
 	}

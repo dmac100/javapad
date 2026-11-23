@@ -1,4 +1,4 @@
-package javapad.ui.claude;
+package javapad.ui.chat;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

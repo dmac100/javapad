@@ -8,7 +8,7 @@ A small desktop editor (SWT) for Eclipse-style Java projects. It opens a project
 
 - **Editor:** syntax colouring (dark and light themes), content assist, imports, quick fixes and formatting, all based on javac's analysis of the project. Selecting an identifier highlights its other uses. Errors and warnings are marked in the left margin and on a strip beside the scrollbar (click a mark to go to its line), and files with errors are marked in the sidebar.
 - **Tabs:** drag an editor tab along its tab strip to reorder it, onto another group's strip to move it, or onto the edge of an editor to split the view (side by side or stacked); empty groups close themselves. The tabs of the side and bottom panels can be reordered by dragging too.
-- **Claude:** a bottom tab for chatting with Claude Code running in the multipass virtual machine `claude` (`multipass exec claude -- ... claude -p`). Each prompt is sent with the path of the project; the tab shows that it is waiting and what Claude does meanwhile (its thinking in dim italics, the tools it uses), then the answer (bullets and **bold** are formatted), and all prompts go to the same Claude session, run in auto mode (`--permission-mode auto`). You type the prompt on the last line and press Enter (Shift+Enter for a new line); Stop and Clear are in the tab's right-click menu, and Clear starts a new conversation.
+- **AI chat:** a bottom tab with a dropdown to choose Claude Code or OpenCode, both running in the multipass virtual machine `claude` (`multipass exec claude -- ...`), so `opencode` has to be installed there too (the pane looks in `~/.opencode/bin` and other usual places if it is not on the login `PATH`). Each prompt is sent with the path of the project; the tab shows that it is waiting and what the AI does meanwhile (its thinking in dim italics, the tools it uses), then the answer (bullets and **bold** are formatted). Claude runs with `-p --permission-mode auto` and OpenCode with `run --auto --format json`; each keeps its own session, so switching AIs keeps both conversations. You type the prompt on the last line and press Enter (Shift+Enter for a new line); Stop and Clear are in the tab's right-click menu, and Clear starts new conversations.
 - **Build, run, test:** compiles in process, runs main classes and JUnit 4 or 5 tests, and shows problems, console output (which also takes input) and test results.
 - **Hot swap:** saving while a main class is running puts the changed method bodies into the running program, like Eclipse's hot code replace. Changes the JVM cannot take (added or removed methods or fields, for example) are reported in the console and need a restart. Run > Hot Swap on Save turns it off.
 - **Terminal:** a tab with your login shell on a real pseudo-terminal (colours, full-screen programs, scrollback), starting in the project folder.
@@ -55,7 +55,7 @@ The menus show the rest.
 | --- | --- |
 | `javapad.ui` | The SWT window: `MainWindow`, `Theme`, `Icons`, `FileUtil`. Subpackages below. |
 | `javapad.ui.editor` | The code editor, its tabs, completion, and editing helpers. |
-| `javapad.ui.claude` | The Claude chat pane and its stream and markdown handling. |
+| `javapad.ui.chat` | The AI chat pane, the choice of AI, and its stream and markdown handling. |
 | `javapad.ui.terminal` | The terminal and console panes and ANSI parsing. |
 | `javapad.ui.git` | Git menu, actions, commit, diff and history views. |
 | `javapad.ui.dialog` | Find, command and confirmation dialogs. |

@@ -1,7 +1,7 @@
 package javapad.ui.git;
 
 import javapad.ui.MainWindow;
-import javapad.ui.claude.Prompt;
+import javapad.ui.chat.Prompt;
 import javapad.ui.dialog.ChoiceDialog;
 import javapad.ui.dialog.ConfirmDialog;
 import javapad.ui.editor.EditorTab;
@@ -34,7 +34,7 @@ public class GitActions {
 		w.display.timerExec(POLL_MS, this::poll);
 	}
 
-	// How often the status is re-read, to notice changes made outside JavaPad (the terminal, Claude, other tools).
+	// How often the status is re-read, to notice changes made outside JavaPad (the terminal, the AI chat, other tools).
 	private static final int POLL_MS = 5000;
 
 	private void poll() {

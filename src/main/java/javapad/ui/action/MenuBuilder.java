@@ -165,12 +165,12 @@ public class MenuBuilder {
 		menuItem(show, "Search", 0, () -> w.bottomTabs.show(w.searchTab));
 		menuItem(show, "Terminal", 0, () -> w.showBottomTab("terminal"));
 		menuItem(show, "History", 0, () -> w.showBottomTab("history"));
-		menuItem(show, "Claude", 0, () -> {
-			w.showBottomTab("claude");
-			w.claude.focusInput();
+		menuItem(show, "AI Chat", 0, () -> {
+			w.showBottomTab("chat");
+			w.chat.focusInput();
 		});
 		menuName = "View";
-		commands.add("Claude > Clear", () -> w.claude.clear());
+		commands.add("AI Chat > Clear", () -> w.chat.clear());
 		Menu source = submenu(bar, "Source");
 		menuItem(source, "Organize Imports", SWT.MOD1 | SWT.SHIFT | 'O', () -> w.withEditor(t -> w.importActions.organize(t)));
 		menuItem(source, "Format", SWT.MOD1 | SWT.SHIFT | 'F', () -> w.withEditor(t -> w.format(t)));

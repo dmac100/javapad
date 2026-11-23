@@ -1,4 +1,4 @@
-package javapad.ui.claude;
+package javapad.ui.chat;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
