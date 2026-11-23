@@ -6,13 +6,18 @@ import javapad.ui.editor.CodeAssist;
 import javapad.ui.editor.EditorTab;
 import javapad.ui.editor.Location;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import javapad.lang.CodeModel;
 import javapad.lang.JavaAnalyzer;
 import javapad.lang.Navigator;
+import javapad.model.EclipseProject;
+import javapad.run.TestFinder;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -24,6 +29,8 @@ public class NavigationActions {
 	private final Shell shell;
 	private final CodeAssist assist;
 	private final Consumer<Location> lineOpener;
+	private final Consumer<File> fileOpener;
+	private final Supplier<EclipseProject> project;
 	private Consumer<Target> hierarchy;
 
 	public static class Target {
@@ -36,10 +43,12 @@ public class NavigationActions {
 		public boolean type;
 	}
 
-	public NavigationActions(Shell shell, CodeAssist assist, Consumer<Location> lineOpener) {
+	public NavigationActions(Shell shell, CodeAssist assist, Consumer<Location> lineOpener, Consumer<File> fileOpener, Supplier<EclipseProject> project) {
 		this.shell = shell;
 		this.assist = assist;
 		this.lineOpener = lineOpener;
+		this.fileOpener = fileOpener;
+		this.project = project;
 	}
 
 	public void setHierarchy(Consumer<Target> hierarchy) {
@@ -164,6 +173,55 @@ public class NavigationActions {
 				open(found.get(pick));
 			}
 		});
+	}
+
+	// Ctrl+Shift+J: swaps between an implementation and its test, or a test and the classes it tests.
+	public void openTest(EditorTab tab) {
+		EclipseProject p = project.get();
+		if(p == null) {
+			info("Open Test", "Open a project first.");
+			return;
+		}
+		File file = tab.file;
+		if(!file.getName().endsWith(".java") || !p.isSource(file)) {
+			info("Open Test", "Open a Java source file first.");
+			return;
+		}
+		String content = tab.editor.getContent();
+		boolean test = TestFinder.isTestClass(content);
+		String className = p.classNameOf(file);
+		List<File> candidates = new ArrayList<File>();
+		if(test) {
+			for(String name : TestFinder.testedClasses(className, content)) {
+				File source = p.sourceFor(name);
+				if(source != null && !candidates.contains(source)) {
+					candidates.add(source);
+				}
+			}
+		} else {
+			for(File f : TestFinder.testsFor(className, p.sourceFolders)) {
+				if(!f.equals(file) && !candidates.contains(f)) {
+					candidates.add(f);
+				}
+			}
+		}
+		if(candidates.isEmpty()) {
+			info("Open Test", test ? "No implementation class was found for " + className + "." : "No test class was found for " + className + ".");
+			return;
+		}
+		if(candidates.size() == 1) {
+			fileOpener.accept(candidates.get(0));
+			return;
+		}
+		Map<String, File> found = new LinkedHashMap<String, File>();
+		for(File f : candidates) {
+			String label = p.relative(f).replace(File.separatorChar, '/');
+			found.put(label, f);
+		}
+		String pick = ChoiceDialog.choose(shell, (test ? "Implementations of " : "Tests for ") + className, new ArrayList<String>(found.keySet()));
+		if(pick != null) {
+			fileOpener.accept(found.get(pick));
+		}
 	}
 
 	static String label(String display, CodeModel.Place p) {

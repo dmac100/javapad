@@ -146,7 +146,7 @@ public class MainWindow {
 		vertical = new SashForm(horizontal, SWT.VERTICAL);
 		editors = new EditorTabs(vertical, theme);
 		editors.setAssist(assist);
-		navigation = new NavigationActions(shell, assist, loc -> openLine(loc));
+		navigation = new NavigationActions(shell, assist, loc -> openLine(loc), f -> editors.open(f), () -> project);
 		editors.setNavigation(navigation);
 		editors.setTabHook(tab -> tabOpened(tab));
 		bottom = new CTabFolder(vertical, SWT.BORDER);

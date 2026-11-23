@@ -185,6 +185,7 @@ public class MenuBuilder {
 		menuItem(navigate, "Open Declaration", SWT.F3, () -> w.withEditor(t -> w.navigation.openDeclaration(t, t.editor.getControl().getCaretOffset())));
 		menuItem(navigate, "Open Implementation", SWT.MOD1 | 'T', () -> w.withEditor(t -> w.navigation.openImplementation(t, t.editor.getControl().getCaretOffset())));
 		menuItem(navigate, "Call Hierarchy", SWT.MOD1 | SWT.ALT | 'H', () -> w.withEditor(t -> w.navigation.callHierarchy(t, t.editor.getControl().getCaretOffset())));
+		menuItem(navigate, "Open Test", SWT.MOD1 | SWT.SHIFT | 'J', () -> w.withEditor(t -> w.navigation.openTest(t)));
 		gitMenu = new GitMenu(w, commands);
 		gitMenu.build(submenu(bar, "Git"));
 		Menu runMenu = submenu(bar, "Run");

@@ -43,6 +43,7 @@ Without Maven: put the jars in `lib/` on the class path, compile `src/main/java`
 | Ctrl+Shift+O / Ctrl+Shift+F | Organize imports / format |
 | Alt+Shift+Up / Alt+Shift+Down | Expand / shrink the selection to the enclosing code |
 | F3 | Open declaration |
+| Ctrl+Shift+J | Open test or tested class |
 | Ctrl+B | Build |
 | Ctrl+R / F11 | Run the active file / repeat the last run |
 | Ctrl+F11 | Run the tests |
