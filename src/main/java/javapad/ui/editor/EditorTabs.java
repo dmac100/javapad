@@ -75,8 +75,6 @@ public class EditorTabs implements TabDrag.Host {
 	}
 
 	public static void styleSash(SashForm sash, Theme theme) {
-		sash.setBackground(theme.divider);
-		sash.SASH_WIDTH = 5;
 	}
 
 	public void restyle() {
