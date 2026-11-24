@@ -2,9 +2,12 @@ package javapad.ui.action;
 
 import javapad.ui.MainWindow;
 import javapad.ui.dialog.CommandDialog;
+import javapad.ui.dialog.QuickOutlineDialog;
+import javapad.ui.editor.EditorTab;
 import javapad.ui.editor.Location;
 
 import java.io.File;
+import javapad.lang.Outline;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
@@ -61,6 +64,9 @@ public class Automation {
 			run.build(finish);
 		} else if(action.equals("command")) {
 			command(shot);
+			finish.run();
+		} else if(action.equals("method")) {
+			method(shot);
 			finish.run();
 		} else if(action.equals("f11")) {
 			run.setIdleHook(finish);
@@ -129,6 +135,33 @@ public class Automation {
 		});
 		if(choice != null) {
 			window.runCommand(choice);
+		}
+	}
+
+	// Ctrl+O: shows the go-to-method popup, filtered by javapad.commandtext, and opens the choice with javapad.commandrun
+	void method(String shot) {
+		EditorTab tab = window.editors.active();
+		if(tab == null) {
+			return;
+		}
+		QuickOutlineDialog dialog = window.navigation.methodDialog(tab);
+		String text = System.getProperty(COMMAND_TEXT, "");
+		boolean choose = Boolean.getBoolean(COMMAND_RUN);
+		Outline.Node chosen = dialog.open(() -> {
+			dialog.setText(text);
+			display.timerExec(300, () -> {
+				if(choose) {
+					dialog.accept();
+				} else {
+					if(shot != null) {
+						window.screenshot(shot + ".dlg.png");
+					}
+					dialog.close();
+				}
+			});
+		});
+		if(chosen != null) {
+			window.open(new Location(tab.file, chosen.line, chosen.column));
 		}
 	}
 

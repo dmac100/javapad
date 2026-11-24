@@ -7,12 +7,13 @@ A small desktop editor (SWT) for Eclipse-style Java projects. It opens a project
 ## Features
 
 - **Editor:** syntax colouring (dark and light themes), content assist, imports, quick fixes and formatting, all based on javac's analysis of the project. Selecting an identifier highlights its other uses. Errors and warnings are marked in the left margin and on a strip beside the scrollbar (click a mark to go to its line), and files with errors are marked in the sidebar.
-- **Tabs:** drag an editor tab along its tab strip to reorder it, onto another group's strip to move it, or onto the edge of an editor to split the view (side by side or stacked); empty groups close themselves. The tabs of the side and bottom panels can be reordered by dragging too.
+- **Tabs:** drag an editor tab along its tab strip to reorder it, onto another group's strip to move it, or onto the edge of an editor to split the view (side by side or stacked); empty groups close themselves. Tabs of the side and bottom panels can be reordered by dragging too; close one with its x and bring it back from View > Show or with Ctrl+3.
 - **AI chat:** a bottom tab with a dropdown to choose Claude Code or OpenCode, both running in the multipass virtual machine `claude` (`multipass exec claude -- ...`), so `opencode` has to be installed there too (the pane looks in `~/.opencode/bin` and other usual places if it is not on the login `PATH`). Each prompt is sent with the path of the project; the tab shows that it is waiting and what the AI does meanwhile (its thinking in dim italics, the tools it uses), then the answer (bullets and **bold** are formatted). Claude runs with `-p --permission-mode auto` and OpenCode with `run --auto --format json`; each keeps its own session, so switching AIs keeps both conversations. You type the prompt on the last line and press Enter (Shift+Enter for a new line); Stop (a button beside the AI dropdown, or in the tab's right-click menu) ends the wait and keeps what arrived, and Clear in that menu starts new conversations.
 - **Build, run, test:** compiles in process, runs main classes and JUnit 4 or 5 tests, and shows problems, console output (which also takes input) and test results.
 - **Hot swap:** saving while a main class is running puts the changed method bodies into the running program, like Eclipse's hot code replace. Changes the JVM cannot take (added or removed methods or fields, for example) are reported in the console and need a restart. Run > Hot Swap on Save turns it off.
 - **Terminal:** a tab with your login shell on a real pseudo-terminal (colours, full-screen programs, scrollback), starting in the project folder.
-- **Navigation:** open a declaration or implementation, call hierarchy, open a file by name, search the project's files, a toolbar button (and Ctrl+Alt+W) shows the open file in the sidebar (a Stop button in the Search tab's header ends a long search and keeps what it found).
+- **Outline:** the Outline tab in the sidebar lists the types, methods and fields of the open file in source order, highlights the one around the caret, and jumps to the one you choose.
+- **Navigation:** open a declaration or implementation, go to a method of the current file by name (Ctrl+O, like Eclipse's quick outline), call hierarchy, open a file by name, search the project's files, a toolbar button (and Ctrl+Alt+W) shows the open file in the sidebar (a Stop button in the Search tab's header ends a long search and keeps what it found).
 - **Whitespace and line endings:** View > Show Whitespace draws spaces, tabs and the line ending (LF or CRLF) of each line; Source > Convert Line Endings switches a file to Unix or Windows endings.
 - **Git:** status in the sidebar (untracked files greyed, modified files green, files with merge conflicts marked; modified lines are marked in the editor margin), assume-unchanged toggle, commit (also a toolbar button), branches and the usual commands, a history view with a commit graph, and side by side file comparison.
 
@@ -36,6 +37,8 @@ Without Maven: put the jars in `lib/` on the class path, compile `src/main/java`
 | Keys | Action |
 | --- | --- |
 | Ctrl+3 | Run command |
+| Ctrl+O | Go to a method in the current file |
+| Ctrl+Alt+O | Open project |
 | Ctrl+Shift+R | Open file by name |
 | Ctrl+F / Ctrl+Shift+H | Find / find in files |
 | Ctrl+Space | Content assist |
@@ -60,9 +63,9 @@ The menus show the rest.
 | `javapad.ui.terminal` | The terminal and console panes and ANSI parsing. |
 | `javapad.ui.git` | Git menu, actions, commit, diff and history views. |
 | `javapad.ui.dialog` | Find, command and confirmation dialogs. |
-| `javapad.ui.pane` | Side and bottom panes: project tree, problems, search, JUnit, call hierarchy. |
+| `javapad.ui.pane` | Side and bottom panes: project tree, outline, problems, search, JUnit, call hierarchy. |
 | `javapad.ui.action` | Menu building and file, navigation, import and run actions. |
-| `javapad.lang` | Code intelligence on javac's Tree API, the formatter, and text search. No SWT. |
+| `javapad.lang` | Code intelligence on javac's Tree API (including the outline), the formatter, and text search. No SWT. |
 | `javapad.git` | The `git` command line and what is parsed from it. No SWT. |
 | `javapad.run`, `javapad.build` | Compiling, and starting programs and tests. |
 | `javapad.model` | The Eclipse project files and `.gitignore` rules. |

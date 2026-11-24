@@ -39,6 +39,7 @@ public class EditorTabs implements TabDrag.Host {
 	private NavigationActions navigation;
 	private Consumer<EditorTab> tabHook;
 	private Consumer<List<Problem>> problemsHook;
+	private Consumer<EditorTab> activeHook;
 
 	public EditorTabs(Composite parent, Theme theme) {
 		this.theme = theme;
@@ -56,10 +57,16 @@ public class EditorTabs implements TabDrag.Host {
 		folder.addCTabFolder2Listener(new CTabFolder2Adapter() {
 			public void close(CTabFolderEvent e) {
 				e.doit = confirmClose((EditorTab)((CTabItem)e.item).getData());
-				shell.getDisplay().asyncExec(() -> removeIfEmpty(folder));
+				shell.getDisplay().asyncExec(() -> {
+					removeIfEmpty(folder);
+					activeChanged();
+				});
 			}
 		});
-		folder.addListener(SWT.Selection, e -> current = folder);
+		folder.addListener(SWT.Selection, e -> {
+			current = folder;
+			activeChanged();
+		});
 		drag.attach(folder);
 		return folder;
 	}
@@ -174,11 +181,30 @@ public class EditorTabs implements TabDrag.Host {
 		current = tab.item.getParent();
 		removeIfEmpty(from);
 		tab.editor.getControl().setFocus();
+		activeChanged(tab);
 	}
 
 	// Called once for every tab that is opened, to add menus and the like.
 	public void setTabHook(Consumer<EditorTab> hook) {
 		tabHook = hook;
+	}
+
+	// Called when the active tab changes (including to null when the last one closes).
+	public void setActiveHook(Consumer<EditorTab> hook) {
+		activeHook = hook;
+	}
+
+	void activeChanged() {
+		if(activeHook != null && !area.isDisposed()) {
+			activeHook.accept(active());
+		}
+	}
+
+	// For when the tab is known, as the folder with the focus may still be another one
+	void activeChanged(EditorTab tab) {
+		if(activeHook != null && !area.isDisposed()) {
+			activeHook.accept(tab);
+		}
 	}
 
 	// Called with every new list of problems, so other views can mark them too.
@@ -216,6 +242,7 @@ public class EditorTabs implements TabDrag.Host {
 			if(canonical(tab.file).equals(file)) {
 				tab.item.getParent().setSelection(tab.item);
 				current = tab.item.getParent();
+				activeChanged(tab);
 				return tab;
 			}
 		}
@@ -244,7 +271,13 @@ public class EditorTabs implements TabDrag.Host {
 			if(tabHook != null) {
 				tabHook.accept(tab);
 			}
+			// clicking into the editor of another split makes it the active one, as its tab strip may not be touched
+			tab.editor.getControl().addListener(SWT.FocusIn, e -> {
+				current = tab.item.getParent();
+				activeChanged();
+			});
 			tab.item.getParent().setSelection(tab.item);
+			activeChanged(tab);
 			return tab;
 		} catch(IOException e) {
 			e.printStackTrace();
@@ -262,6 +295,7 @@ public class EditorTabs implements TabDrag.Host {
 		tab.item.getParent().setSelection(tab.item);
 		current = tab.item.getParent();
 		tab.editor.getControl().setFocus();
+		activeChanged(tab);
 	}
 
 	public List<EditorTab> tabs() {
@@ -299,6 +333,7 @@ public class EditorTabs implements TabDrag.Host {
 		if(item != null && confirmClose((EditorTab)item.getData())) {
 			item.dispose();
 			removeIfEmpty(folder);
+			activeChanged();
 		}
 	}
 
@@ -310,6 +345,7 @@ public class EditorTabs implements TabDrag.Host {
 		for(int i = all.size() - 1; i > 0; i--) {
 			removeIfEmpty(all.get(i));
 		}
+		activeChanged();
 	}
 
 	public boolean saveAll() {

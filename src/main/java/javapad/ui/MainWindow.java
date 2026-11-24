@@ -23,6 +23,7 @@ import javapad.ui.git.HistoryPane;
 import javapad.ui.pane.BottomTabs;
 import javapad.ui.pane.CallHierarchyPane;
 import javapad.ui.pane.JUnitPane;
+import javapad.ui.pane.OutlinePane;
 import javapad.ui.pane.ProblemsPane;
 import javapad.ui.pane.ProjectTree;
 import javapad.ui.pane.SearchPane;
@@ -78,6 +79,7 @@ public class MainWindow {
 	final SideTabs sideTabs;
 	public final SideTabs.Tab projectTab;
 	public final SideTabs.Tab sourceTab;
+	public final SideTabs.Tab outlineTab;
 	public final EditorTabs editors;
 	public final ConsolePane console;
 	final ProblemsPane problemsPane;
@@ -97,6 +99,7 @@ public class MainWindow {
 	public final HistoryPane history;
 	public final GitActions git;
 	private final CallHierarchyPane callPane;
+	final OutlinePane outlinePane;
 	final JUnitPane junitPane;
 	private final SashForm horizontal;
 	private final SashForm vertical;
@@ -139,9 +142,11 @@ public class MainWindow {
 		left = new CTabFolder(horizontal, SWT.BORDER);
 		projectTree = new ProjectTree(left, false);
 		sourceTree = new ProjectTree(left, true);
+		outlinePane = new OutlinePane(left, theme);
 		sideTabs = new SideTabs(left, shell);
 		projectTab = sideTabs.add("Project", projectTree.getControl());
 		sourceTab = sideTabs.add("Sources", sourceTree.getControl());
+		outlineTab = sideTabs.add("Outline", outlinePane.getControl());
 		projectTab.select();
 		vertical = new SashForm(horizontal, SWT.VERTICAL);
 		editors = new EditorTabs(vertical, theme);
@@ -149,6 +154,8 @@ public class MainWindow {
 		navigation = new NavigationActions(shell, assist, loc -> openLine(loc), f -> editors.open(f), () -> project);
 		editors.setNavigation(navigation);
 		editors.setTabHook(tab -> tabOpened(tab));
+		editors.setActiveHook(tab -> outlinePane.setEditor(tab));
+		outlinePane.setOpener(l -> open(l));
 		bottom = new CTabFolder(vertical, SWT.BORDER);
 		bottom.setTabPosition(SWT.TOP);
 		console = new ConsolePane(bottom, theme);
@@ -173,6 +180,11 @@ public class MainWindow {
 		chat = new ChatPane(bottom, theme);
 		chatTab = bottomTabs.add("chat", "AI Chat", chat.getControl(), true);
 		chat.setWaitingHook(waiting -> bottomTabs.setText(chatTab, waiting ? "AI Chat (waiting)" : "AI Chat"));
+		left.addListener(SWT.Selection, e -> {
+			if(sideTabs.selected() == outlineTab) {
+				outlinePane.refresh();
+			}
+		});
 		bottom.addListener(SWT.Selection, e -> {
 			if(bottomTabs.selected() == terminalTab) {
 				terminal.ensureStarted();
@@ -188,7 +200,7 @@ public class MainWindow {
 			bottomTabs.show(callTab);
 		});
 		bottomTabs.show(consoleTab);
-		horizontal.setWeights(new int[] {20, 80});
+		horizontal.setWeights(new int[] {24, 76});
 		vertical.setWeights(new int[] {60, 40});
 		run = new RunController(display, shell, editors, console, problemsPane, junitPane, assist, bottomTabs, consoleTab, problemsTab, junitTab, () -> currentFile(), () -> refreshSources(), m -> error(m));
 		importActions = new ImportActions(shell, assist, () -> project);
@@ -239,6 +251,7 @@ public class MainWindow {
 		EditorTabs.styleSash(vertical, theme);
 		projectTree.restyle(theme);
 		sourceTree.restyle(theme);
+		outlinePane.restyle(theme);
 		problemsPane.restyle(theme);
 		console.restyle();
 		terminal.restyle();
@@ -304,6 +317,32 @@ public class MainWindow {
 		return sourceTab.selected() ? sourceTree : projectTree;
 	}
 
+	public void showProject() {
+		sideTabs.show(projectTab);
+	}
+
+	public void showSources() {
+		sideTabs.show(sourceTab);
+	}
+
+	public void showJUnit() {
+		sideTabs.show(junitTab);
+	}
+
+	// Shows the Outline tab, and parses the active file again in case it changed while the tab was closed.
+	public void showOutline() {
+		sideTabs.show(outlineTab);
+		outlinePane.refresh();
+	}
+
+	void showSourcesOrProject(boolean sources) {
+		if(sources) {
+			showSources();
+		} else {
+			showProject();
+		}
+	}
+
 	// One-off: select the file of the active editor in the sidebar, switching tab if this one does not list it.
 	public void showInSidebar() {
 		EditorTab tab = editors.active();
@@ -314,10 +353,11 @@ public class MainWindow {
 		ProjectTree first = sources ? sourceTree : projectTree;
 		ProjectTree second = sources ? projectTree : sourceTree;
 		if(first.reveal(tab.file)) {
+			showSourcesOrProject(sources);
 			return;
 		}
 		if(second.reveal(tab.file)) {
-			(sources ? projectTab : sourceTab).select();
+			showSourcesOrProject(!sources);
 		}
 	}
 
@@ -674,6 +714,11 @@ public class MainWindow {
 		}
 	}
 
+	// Ctrl+O: picks a method of the active file by name and goes to it.
+	public void goToMethod() {
+		withEditor(t -> navigation.goToMember(t));
+	}
+
 	public void contentAssist() {
 		EditorTab tab = editors.active();
 		if(tab != null) {
@@ -736,10 +781,15 @@ public class MainWindow {
 		new Automation(this).run();
 	}
 
-	// Used by Automation: shows one of the tabs by name (problems, console, call, history, chat, search at the bottom; junit in the sidebar); a closed one is reopened.
+	// Used by Automation: shows one of the tabs by name (problems, console, call, history, chat, search at the bottom;
+	// junit and outline in the sidebar); a closed one is reopened.
 	public void showBottomTab(String name) {
 		if(name.equals("junit")) {
-			junitTab.select();
+			showJUnit();
+			return;
+		}
+		if(name.equals("outline")) {
+			showOutline();
 			return;
 		}
 		BottomTabs.Tab tab = bottomTabs.named(name);
@@ -752,7 +802,7 @@ public class MainWindow {
 	}
 
 	public void showSourcesTree() {
-		sourceTab.select();
+		showSources();
 	}
 
 	public void selectProjectRoot() {

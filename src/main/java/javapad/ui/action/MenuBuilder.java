@@ -107,7 +107,7 @@ public class MenuBuilder {
 		Menu bar = new Menu(w.shell, SWT.BAR);
 		w.shell.setMenuBar(bar);
 		Menu file = submenu(bar, "File");
-		menuItem(file, "Open Project...", SWT.MOD1 | 'O', () -> w.chooseProject());
+		menuItem(file, "Open Project...", SWT.MOD1 | SWT.ALT | 'O', () -> w.chooseProject());
 		menuItem(file, "Run Command...", SWT.MOD1 | '3', () -> w.runCommandDialog());
 		menuItem(file, "Open File...", SWT.MOD1 | SWT.SHIFT | 'R', () -> w.runFileDialog());
 		menuItem(file, "Regenerate Project File...", 0, () -> w.regenerateProject());
@@ -156,11 +156,12 @@ public class MenuBuilder {
 		Menu show = new Menu(w.shell, SWT.DROP_DOWN);
 		showItem.setMenu(show);
 		menuName = "View > Show";
-		menuItem(show, "Project", 0, () -> w.projectTab.select());
-		menuItem(show, "Sources", 0, () -> w.sourceTab.select());
+		menuItem(show, "Project", 0, () -> w.showProject());
+		menuItem(show, "Sources", 0, () -> w.showSources());
+		menuItem(show, "Outline", 0, () -> w.showOutline());
 		menuItem(show, "Problems", 0, () -> w.bottomTabs.show(w.problemsTab));
 		menuItem(show, "Console", 0, () -> w.bottomTabs.show(w.consoleTab));
-		menuItem(show, "JUnit", 0, () -> w.junitTab.select());
+		menuItem(show, "JUnit", 0, () -> w.showJUnit());
 		menuItem(show, "Call Hierarchy", 0, () -> w.bottomTabs.show(w.callTab));
 		menuItem(show, "Search", 0, () -> w.bottomTabs.show(w.searchTab));
 		menuItem(show, "Terminal", 0, () -> w.showBottomTab("terminal"));
@@ -182,6 +183,7 @@ public class MenuBuilder {
 		menuItem(source, "Quick Fix", SWT.MOD1 | '1', () -> w.withEditor(t -> w.importActions.quickFix(t)));
 		Menu navigate = submenu(bar, "Navigate");
 		menuItem(navigate, "Show Current File in Sidebar", SWT.MOD1 | SWT.ALT | 'W', () -> w.showInSidebar());
+		menuItem(navigate, "Go to Method in File...", SWT.MOD1 | 'O', () -> w.goToMethod());
 		menuItem(navigate, "Open Declaration", SWT.F3, () -> w.withEditor(t -> w.navigation.openDeclaration(t, t.editor.getControl().getCaretOffset())));
 		menuItem(navigate, "Open Implementation", SWT.MOD1 | 'T', () -> w.withEditor(t -> w.navigation.openImplementation(t, t.editor.getControl().getCaretOffset())));
 		menuItem(navigate, "Call Hierarchy", SWT.MOD1 | SWT.ALT | 'H', () -> w.withEditor(t -> w.navigation.callHierarchy(t, t.editor.getControl().getCaretOffset())));

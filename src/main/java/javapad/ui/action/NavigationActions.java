@@ -2,6 +2,7 @@ package javapad.ui.action;
 
 import javapad.ui.dialog.ChoiceDialog;
 import javapad.ui.dialog.ConfirmDialog;
+import javapad.ui.dialog.QuickOutlineDialog;
 import javapad.ui.editor.CodeAssist;
 import javapad.ui.editor.EditorTab;
 import javapad.ui.editor.Location;
@@ -16,6 +17,7 @@ import java.util.function.Supplier;
 import javapad.lang.CodeModel;
 import javapad.lang.JavaAnalyzer;
 import javapad.lang.Navigator;
+import javapad.lang.Outline;
 import javapad.model.EclipseProject;
 import javapad.run.TestFinder;
 import javax.lang.model.element.Element;
@@ -173,6 +175,29 @@ public class NavigationActions {
 				open(found.get(pick));
 			}
 		});
+	}
+
+	// Ctrl+O: the methods of the file in a popup, filtered as the name is typed, like Eclipse's quick outline.
+	public void goToMember(EditorTab tab) {
+		if(!tab.file.getName().endsWith(".java")) {
+			info("Go to Method", "Open a Java file first.");
+			return;
+		}
+		QuickOutlineDialog dialog = methodDialog(tab);
+		if(dialog.isEmpty()) {
+			info("Go to Method", "This file declares no methods.");
+			return;
+		}
+		Outline.Node node = dialog.open();
+		if(node != null) {
+			lineOpener.accept(new Location(tab.file, node.line, node.column));
+		}
+	}
+
+	// The popup for the file as it is in the editor now, also used by the headless test runs.
+	public QuickOutlineDialog methodDialog(EditorTab tab) {
+		List<Outline.Node> methods = Outline.methods(Outline.parse(tab.editor.getContent()));
+		return new QuickOutlineDialog(shell, methods, tab.file.getName());
 	}
 
 	// Ctrl+Shift+J: swaps between an implementation and its test, or a test and the classes it tests.
