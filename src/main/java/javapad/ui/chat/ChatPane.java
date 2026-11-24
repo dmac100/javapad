@@ -25,6 +25,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
@@ -57,6 +58,7 @@ public class ChatPane {
 	private final Composite header;
 	private final Label aiLabel;
 	private final Combo aiChoice;
+	private final Button stop;
 	private final StyledText text;
 	private final Theme theme;
 	private final Display display;
@@ -106,7 +108,7 @@ public class ChatPane {
 		panel = new Composite(parent, SWT.NONE);
 		panel.setLayout(new GridLayout(1, false));
 		header = new Composite(panel, SWT.NONE);
-		header.setLayout(new GridLayout(2, false));
+		header.setLayout(new GridLayout(3, false));
 		header.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
 		aiLabel = new Label(header, SWT.NONE);
 		aiLabel.setText("AI:");
@@ -117,6 +119,12 @@ public class ChatPane {
 		aiChoice.setToolTipText("AI to send prompts to");
 		aiChoice.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 		aiChoice.addListener(SWT.Selection, e -> choose(aiChoice.getText()));
+		stop = new Button(header, SWT.PUSH);
+		stop.setText("Stop");
+		stop.setToolTipText("Stop waiting for the answer");
+		stop.setEnabled(false);
+		stop.addListener(SWT.Selection, e -> stopPressed());
+		stop.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
 		text = new StyledText(panel, SWT.V_SCROLL | SWT.WRAP);
 		text.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		text.setFont(theme.font);
@@ -643,6 +651,14 @@ public class ChatPane {
 		});
 	}
 
+	// the Stop button: ends the wait and puts the caret back in the prompt, ready to type again
+	void stopPressed() {
+		cancel();
+		if(!text.isDisposed()) {
+			text.setFocus();
+		}
+	}
+
 	// Stops the waiting for an answer; whatever arrived stays.
 	void cancel() {
 		Process p;
@@ -702,6 +718,9 @@ public class ChatPane {
 		// the AI cannot be changed while it is working: the answer belongs to the one that was chosen
 		if(!aiChoice.isDisposed()) {
 			aiChoice.setEnabled(!on);
+		}
+		if(!stop.isDisposed()) {
+			stop.setEnabled(on);
 		}
 		if(waitingHook != null) {
 			waitingHook.accept(on);
@@ -780,6 +799,8 @@ public class ChatPane {
 		aiLabel.setForeground(theme.foreground);
 		aiChoice.setBackground(theme.background);
 		aiChoice.setForeground(theme.foreground);
+		stop.setBackground(theme.chrome);
+		stop.setForeground(theme.foreground);
 		text.setFont(theme.font);
 		text.setBackground(theme.background);
 		text.setForeground(theme.foreground);
