@@ -3,6 +3,7 @@ package javapad.ui.pane;
 import javapad.ui.FileUtil;
 import javapad.ui.Icons;
 import javapad.ui.Theme;
+import javapad.ui.editor.EditorTabs;
 import javapad.ui.editor.Location;
 import javapad.ui.editor.ReadOnlyText;
 
@@ -343,7 +344,7 @@ public class JUnitPane {
 	public void restyle() {
 		detail.setFont(theme.font);
 		composite.setBackground(theme.chrome);
-		sash.setBackground(theme.chrome);
+		EditorTabs.styleSash(sash);
 		toolbar.setBackground(theme.chrome);
 		summary.setBackground(theme.chrome);
 		summary.setForeground(theme.foreground);

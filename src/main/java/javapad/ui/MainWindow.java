@@ -247,8 +247,8 @@ public class MainWindow {
 			f.setSelectionBackground(f == left ? theme.sidebar : theme.background);
 			f.setSelectionForeground(f == left ? theme.sidebarText : theme.foreground);
 		}
-		EditorTabs.styleSash(horizontal, theme);
-		EditorTabs.styleSash(vertical, theme);
+		EditorTabs.styleSash(horizontal);
+		EditorTabs.styleSash(vertical);
 		projectTree.restyle(theme);
 		sourceTree.restyle(theme);
 		outlinePane.restyle(theme);

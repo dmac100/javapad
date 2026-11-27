@@ -2,6 +2,7 @@ package javapad.ui.git;
 
 import javapad.ui.MainWindow;
 import javapad.ui.Theme;
+import javapad.ui.editor.EditorTabs;
 import javapad.ui.editor.ReadOnlyText;
 
 import java.util.ArrayList;
@@ -107,8 +108,6 @@ public class HistoryPane {
 			c.setText(fileTitles[i]);
 			c.setWidth(fileWidths[i]);
 		}
-		vertical.SASH_WIDTH = 5;
-		lower.SASH_WIDTH = 5;
 		vertical.setWeights(new int[] {55, 45});
 		lower.setWeights(new int[] {70, 30});
 		bold = boldFont();
@@ -170,8 +169,8 @@ public class HistoryPane {
 			radio.setBackground(theme.chrome);
 			radio.setForeground(theme.foreground);
 		}
-		vertical.setBackground(theme.divider);
-		lower.setBackground(theme.divider);
+		EditorTabs.styleSash(vertical);
+		EditorTabs.styleSash(lower);
 		for(Table t : new Table[] {commitTable, fileTable}) {
 			t.setBackground(theme.background);
 			t.setForeground(theme.foreground);

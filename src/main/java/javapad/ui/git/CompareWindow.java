@@ -3,6 +3,7 @@ package javapad.ui.git;
 import javapad.ui.MainWindow;
 import javapad.ui.Theme;
 import javapad.ui.dialog.ConfirmDialog;
+import javapad.ui.editor.EditorTabs;
 import javapad.ui.editor.ReadOnlyText;
 
 import java.util.List;
@@ -75,7 +76,7 @@ public class CompareWindow {
 		shell.setBackground(theme.chrome);
 		SashForm outer = new SashForm(shell, SWT.HORIZONTAL);
 		outer.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
-		outer.setBackground(theme.chrome);
+		EditorTabs.styleSash(outer);
 		Table list = null;
 		if(entries.size() > 1) {
 			list = new Table(outer, SWT.FULL_SELECTION | SWT.SINGLE | SWT.BORDER | SWT.V_SCROLL);
